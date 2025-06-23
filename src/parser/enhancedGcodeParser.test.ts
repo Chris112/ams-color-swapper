@@ -1,0 +1,252 @@
+import { EnhancedGcodeParser, parseLine, LineMode, GCodeLineStream } from './enhancedGcodeParser';
+import { Logger } from '../debug/logger';
+import { Readable } from 'stream';
+
+// Example tests demonstrating the enhanced parser features
+describe('EnhancedGcodeParser', () => {
+  let logger: Logger;
+  
+  beforeEach(() => {
+    logger = new Logger();
+    logger.setLogLevel('error'); // Suppress logs during tests
+  });
+  
+  describe('parseLine', () => {
+    it('should parse basic G-code commands', () => {
+      const result = parseLine('G0 X10.5 Y20.0 Z5.25 F3000');
+      expect(result.words).toEqual([
+        ['G', 0],
+        ['X', 10.5],
+        ['Y', 20],
+        ['Z', 5.25],
+        ['F', 3000]
+      ]);
+    });
+    
+    it('should parse with flatten option', () => {
+      const result = parseLine('G0 X10 Y20', { flatten: true });
+      expect(result.words).toEqual(['G0', 'X10', 'Y20']);
+    });
+    
+    it('should handle comments correctly', () => {
+      const result = parseLine('G0 X10 Y20 ; Move to position');
+      expect(result.comments).toEqual(['Move to position']);
+      
+      const result2 = parseLine('G0 X10 (temporary position) Y20');
+      expect(result2.comments).toEqual(['temporary position']);
+    });
+    
+    it('should handle nested parentheses comments', () => {
+      const result = parseLine('G0 X10 (outer (inner) comment) Y20');
+      expect(result.comments).toEqual(['outer (inner) comment']);
+    });
+    
+    it('should handle line modes correctly', () => {
+      const line = 'G0 X10 Y20 ; comment';
+      
+      const original = parseLine(line, { lineMode: LineMode.ORIGINAL });
+      expect(original.line).toBe('G0 X10 Y20 ; comment');
+      
+      const stripped = parseLine(line, { lineMode: LineMode.STRIPPED });
+      expect(stripped.line).toBe('G0 X10 Y20');
+      
+      const compact = parseLine(line, { lineMode: LineMode.COMPACT });
+      expect(compact.line).toBe('G0X10Y20');
+    });
+    
+    it('should parse line numbers and checksums', () => {
+      const result = parseLine('N123 G0 X10 Y20 *45');
+      expect(result.ln).toBe(123);
+      expect(result.cs).toBe(45);
+    });
+    
+    it('should detect checksum errors', () => {
+      const result = parseLine('N123 G0 X10 Y20 *999');
+      expect(result.cs).toBe(999);
+      expect(result.err).toBe(true);
+    });
+    
+    it('should handle special commands', () => {
+      const result1 = parseLine('$H');
+      expect(result1.cmds).toEqual(['$H']);
+      
+      const result2 = parseLine('%wait');
+      expect(result2.cmds).toEqual(['%wait']);
+      
+      const result3 = parseLine('{"sr":null}');
+      expect(result3.cmds).toEqual(['{"sr":null}']);
+    });
+    
+    it('should handle tool changes', () => {
+      const result = parseLine('T2');
+      expect(result.words).toEqual([['T', 2]]);
+    });
+    
+    it('should handle M600 filament change', () => {
+      const result = parseLine('M600');
+      expect(result.words).toEqual([['M', 600]]);
+    });
+  });
+  
+  describe('GCodeLineStream', () => {
+    it('should handle streaming data', (done) => {
+      const gcode = `G0 X0 Y0
+G1 X10 Y10 Z1
+; Layer 1
+T1
+G1 X20 Y20`;
+      
+      const stream = Readable.from([gcode]);
+      const lineStream = new GCodeLineStream();
+      const results: any[] = [];
+      
+      lineStream.on('data', (data) => {
+        results.push(data);
+      });
+      
+      lineStream.on('end', () => {
+        expect(results).toHaveLength(4); // Excluding empty/comment line
+        expect(results[0].words).toEqual([['G', 0], ['X', 0], ['Y', 0]]);
+        expect(results[3].words).toEqual([['G', 1], ['X', 20], ['Y', 20]]);
+        done();
+      });
+      
+      stream.pipe(lineStream);
+    });
+    
+    it('should handle partial lines across chunks', (done) => {
+      const chunk1 = 'G0 X10 ';
+      const chunk2 = 'Y20\nG1 Z5';
+      
+      const lineStream = new GCodeLineStream();
+      const results: any[] = [];
+      
+      lineStream.on('data', (data) => {
+        results.push(data);
+      });
+      
+      lineStream.on('end', () => {
+        expect(results).toHaveLength(2);
+        expect(results[0].words).toEqual([['G', 0], ['X', 10], ['Y', 20]]);
+        expect(results[1].words).toEqual([['G', 1], ['Z', 5]]);
+        done();
+      });
+      
+      lineStream.write(chunk1);
+      lineStream.write(chunk2);
+      lineStream.end();
+    });
+  });
+  
+  describe('EnhancedGcodeParser with events', () => {
+    it('should emit events during parsing', async () => {
+      const parser = new EnhancedGcodeParser(logger, { enableEvents: true });
+      const events: any[] = [];
+      
+      parser.on('start', (data) => events.push({ type: 'start', data }));
+      parser.on('toolChange', (data) => events.push({ type: 'toolChange', data }));
+      parser.on('layer', (data) => events.push({ type: 'layer', data }));
+      parser.on('filamentChange', (data) => events.push({ type: 'filamentChange', data }));
+      
+      const gcode = `; generated by Slicer 1.0
+G0 X0 Y0 Z0.2
+; layer 1
+G1 X10 Y10
+T1
+G1 X20 Y20
+M600
+; layer 2
+T0`;
+      
+      // Create a mock file
+      const mockFile = '/tmp/test.gcode';
+      require('fs').writeFileSync(mockFile, gcode);
+      
+      await parser.parseFile(mockFile, 'test.gcode');
+      
+      // Verify events
+      expect(events.some(e => e.type === 'start')).toBe(true);
+      expect(events.some(e => e.type === 'toolChange' && e.data.toTool === 'T1')).toBe(true);
+      expect(events.some(e => e.type === 'layer' && e.data.layer === 1)).toBe(true);
+      expect(events.some(e => e.type === 'filamentChange')).toBe(true);
+      
+      // Clean up
+      require('fs').unlinkSync(mockFile);
+    });
+  });
+  
+  describe('Performance features', () => {
+    it('should handle batch processing', (done) => {
+      const lines = Array(1000).fill(null).map((_, i) => `G1 X${i} Y${i}`);
+      const gcode = lines.join('\n');
+      
+      const stream = Readable.from([gcode]);
+      const lineStream = new GCodeLineStream({ batchSize: 100 });
+      let processedCount = 0;
+      
+      lineStream.on('data', () => {
+        processedCount++;
+      });
+      
+      lineStream.on('end', () => {
+        expect(processedCount).toBe(1000);
+        done();
+      });
+      
+      stream.pipe(lineStream);
+    });
+  });
+});
+
+// Example usage
+async function exampleUsage() {
+  const logger = new Logger();
+  const parser = new EnhancedGcodeParser(logger, {
+    enableEvents: true,
+    lineMode: LineMode.STRIPPED,
+    flatten: false
+  });
+  
+  // Listen to events
+  parser.on('start', ({ fileName }) => {
+    console.log(`Started parsing: ${fileName}`);
+  });
+  
+  parser.on('toolChange', (change) => {
+    console.log(`Tool change: ${change.fromTool} → ${change.toTool} at layer ${change.layer}`);
+  });
+  
+  parser.on('layer', ({ layer, tool, z }) => {
+    console.log(`Layer ${layer} started with tool ${tool} at Z=${z}`);
+  });
+  
+  parser.on('end', (stats) => {
+    console.log(`Parsing complete. Total layers: ${stats.totalLayers}`);
+    console.log(`Tool changes: ${stats.totalToolChanges}`);
+  });
+  
+  // Parse a file
+  const stats = await parser.parseFile('example.gcode', 'example.gcode');
+  console.log('Final stats:', stats);
+}
+
+// Demonstrate synchronous parsing
+function syncParsingExample() {
+  const gcode = `
+G0 X0 Y0 Z0.2
+G1 X10 Y10 E1.5
+T1 ; Switch to tool 1
+G1 X20 Y20 E3.0
+`;
+  
+  const parser = new EnhancedGcodeParser();
+  const results = parser.parseStringSync(gcode);
+  
+  results.forEach((parsed, index) => {
+    console.log(`Line ${index + 1}:`, parsed.line);
+    console.log('  Words:', parsed.words);
+    if (parsed.comments) {
+      console.log('  Comments:', parsed.comments);
+    }
+  });
+}

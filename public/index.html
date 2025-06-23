@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>G-code Color Mapper - AMS Optimizer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 G-code Color Mapper</h1>
+            <p>Optimize multi-color 3D prints for AMS (Automatic Material System)</p>
+            <div class="printer-select">
+                <label for="printerType">Printer Type:</label>
+                <select id="printerType">
+                    <option value="bambu">Bambu Lab (X1C, P1P, A1)</option>
+                    <option value="prusa">Prusa MMU</option>
+                    <option value="generic">Generic Multi-Material</option>
+                </select>
+            </div>
+        </header>
+
+        <main>
+            <section id="uploadSection" class="card">
+                <h2>Upload G-code File</h2>
+                <div id="dropZone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <svg class="upload-icon" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <p>Drag & drop your G-code file here</p>
+                        <p class="sub-text">or click to browse</p>
+                        <p class="file-types">Accepts: .gcode, .gco, .g files up to 200MB</p>
+                    </div>
+                    <input type="file" id="fileInput" accept=".gcode,.gco,.g" style="display: none;">
+                </div>
+                <div id="uploadProgress" class="upload-progress" style="display: none;">
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                    <p class="progress-text">Uploading...</p>
+                </div>
+            </section>
+
+            <section id="resultsSection" style="display: none;">
+                <div class="results-grid">
+                    <div class="card stats-card">
+                        <h2>📊 File Statistics</h2>
+                        <div id="fileStats" class="stats-content"></div>
+                    </div>
+
+                    <div class="card colors-card">
+                        <h2>🎨 Color Analysis</h2>
+                        <div id="colorStats" class="color-stats"></div>
+                        <canvas id="colorTimeline" class="timeline-canvas"></canvas>
+                    </div>
+
+                    <div class="card optimization-card">
+                        <h2>⚡ AMS Optimization</h2>
+                        <div id="optimizationResults" class="optimization-content"></div>
+                    </div>
+
+                    <div class="card swaps-card">
+                        <h2>🔄 Manual Swap Instructions</h2>
+                        <div id="swapInstructions" class="swap-instructions"></div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="exportBtn" class="btn btn-primary">📥 Export Instructions</button>
+                    <button id="newFileBtn" class="btn btn-secondary">📁 Analyze New File</button>
+                    <button id="toggleDebugBtn" class="btn btn-secondary">🐛 Toggle Debug</button>
+                </div>
+            </section>
+
+            <section id="debugSection" class="card debug-panel" style="display: none;">
+                <h2>🐛 Debug Information</h2>
+                <div class="debug-tabs">
+                    <button class="tab-btn active" data-tab="logs">Parser Logs</button>
+                    <button class="tab-btn" data-tab="performance">Performance</button>
+                    <button class="tab-btn" data-tab="raw">Raw Data</button>
+                </div>
+                <div id="debugContent" class="debug-content">
+                    <div id="logsTab" class="tab-content active">
+                        <div id="parserLogs" class="log-viewer"></div>
+                    </div>
+                    <div id="performanceTab" class="tab-content">
+                        <div id="performanceStats"></div>
+                    </div>
+                    <div id="rawTab" class="tab-content">
+                        <pre id="rawData"></pre>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>G-code Color Mapper v1.0 | Optimized for OrcaSlicer multi-color prints</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
