@@ -36,7 +36,7 @@
           <section id="uploadSection" class="animate-fade-in">
             <h2 class="text-h2 text-gray-900 dark:text-white mb-6 text-center">Upload G-code File</h2>
 
-          <div id="dropZone" class="max-w-2xl mx-auto glass border-2 border-dashed border-white/20 rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 hover:border-vibrant-pink hover:shadow-glow-pink hover:scale-[1.02] group">
+          <div id="dropZone" class="max-w-2xl mx-auto glass rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-16 h-16 mx-auto mb-4 text-white/40 group-hover:text-vibrant-pink transition-colors animate-float">
               <path
                 stroke-linecap="round"
@@ -68,6 +68,12 @@
 
         <!-- Results Section -->
         <section id="resultsSection" class="animate-slide-up" hidden>
+          <!-- File Name Header -->
+          <div class="text-center mb-8">
+            <h2 id="fileName" class="text-white font-black mb-2" style="font-size: 3.5rem; line-height: 1.1;"></h2>
+            <p class="text-white/60">Analysis Complete</p>
+          </div>
+          
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- File Statistics -->
             <div class="card-glass animate-scale-in" style="animation-delay: 0.1s">
@@ -157,6 +163,17 @@
                 ></path>
               </svg>
               Debug Info
+            </button>
+            <button id="clearCacheBtn" class="btn-glass inline-flex items-center gap-2">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                ></path>
+              </svg>
+              Clear Cache
             </button>
           </div>
         </section>

@@ -7,6 +7,7 @@ export class ResultsView extends Component {
   private exportBtn: HTMLElement;
   private newFileBtn: HTMLElement;
   private toggleDebugBtn: HTMLElement;
+  private clearCacheBtn: HTMLElement;
 
   constructor() {
     super('#resultsSection');
@@ -14,8 +15,9 @@ export class ResultsView extends Component {
     const exportBtn = this.element.querySelector('#exportBtn');
     const newFileBtn = this.element.querySelector('#newFileBtn');
     const toggleDebugBtn = this.element.querySelector('#toggleDebugBtn');
+    const clearCacheBtn = this.element.querySelector('#clearCacheBtn');
     
-    if (!exportBtn || !newFileBtn || !toggleDebugBtn) {
+    if (!exportBtn || !newFileBtn || !toggleDebugBtn || !clearCacheBtn) {
       console.error('ResultsView: Required buttons not found');
       return;
     }
@@ -23,6 +25,7 @@ export class ResultsView extends Component {
     this.exportBtn = exportBtn as HTMLElement;
     this.newFileBtn = newFileBtn as HTMLElement;
     this.toggleDebugBtn = toggleDebugBtn as HTMLElement;
+    this.clearCacheBtn = clearCacheBtn as HTMLElement;
     
     this.attachEventListeners();
     this.addMicroInteractions();
@@ -32,13 +35,20 @@ export class ResultsView extends Component {
   protected render(): void {
     const { view, stats, optimization } = this.state;
     
-    console.log('ResultsView render:', { view, hasStats: !!stats, hasOptimization: !!optimization });
+    console.log('ResultsView render:', { 
+      view, 
+      hasStats: !!stats, 
+      hasOptimization: !!optimization,
+      elementHidden: this.element.classList.contains('hidden'),
+      elementHiddenAttr: this.element.hasAttribute('hidden')
+    });
     
     // Show/hide based on view
     this.toggle(view === 'results');
     
     if (view === 'results' && stats && optimization) {
       console.log('Updating results view components');
+      this.updateFileName();
       this.updateFileStats();
       this.updateColorStats();
       this.updateOptimization();
@@ -65,11 +75,27 @@ export class ResultsView extends Component {
     if (this.toggleDebugBtn) {
       this.toggleDebugBtn.addEventListener('click', () => this.emit(AppEvents.DEBUG_TOGGLE));
     }
+    if (this.clearCacheBtn) {
+      this.clearCacheBtn.addEventListener('click', () => this.emit(AppEvents.CLEAR_CACHE));
+    }
+  }
+
+  private updateFileName(): void {
+    const fileNameElement = document.getElementById('fileName');
+    if (fileNameElement && this.state.stats) {
+      fileNameElement.textContent = this.state.stats.fileName;
+      // Add typewriter effect for file name
+      fileNameElement.style.opacity = '0';
+      setTimeout(() => {
+        fileNameElement.style.transition = 'opacity 0.5s ease';
+        fileNameElement.style.opacity = '1';
+      }, 100);
+    }
   }
 
   private addMicroInteractions(): void {
     // Add ripple effect to buttons
-    [this.exportBtn, this.newFileBtn, this.toggleDebugBtn].forEach(btn => {
+    [this.exportBtn, this.newFileBtn, this.toggleDebugBtn, this.clearCacheBtn].forEach(btn => {
       if (btn) {
         addRippleEffect(btn);
         addGlowHover(btn, 'purple');

@@ -11,7 +11,6 @@ const formatFileSize = (bytes: number): string => {
 // File statistics template
 export const fileStatsTemplate = (stats: GcodeStats): string => {
   const items = [
-    { label: 'File Name', value: stats.fileName },
     { label: 'File Size', value: formatFileSize(stats.fileSize) },
     { label: 'Slicer', value: stats.slicerInfo ? `${stats.slicerInfo.software} v${stats.slicerInfo.version}` : 'Unknown' },
     { label: 'Total Layers', value: stats.totalLayers.toString() },
@@ -21,7 +20,7 @@ export const fileStatsTemplate = (stats: GcodeStats): string => {
     { label: 'Parse Time', value: `${stats.parseTime}ms` },
   ];
 
-  return `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+  return `<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
     ${items.map(item => `
       <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform group">
         <div class="text-3xl font-bold gradient-text mb-2 group-hover:animate-pulse">${item.value}</div>

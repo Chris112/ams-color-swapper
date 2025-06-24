@@ -10,4 +10,10 @@ export default defineConfig({
   server: {
     port: 4000,
   },
+  worker: {
+    format: 'es',
+  },
+  optimizeDeps: {
+    exclude: ['src/workers/parserWorker.ts']
+  }
 });

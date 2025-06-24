@@ -39,6 +39,12 @@ export class FileUploader extends Component {
   protected render(): void {
     const { view, isLoading, loadingProgress, loadingMessage } = this.state;
     
+    console.log('FileUploader render:', {
+      view,
+      isLoading,
+      shouldShow: view === 'upload'
+    });
+    
     // Show/hide based on view
     this.toggle(view === 'upload');
     
@@ -79,9 +85,6 @@ export class FileUploader extends Component {
   private addMicroInteractions(): void {
     if (!this.dropZone) return;
 
-    // Add 3D tilt effect to dropzone
-    add3DTiltEffect(this.dropZone, 10);
-
     // Add magnetic effect to button
     const button = this.dropZone.querySelector('button');
     if (button) {
@@ -94,12 +97,57 @@ export class FileUploader extends Component {
     if (icon) {
       icon.classList.add('transition-all', 'duration-300');
     }
+
+    // Track mouse state for border animation
+    let isMouseInside = false;
+
+    // Add border animation on mouse enter/leave
+    this.dropZone.addEventListener('mouseenter', (e) => {
+      isMouseInside = true;
+      this.dropZone!.classList.add('border-active');
+      this.dropZone!.style.boxShadow = '0 0 15px rgba(255, 0, 110, 0.2)';
+      this.dropZone!.style.transition = 'transform 0.2s ease, box-shadow 0.3s ease';
+    });
+
+    this.dropZone.addEventListener('mouseleave', (e) => {
+      isMouseInside = false;
+      this.dropZone!.classList.remove('border-active');
+      this.dropZone!.style.transform = '';
+      this.dropZone!.style.boxShadow = '';
+    });
+
+    // Add mouse tracking for gradient glow and 3D tilt
+    this.dropZone.addEventListener('mousemove', (e) => {
+      if (!isMouseInside) {
+        this.dropZone!.classList.add('border-active');
+        isMouseInside = true;
+      }
+      
+      const rect = this.dropZone!.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 100;
+      const y = ((e.clientY - rect.top) / rect.height) * 100;
+      
+      // Set gradient position
+      this.dropZone!.style.setProperty('--mouse-x', `${x}%`);
+      this.dropZone!.style.setProperty('--mouse-y', `${y}%`);
+      
+      // Add 3D tilt effect
+      const xPercent = (x / 100 - 0.5) * 2; // -1 to 1
+      const yPercent = (y / 100 - 0.5) * 2; // -1 to 1
+      const maxTilt = 10;
+      const xDeg = xPercent * maxTilt;
+      const yDeg = yPercent * maxTilt;
+      
+      this.dropZone!.style.transform = `perspective(1000px) rotateY(${xDeg}deg) rotateX(${-yDeg}deg) scale(1.02)`;
+    });
   }
 
   private handleFileSelect(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files[0]) {
       this.processFile(input.files[0]);
+      // Reset the input value so the same file can be selected again
+      input.value = '';
     }
   }
 

@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['client/**/*.test.ts', 'client/**/*.spec.ts'],
+    include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'dist/'],
