@@ -52,4 +52,5 @@ export const AppEvents = {
   RESET_REQUESTED: 'reset:requested',
   DEBUG_TOGGLE: 'debug:toggle',
   TAB_CHANGE: 'tab:change',
+  CLEAR_CACHE: 'cache:clear',
 } as const;

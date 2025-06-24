@@ -338,7 +338,7 @@ export class GcodeParser {
       };
 
       this.toolChanges.push(change);
-      this.logger.info(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
+      this.logger.debug(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
 
       this.currentTool = tool;
       // Don't update the layer color map here - wait for the layer change

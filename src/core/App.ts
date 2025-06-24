@@ -5,12 +5,16 @@ import { ResultsView } from '../ui/components/ResultsView';
 import { DebugPanel } from '../ui/components/DebugPanel';
 import { GcodeParser } from '../parser/gcodeParser';
 import { Logger } from '../utils/logger';
-import { GcodeStats, OptimizationResult, SlotAssignment } from '../types';
+import { GcodeStats, OptimizationResult, SlotAssignment, LogEntry } from '../types';
+import { gcodeCache } from '../services/GcodeCache';
+import { generateFileHash } from '../utils/hash';
+import { parserWorkerService } from '../services/ParserWorkerService';
 
 export class App {
   private components: any[] = [];
   private logger: Logger;
   private parser: GcodeParser;
+  private useWebWorker = true; // Flag to use Web Worker
 
   constructor() {
     this.logger = new Logger();
@@ -50,29 +54,172 @@ export class App {
       const currentState = appState.getState();
       appState.setState({ debugVisible: !currentState.debugVisible });
     });
+
+    // Clear cache event
+    eventBus.on(AppEvents.CLEAR_CACHE, async () => {
+      try {
+        await gcodeCache.clear();
+        this.logger.info('Cache cleared successfully');
+        // Show a brief success message
+        const btn = document.getElementById('clearCacheBtn');
+        if (btn) {
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Cleared!';
+          btn.classList.add('text-vibrant-teal');
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.remove('text-vibrant-teal');
+          }, 2000);
+        }
+      } catch (error) {
+        this.logger.error('Failed to clear cache', error);
+      }
+    });
   }
 
   private async handleFileSelected(file: File): Promise<void> {
     try {
       // Show loading state
+      appState.setLoading(true, 'Checking cache...', 5);
+
+      // Generate file hash for cache key
+      const cacheKey = await generateFileHash(file);
+      
+      // Check cache first
+      const cachedEntry = await gcodeCache.get(cacheKey);
+      
+      if (cachedEntry) {
+        // Cache hit!
+        this.logger.info(`Cache hit for ${file.name}`);
+        console.log('Using cached results:', { 
+          fileName: cachedEntry.fileName, 
+          cachedAt: new Date(cachedEntry.timestamp).toLocaleString() 
+        });
+        
+        // Log cached data for visualization planning
+        console.log('=== CACHED G-CODE PARSING DATA ===');
+        console.log('File Info:', {
+          fileName: cachedEntry.stats.fileName,
+          fileSize: `${(cachedEntry.stats.fileSize / 1024 / 1024).toFixed(2)} MB`,
+          parseTime: `${cachedEntry.stats.parseTime}ms`
+        });
+        
+        console.log('Slicer Info:', cachedEntry.stats.slicerInfo);
+        
+        console.log('Print Statistics:', {
+          totalLayers: cachedEntry.stats.totalLayers,
+          totalHeight: `${cachedEntry.stats.totalHeight}mm`,
+          estimatedPrintTime: cachedEntry.stats.printTime,
+          printTimeSeconds: cachedEntry.stats.estimatedPrintTime,
+          printCost: cachedEntry.stats.printCost ? `$${cachedEntry.stats.printCost}` : 'Not available'
+        });
+        
+        console.log('Filament Usage:', cachedEntry.stats.filamentUsage);
+        console.log('Filament Estimates by Tool:', cachedEntry.stats.filamentEstimates);
+        
+        console.log('Colors Found:', cachedEntry.stats.colors.map(c => ({
+          id: c.id,
+          name: c.name || 'Unknown',
+          hexColor: c.hexColor,
+          layers: `${c.firstLayer}-${c.lastLayer}`,
+          layerCount: c.layerCount,
+          usage: `${c.usagePercentage}%`
+        })));
+        
+        console.log('Tool Changes:', cachedEntry.stats.toolChanges.map(tc => ({
+          from: tc.fromTool,
+          to: tc.toTool,
+          atLayer: tc.layer,
+          atLine: tc.lineNumber,
+          zHeight: `${tc.zHeight}mm`
+        })));
+        
+        console.log('Layer-Color Map (first 10 layers):', 
+          Array.from(cachedEntry.stats.layerColorMap.entries()).slice(0, 10)
+        );
+        
+        console.log('Color Usage Ranges:', cachedEntry.stats.colorUsageRanges);
+        
+        console.log('Parser Warnings:', cachedEntry.stats.parserWarnings);
+        
+        console.log('Optimization Results:', {
+          totalColors: cachedEntry.optimization.totalColors,
+          requiredSlots: cachedEntry.optimization.requiredSlots,
+          timeSaved: `${cachedEntry.optimization.estimatedTimeSaved} seconds`,
+          slotAssignments: cachedEntry.optimization.slotAssignments,
+          manualSwaps: cachedEntry.optimization.manualSwaps,
+          canShareSlots: cachedEntry.optimization.canShareSlots
+        });
+        
+        console.log('=== END OF CACHED DATA ===');
+        
+        // Show brief loading message
+        appState.setLoading(true, 'Loading from cache...', 100);
+        
+        // Small delay for UI feedback
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Set results which will clear loading and switch view
+        appState.setAnalysisResults(cachedEntry.stats, cachedEntry.optimization, cachedEntry.logs);
+        return;
+      }
+
+      // Cache miss - proceed with parsing
+      this.logger.info(`Cache miss for ${file.name} - parsing file`);
       appState.setLoading(true, 'Reading file...', 10);
 
-      // Simulate progress updates with more granular steps
-      const progressInterval = setInterval(() => {
-        const state = appState.getState();
-        if (state.loadingProgress < 90) {
-          const newProgress = Math.min(state.loadingProgress + 5, 90);
-          const message = newProgress < 30 ? 'Reading file...' : 
-                         newProgress < 60 ? 'Parsing G-code...' : 
-                         'Analyzing colors...';
-          appState.setLoading(true, message, newProgress);
-        }
-      }, 100);
+      let stats: GcodeStats;
+      let logs: LogEntry[];
 
-      // Parse the file
-      const stats = await this.parser.parse(file);
+      // Use Web Worker if available, fallback to main thread
+      if (this.useWebWorker) {
+        try {
+          // Parse using Web Worker for non-blocking operation
+          const result = await parserWorkerService.parse(file, (progress, message) => {
+            appState.setLoading(true, message, progress);
+          });
+          
+          stats = result.stats;
+          logs = result.logs;
+          this.logger.info('Parsed using Web Worker - UI remained responsive');
+        } catch (error) {
+          // Fallback to main thread if Worker fails
+          this.logger.warn('Web Worker failed, falling back to main thread parsing', error);
+          
+          // Use original progress simulation
+          const progressInterval = setInterval(() => {
+            const state = appState.getState();
+            if (state.loadingProgress < 90) {
+              const newProgress = Math.min(state.loadingProgress + 5, 90);
+              const message = newProgress < 30 ? 'Reading file...' : 
+                             newProgress < 60 ? 'Parsing G-code...' : 
+                             'Analyzing colors...';
+              appState.setLoading(true, message, newProgress);
+            }
+          }, 100);
+
+          stats = await this.parser.parse(file);
+          logs = this.logger.getLogs();
+          clearInterval(progressInterval);
+        }
+      } else {
+        // Original main thread parsing
+        const progressInterval = setInterval(() => {
+          const state = appState.getState();
+          if (state.loadingProgress < 90) {
+            const newProgress = Math.min(state.loadingProgress + 5, 90);
+            const message = newProgress < 30 ? 'Reading file...' : 
+                           newProgress < 60 ? 'Parsing G-code...' : 
+                           'Analyzing colors...';
+            appState.setLoading(true, message, newProgress);
+          }
+        }, 100);
+
+        stats = await this.parser.parse(file);
+        logs = this.logger.getLogs();
+        clearInterval(progressInterval);
+      }
       
-      clearInterval(progressInterval);
       appState.setLoading(true, 'Optimizing...', 95);
 
       // Add a small delay to show the final progress
@@ -81,8 +228,68 @@ export class App {
       // Generate optimization
       const optimization = this.createOptimization(stats);
       
-      // Get logs
-      const logs = this.logger.getLogs();
+      // Logs are already retrieved above
+
+      // Log all parsed data for visualization planning
+      console.log('=== COMPLETE G-CODE PARSING DATA ===');
+      console.log('File Info:', {
+        fileName: stats.fileName,
+        fileSize: `${(stats.fileSize / 1024 / 1024).toFixed(2)} MB`,
+        parseTime: `${stats.parseTime}ms`
+      });
+      
+      console.log('Slicer Info:', stats.slicerInfo);
+      
+      console.log('Print Statistics:', {
+        totalLayers: stats.totalLayers,
+        totalHeight: `${stats.totalHeight}mm`,
+        estimatedPrintTime: stats.printTime,
+        printTimeSeconds: stats.estimatedPrintTime,
+        printCost: stats.printCost ? `$${stats.printCost}` : 'Not available'
+      });
+      
+      console.log('Filament Usage:', stats.filamentUsage);
+      console.log('Filament Estimates by Tool:', stats.filamentEstimates);
+      
+      console.log('Colors Found:', stats.colors.map(c => ({
+        id: c.id,
+        name: c.name || 'Unknown',
+        hexColor: c.hexColor,
+        layers: `${c.firstLayer}-${c.lastLayer}`,
+        layerCount: c.layerCount,
+        usage: `${c.usagePercentage}%`
+      })));
+      
+      console.log('Tool Changes:', stats.toolChanges.map(tc => ({
+        from: tc.fromTool,
+        to: tc.toTool,
+        atLayer: tc.layer,
+        atLine: tc.lineNumber,
+        zHeight: `${tc.zHeight}mm`
+      })));
+      
+      console.log('Layer-Color Map (first 10 layers):', 
+        Array.from(stats.layerColorMap.entries()).slice(0, 10)
+      );
+      
+      console.log('Color Usage Ranges:', stats.colorUsageRanges);
+      
+      console.log('Parser Warnings:', stats.parserWarnings);
+      
+      console.log('Optimization Results:', {
+        totalColors: optimization.totalColors,
+        requiredSlots: optimization.requiredSlots,
+        timeSaved: `${optimization.estimatedTimeSaved} seconds`,
+        slotAssignments: optimization.slotAssignments,
+        manualSwaps: optimization.manualSwaps,
+        canShareSlots: optimization.canShareSlots
+      });
+      
+      console.log('=== END OF PARSING DATA ===');
+
+      // Cache the results
+      await gcodeCache.set(cacheKey, file.name, file.size, stats, optimization, logs);
+      this.logger.info(`Results cached for ${file.name}`);
 
       // Show 100% briefly before showing results
       appState.setLoading(true, 'Complete!', 100);
@@ -225,6 +432,9 @@ export class App {
   public destroy(): void {
     // Clean up all components
     this.components.forEach(component => component.destroy());
+    
+    // Clean up Web Worker
+    parserWorkerService.destroy();
     
     // Remove all event listeners
     eventBus.removeAllListeners();

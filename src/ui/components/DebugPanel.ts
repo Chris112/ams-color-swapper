@@ -2,6 +2,7 @@ import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { appState } from '../../state/AppState';
 import { animateNumber, typewriterEffect } from '../../utils/animations';
+import { gcodeCache } from '../../services/GcodeCache';
 
 export class DebugPanel extends Component {
   private tabButtons: NodeListOf<HTMLElement>;
@@ -147,7 +148,7 @@ export class DebugPanel extends Component {
     this.parserLogs.innerHTML = logHtml;
   }
 
-  private updatePerformance(): void {
+  private async updatePerformance(): Promise<void> {
     const { stats } = this.state;
     
     if (!stats) {
@@ -156,6 +157,10 @@ export class DebugPanel extends Component {
     }
     
     const maxLineNumber = stats.toolChanges.reduce((max, tc) => Math.max(max, tc.lineNumber), 0);
+    
+    // Get cache metadata
+    const cacheMetadata = await gcodeCache.getMetadata();
+    const cacheSize = (cacheMetadata.totalSize / 1024).toFixed(1); // Convert to KB
     
     this.performanceStats.innerHTML = `
       <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform animate-scale-in" style="animation-delay: 0ms">
@@ -173,6 +178,14 @@ export class DebugPanel extends Component {
       <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform animate-scale-in" style="animation-delay: 150ms">
         <div class="text-4xl font-bold gradient-text">~${(stats.fileSize / stats.parseTime).toFixed(2)}</div>
         <div class="text-sm text-white/60 uppercase tracking-wider mt-2">KB/ms Parse Speed</div>
+      </div>
+      <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform animate-scale-in" style="animation-delay: 200ms">
+        <div class="text-4xl font-bold gradient-text stat-value" data-value="${cacheMetadata.totalEntries}">0</div>
+        <div class="text-sm text-white/60 uppercase tracking-wider mt-2">Cached Files</div>
+      </div>
+      <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform animate-scale-in" style="animation-delay: 250ms">
+        <div class="text-4xl font-bold gradient-text">${cacheSize}</div>
+        <div class="text-sm text-white/60 uppercase tracking-wider mt-2">Cache Size (KB)</div>
       </div>
     `;
     
