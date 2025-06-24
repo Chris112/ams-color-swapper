@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AMS Color Swapper - G-code Optimizer</title>
+    <style>
+      /* Critical inline styles to prevent layout shift */
+      .upload-area svg {
+        width: 48px;
+        height: 48px;
+        display: block;
+        margin: 0 auto 16px;
+      }
+      .btn svg {
+        width: 20px;
+        height: 20px;
+        margin-right: 8px;
+        display: inline-block;
+        vertical-align: middle;
+      }
+      .hidden {
+        display: none !important;
+      }
+      /* Prevent text size changes */
+      body {
+        font-size: 14px;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mx-auto py-8">
+      <header class="text-center mb-12">
+        <h1 class="text-h1 mb-2">AMS Color Swapper</h1>
+        <p class="text-xl text-brand-blue font-medium mb-4">Optimize every layer</p>
+        <p class="text-base text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+          Smart G-code analyzer and optimizer for multi-color 3D prints using Automatic Material Systems
+        </p>
+      </header>
+
+      <main>
+        <!-- Upload Section -->
+        <section id="uploadSection" class="card max-w-2xl mx-auto mb-8">
+          <h2 class="text-h2 mb-6">Upload G-code File</h2>
+          
+          <div id="dropZone" class="upload-area">
+            <svg class="w-12 h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+            <p class="text-lg font-medium mb-2">Drop your G-code file here</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">or click to browse</p>
+            <button class="btn btn-primary">Select File</button>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-4">Supports .gcode, .gco, .g files up to 200MB</p>
+            <input type="file" id="fileInput" accept=".gcode,.gco,.g" class="hidden" />
+          </div>
+
+          <div id="uploadProgress" class="mt-6 hidden">
+            <div class="progress-bar">
+              <div class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+            <p class="text-center text-sm text-gray-600 dark:text-gray-400 mt-2">Processing...</p>
+          </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- File Statistics -->
+            <div class="card">
+              <h3 class="text-h3 mb-4">File Statistics</h3>
+              <div id="fileStats" class="space-y-4">
+                <!-- Stats will be populated here -->
+              </div>
+            </div>
+
+            <!-- Color Analysis -->
+            <div class="card">
+              <h3 class="text-h3 mb-4">Color Analysis</h3>
+              <div id="colorStats" class="space-y-3 mb-6">
+                <!-- Color swatches will be populated here -->
+              </div>
+              <canvas id="colorTimeline" class="w-full h-40 bg-gray-50 rounded-md"></canvas>
+            </div>
+
+            <!-- Optimization Results -->
+            <div class="card">
+              <h3 class="text-h3 mb-4">Optimization Summary</h3>
+              <div id="optimizationResults" class="space-y-4">
+                <!-- Optimization stats will be populated here -->
+              </div>
+            </div>
+
+            <!-- Swap Instructions -->
+            <div class="card">
+              <h3 class="text-h3 mb-4">Manual Swap Instructions</h3>
+              <div id="swapInstructions" class="space-y-3">
+                <!-- Instructions will be populated here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex justify-center gap-4">
+            <button id="exportBtn" class="btn btn-primary">
+              <svg class="w-5 h-5 mr-2" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Export Instructions
+            </button>
+            <button id="newFileBtn" class="btn btn-secondary">
+              <svg class="w-5 h-5 mr-2" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              </svg>
+              Analyze New File
+            </button>
+            <button id="toggleDebugBtn" class="btn btn-secondary">
+              <svg class="w-5 h-5 mr-2" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+              </svg>
+              Debug Info
+            </button>
+          </div>
+        </section>
+
+        <!-- Debug Section -->
+        <section id="debugSection" class="card mt-8 hidden">
+          <h3 class="text-h3 mb-4">Debug Information</h3>
+          
+          <div class="flex gap-2 mb-4 border-b border-gray-200 dark:border-gray-700">
+            <button class="px-4 py-2 text-sm font-medium text-brand-blue border-b-2 border-brand-blue" data-tab="logs">
+              Parser Logs
+            </button>
+            <button class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" data-tab="performance">
+              Performance
+            </button>
+            <button class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" data-tab="raw">
+              Raw Data
+            </button>
+          </div>
+
+          <div id="debugContent">
+            <div id="logsTab" class="block">
+              <pre id="parserLogs" class="bg-gray-900 text-gray-100 p-4 rounded-md text-sm overflow-auto max-h-96"></pre>
+            </div>
+            <div id="performanceTab" class="hidden">
+              <div id="performanceStats" class="space-y-3">
+                <!-- Performance metrics will be populated here -->
+              </div>
+            </div>
+            <div id="rawTab" class="hidden">
+              <pre id="rawData" class="bg-gray-900 text-gray-100 p-4 rounded-md text-xs overflow-auto max-h-96"></pre>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="text-center mt-16 pt-8 border-t border-gray-200 dark:border-gray-700">
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          AMS Color Swapper v1.0 &bull; Optimize every layer &bull; Print smarter, not harder
+        </p>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>

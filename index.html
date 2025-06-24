@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AMS Color Swapper - G-code Optimizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/main.css">
+  </head>
+  <body class="text-white font-sans min-h-screen">
+    <div class="min-h-screen flex flex-col">
+      <header class="glass-heavy border-b border-white/10">
+        <div class="max-w-container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div class="text-center">
+            <div class="flex items-center justify-center gap-3 mb-2">
+              <div class="w-12 h-12 bg-gradient-neon rounded-2xl flex items-center justify-center shadow-glow-purple animate-pulse-glow">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-8 h-8 text-white">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-12 0v4a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <h1 class="text-h1 gradient-text font-black">AMS Color Swapper</h1>
+            </div>
+            <p class="text-lg font-medium text-vibrant-pink mb-2 animate-pulse">Paint your prints in motion</p>
+            <p class="text-body text-white/70 max-w-2xl mx-auto">
+              Smart G-code analyzer and optimizer for multi-color 3D prints using Automatic Material Systems
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main class="flex-1">
+        <div class="max-w-container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+          <!-- Upload Section -->
+          <section id="uploadSection" class="animate-fade-in">
+            <h2 class="text-h2 text-gray-900 dark:text-white mb-6 text-center">Upload G-code File</h2>
+
+          <div id="dropZone" class="max-w-2xl mx-auto glass border-2 border-dashed border-white/20 rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 hover:border-vibrant-pink hover:shadow-glow-pink hover:scale-[1.02] group">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-16 h-16 mx-auto mb-4 text-white/40 group-hover:text-vibrant-pink transition-colors animate-float">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              ></path>
+            </svg>
+            <p class="text-lg font-medium text-white mb-1">
+              Drop your G-code file here
+            </p>
+            <p class="text-body text-white/60 mb-4">or click to browse</p>
+            <button class="btn-gradient">
+              Select File
+            </button>
+            <p class="text-sm text-white/50 mt-4">
+              Supports .gcode, .gco, .g files up to 200MB
+            </p>
+            <input type="file" id="fileInput" accept=".gcode,.gco,.g" hidden />
+          </div>
+
+          <div id="uploadProgress" class="max-w-2xl mx-auto mt-8" hidden>
+            <div class="progress-bar">
+              <div id="progressBarFill" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+            <p class="text-center text-body text-gray-600 dark:text-gray-400 mt-3">Processing...</p>
+          </div>
+        </section>
+
+        <!-- Results Section -->
+        <section id="resultsSection" class="animate-slide-up" hidden>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- File Statistics -->
+            <div class="card-glass animate-scale-in" style="animation-delay: 0.1s">
+              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-blue">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                File Statistics
+              </h3>
+              <div id="fileStats" class="space-y-3">
+                <!-- Stats will be populated here -->
+              </div>
+            </div>
+
+            <!-- Color Analysis -->
+            <div class="card-glass animate-scale-in" style="animation-delay: 0.2s">
+              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-purple">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-12 0v4a2 2 0 002 2z"></path>
+                </svg>
+                Color Analysis
+              </h3>
+              <div id="colorStats" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+                <!-- Color swatches will be populated here -->
+              </div>
+              <canvas id="colorTimeline" class="w-full h-32 rounded-xl glass"></canvas>
+            </div>
+
+            <!-- Optimization Results -->
+            <div class="card-glass animate-scale-in" style="animation-delay: 0.3s">
+              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-orange">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                </svg>
+                Optimization Summary
+              </h3>
+              <div id="optimizationResults" class="space-y-3">
+                <!-- Optimization stats will be populated here -->
+              </div>
+            </div>
+
+            <!-- Swap Instructions -->
+            <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
+              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-green">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                </svg>
+                Manual Swap Instructions
+              </h3>
+              <div id="swapInstructions" class="space-y-2">
+                <!-- Instructions will be populated here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex flex-wrap gap-3 mt-8 justify-center">
+            <button id="exportBtn" class="btn-gradient inline-flex items-center gap-2">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                ></path>
+              </svg>
+              Export Instructions
+            </button>
+            <button id="newFileBtn" class="btn-glass inline-flex items-center gap-2">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 4v16m8-8H4"
+                ></path>
+              </svg>
+              Analyze New File
+            </button>
+            <button id="toggleDebugBtn" class="btn-glass inline-flex items-center gap-2">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                ></path>
+              </svg>
+              Debug Info
+            </button>
+          </div>
+        </section>
+
+        <!-- Debug Section -->
+        <section id="debugSection" class="mt-8 animate-slide-up" hidden>
+          <div class="card-glass">
+            <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-blue">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+              </svg>
+              Debug Information
+            </h3>
+
+            <div class="flex gap-2 mb-4 border-b border-white/10">
+              <button data-tab="logs" class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-pink transition-all duration-300">Parser Logs</button>
+              <button data-tab="performance" class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-purple transition-all duration-300">Performance</button>
+              <button data-tab="raw" class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-blue transition-all duration-300">Raw Data</button>
+            </div>
+
+            <div id="debugContent">
+              <div id="logsTab" class="glass rounded-xl p-4 overflow-x-auto">
+                <pre id="parserLogs" class="text-code font-mono text-white/80"></pre>
+              </div>
+              <div id="performanceTab" class="bg-gray-900 rounded-sm p-4" hidden>
+                <div id="performanceStats" class="space-y-2 text-code font-mono text-gray-300">
+                  <!-- Performance metrics will be populated here -->
+                </div>
+              </div>
+              <div id="rawTab" class="bg-gray-900 rounded-sm p-4 overflow-x-auto" hidden>
+                <pre id="rawData" class="text-code font-mono text-gray-300"></pre>
+              </div>
+            </div>
+          </div>
+        </section>
+        </div>
+      </main>
+
+      <footer class="glass-heavy border-t border-white/10 mt-auto">
+        <div class="max-w-container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <p class="text-center text-body text-white/60">
+            <span class="gradient-text font-semibold">AMS Color Swapper</span> v1.0 &bull; Paint your prints in motion &bull; Print smarter, not harder
+          </p>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/app.ts"></script>
+  </body>
+</html>

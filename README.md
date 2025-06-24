@@ -20,6 +20,7 @@ A sophisticated G-code analyzer and optimizer for multi-color 3D prints using Au
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Node.js 18 or higher
 - npm or yarn
 
@@ -51,18 +52,21 @@ The application will be available at `http://localhost:3000`
 ## 🛠️ Technical Details
 
 ### Architecture
+
 - **Frontend**: Vanilla JavaScript with modern ES6+ features
 - **Backend**: Express.js server with TypeScript
 - **Parser**: Custom G-code parser optimized for multi-color prints
 - **Optimizer**: Graph-based algorithm for slot assignment
 
 ### Key Components
+
 - `src/parser/gcodeParser.ts` - Core G-code parsing logic
 - `src/optimizer/colorOptimizer.ts` - Slot assignment algorithm
 - `src/parser/enhancedGcodeParser.ts` - Stream-based parser with advanced features
 - `public/js/app.js` - Frontend application logic
 
 ### Supported G-code Features
+
 - Layer detection (multiple formats)
 - Tool change commands (T0-T15)
 - Bambu Lab AMS commands (M620/M621)
@@ -72,6 +76,7 @@ The application will be available at `http://localhost:3000`
 ## 🎨 How It Works
 
 The optimizer uses a sophisticated algorithm to:
+
 1. Analyze color usage patterns across layers
 2. Build a conflict graph of overlapping colors
 3. Find optimal slot assignments using graph coloring

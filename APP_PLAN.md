@@ -1,11 +1,13 @@
 # G-code Color Mapping Tool - Implementation Plan
 
 ## Project Overview
+
 Build a TypeScript/Node.js web application that analyzes multi-color G-code files from OrcaSlicer and optimizes AMS (Automatic Material System) slot assignments to minimize manual filament swaps during 3D printing.
 
 ## Key Features
 
 ### 1. G-code Analysis with Detailed Statistics
+
 - Parse multi-color G-code with tool changes
 - Extract color/filament information from OrcaSlicer metadata
 - Map colors to layer ranges
@@ -19,6 +21,7 @@ Build a TypeScript/Node.js web application that analyzes multi-color G-code file
   - Color overlap analysis (which colors never print simultaneously)
 
 ### 2. AMS Optimization Algorithm
+
 - For ≤4 colors: Direct 1:1 mapping to AMS slots
 - For >4 colors: Smart slot sharing recommendations
 - Calculate optimal pause layers for manual swaps
@@ -26,6 +29,7 @@ Build a TypeScript/Node.js web application that analyzes multi-color G-code file
 - Consider print order and color frequency
 
 ### 3. Debug & Transparency Features
+
 - Raw G-code preview with syntax highlighting
 - Tool change visualization timeline
 - Debug console showing parser decisions
@@ -36,6 +40,7 @@ Build a TypeScript/Node.js web application that analyzes multi-color G-code file
 ## Technical Implementation
 
 ### G-code Parser Output Statistics
+
 ```typescript
 interface GcodeStats {
   // File metadata
@@ -46,30 +51,30 @@ interface GcodeStats {
     version: string;
     profile?: string;
   };
-  
+
   // Print statistics
   totalLayers: number;
   totalHeight: number;
   estimatedPrintTime?: number;
-  
+
   // Color information
   colors: ColorInfo[];
   toolChanges: ToolChange[];
   layerColorMap: Map<number, string>;
   colorUsageRanges: ColorRange[];
-  
+
   // Filament data
   filamentEstimates?: FilamentUsage[];
-  
+
   // Debug info
   parserWarnings: string[];
   parseTime: number;
 }
 
 interface ColorInfo {
-  id: string;           // T0, T1, etc.
-  name?: string;        // User-defined color name
-  hexColor?: string;    // Color code if available
+  id: string; // T0, T1, etc.
+  name?: string; // User-defined color name
+  hexColor?: string; // Color code if available
   firstLayer: number;
   lastLayer: number;
   layerCount: number;
@@ -80,7 +85,7 @@ interface ColorRange {
   colorId: string;
   startLayer: number;
   endLayer: number;
-  continuous: boolean;  // If color is used continuously in this range
+  continuous: boolean; // If color is used continuously in this range
 }
 
 interface ToolChange {
@@ -92,6 +97,7 @@ interface ToolChange {
 ```
 
 ### Color Analysis Report Features
+
 - Interactive color usage timeline graph
 - Overlap matrix showing which colors can share slots
 - Optimization recommendations with detailed rationale
@@ -99,6 +105,7 @@ interface ToolChange {
 - Estimated time savings vs. no optimization
 
 ### Debug Console Features
+
 - Real-time parsing progress indicator
 - Tool change detection logs with line numbers
 - Color assignment decision explanations
@@ -106,6 +113,7 @@ interface ToolChange {
 - Warning/error highlighting for problematic G-code
 
 ## File Structure
+
 ```
 gcoder/
 ├── APP_PLAN.md              # This planning document
@@ -145,12 +153,14 @@ gcoder/
 ## User Interface Components
 
 ### 1. Main Dashboard
+
 - **Upload Area**: Drag-and-drop zone for G-code files
 - **Analysis Progress**: Real-time progress bar with status messages
 - **Quick Stats**: Summary cards showing key metrics
 - **Recent Files**: History of analyzed files (localStorage)
 
 ### 2. Statistics Panel
+
 - **File Information**
   - Filename, size, upload time
   - Detected slicer and version
@@ -170,6 +180,7 @@ gcoder/
   - Tool change markers
 
 ### 3. Optimization Panel
+
 - **AMS Slot Assignment**
   - Drag-and-drop color to slot interface
   - Auto-assign button with algorithm selection
@@ -185,6 +196,7 @@ gcoder/
   - Share optimization via link
 
 ### 4. Debug Panel (Collapsible)
+
 - **Parser Log Viewer**
   - Scrollable log with timestamps
   - Filter by log level (info/warn/error)
@@ -242,6 +254,7 @@ gcoder/
    - Add example files
 
 ## Future Enhancements
+
 - Support for other slicers (PrusaSlicer, Cura)
 - Cloud storage for analysis history
 - Community sharing of optimizations
@@ -250,6 +263,7 @@ gcoder/
 - Machine learning for optimization improvements
 
 ## Success Metrics
+
 - Parse 100MB G-code file in <5 seconds
 - Reduce manual swaps by >50% for 6+ color prints
 - Clear visual representation of color usage

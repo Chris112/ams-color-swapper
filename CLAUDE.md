@@ -1,130 +1,142 @@
-# CLAUDE.md - G-code Color Mapper Development Guide
+# CLAUDE.md
 
-## Project Overview
-G-code Color Mapper is a TypeScript/Node.js web application that analyzes multi-color G-code files from OrcaSlicer and optimizes AMS (Automatic Material System) slot assignments to minimize manual filament swaps during 3D printing.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Key Commands
+## ⚠️ CRITICAL: Tailwind CSS v4 Usage
 
-### Development
+**This project uses Tailwind CSS v4 - DO NOT use v3 syntax!**
+
+### Key Differences:
+1. **NO @apply with custom colors** - Use direct CSS properties instead
+   ```css
+   /* ❌ WRONG - This will cause errors */
+   .my-class {
+     @apply bg-brand-blue from-brand-purple;
+   }
+   
+   /* ✅ CORRECT - Use CSS properties */
+   .my-class {
+     background-color: #0070F3;
+     background: linear-gradient(to right, #0070F3, #8B5CF6);
+   }
+   ```
+
+2. **Custom colors ARE available in HTML** - Use them directly in class names
+   ```html
+   <!-- ✅ CORRECT - These work in HTML -->
+   <div class="bg-brand-blue text-brand-purple border-brand-teal">
+   ```
+
+3. **@apply is ONLY for built-in Tailwind utilities**
+   ```css
+   /* ✅ CORRECT - Built-in utilities work */
+   .my-class {
+     @apply relative w-full rounded-md;
+   }
+   ```
+
+4. **Import syntax** - Use `@import 'tailwindcss'` not old directives
+
+## Development Commands
+
+Run these commands from the project root:
+
 ```bash
-npm install        # Install dependencies
-npm run dev       # Start development server with hot reload (tsx watch)
-npm run build     # Build TypeScript to JavaScript
-npm start         # Run production server
-npm test          # Run tests (not yet implemented)
+# Start development server on port 4000
+npm run dev
+
+# Run tests in watch mode
+npm test
+
+# Run tests once (CI mode)
+npm run test:run
+
+# Run tests with UI
+npm run test:ui
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Format code
+npm run format
+
+# Check formatting
+npm run format:check
 ```
 
-### Server Details
-- Development: Uses `tsx watch src/server.ts` for hot reload
-- Production: Compiles to `dist/` and runs `node dist/server.js`
-- Default port: 3000 (http://localhost:3000)
+## Architecture Overview
 
-## Technical Architecture
+This is a client-side G-code analyzer application built with TypeScript and Vite. All processing happens in the browser with no backend server required.
 
-### Technology Stack
-- **Backend**: Node.js with Express 5.1.0, TypeScript
-- **Parser**: Uses gcode-parser library for base parsing
-- **File Upload**: Multer for handling file uploads
-- **Development**: tsx for TypeScript execution, nodemon available
+### Key Components
 
-### TypeScript Configuration
-- Target: ES2020
-- Module: CommonJS
-- Strict mode enabled
-- Source maps and declarations enabled
-- Root: `./src`, Output: `./dist`
+1. **GcodeAnalyzer** (`src/app.ts`): Main application controller that manages:
+   - File upload handling
+   - UI state management
+   - Result display and export
+   - DOM interactions
+
+2. **GcodeParser** (`src/parser/gcodeParser.ts`): Core parsing engine that:
+   - Extracts colors and filament changes from G-code
+   - Identifies layers and tool changes
+   - Calculates print statistics
+   - Handles multiple slicer formats (OrcaSlicer, Bambu Lab, etc.)
+
+3. **EnhancedGcodeParser** (`src/parser/enhancedParser.ts`): Advanced streaming parser with:
+   - Event-driven architecture for real-time progress
+   - Memory-efficient processing for large files
+   - Based on best practices from gcode-parser library
 
 ### Project Structure
+
 ```
 src/
-├── server.ts           # Express server setup
-├── routes/
-│   ├── upload.ts       # File upload handling
-│   └── analyze.ts      # Analysis API endpoints
-├── parser/
-│   ├── gcodeParser.ts  # Main G-code parsing logic
-│   ├── enhancedGcodeParser.ts  # Enhanced parser implementation
-│   ├── statistics.ts   # Statistics calculation
-│   └── colorExtractor.ts # Color/tool change detection
-├── optimizer/
-│   └── colorOptimizer.ts # Slot optimization algorithm
-├── debug/
-│   └── logger.ts       # Debug logging system
-└── types/
-    └── index.ts        # TypeScript type definitions
+├── app.ts                 # Main application entry point
+├── parser/               # G-code parsing logic
+│   ├── gcodeParser.ts    # Core parser
+│   ├── enhancedParser.ts # Streaming parser
+│   ├── colorExtractor.ts # Color extraction utilities
+│   └── statistics.ts     # Statistics calculations
+├── types/index.ts        # All TypeScript interfaces
+└── utils/               # Utility functions
+    ├── fileReader.ts    # File reading utilities
+    └── logger.ts        # Debug logging system
 ```
 
-## API Endpoints
-- `POST /api/upload` - Upload G-code file (max 200MB)
-- `POST /api/analyze/:fileId` - Analyze uploaded file
-- `GET /api/health` - Health check
+## Testing Approach
 
-## Important Technical Constraints
+- Tests use Vitest with JSDOM environment
+- Test files are in `__tests__` directories within each module
+- Test fixtures with real G-code files are in `src/parser/__tests__/fixtures/`
+- Run a specific test file: `npm test src/parser/__tests__/gcodeParser.test.ts`
 
-### File Handling
-- Maximum upload size: 200MB
-- Supported formats: .gcode, .gco, .g
-- Files stored temporarily in `uploads/` directory
+## Important Design Decisions
 
-### Performance Requirements
-- Parse 100MB G-code file in <5 seconds
-- Export instructions in <1 second
-- Real-time parsing progress indicators
+1. **Client-Side Only**: All processing happens in the browser. There's no server component.
 
-### Color Optimization Logic
-- **≤4 colors**: Direct 1:1 mapping to AMS slots
-- **>4 colors**: Smart slot sharing based on:
-  - Non-overlapping layer ranges
-  - Optimal pause points for manual swaps
-  - Minimum user intervention
+2. **TypeScript Strict Mode**: The codebase uses strict TypeScript. All data structures have comprehensive type definitions in `src/types/index.ts`.
 
-## Key Features to Implement
+3. **Event-Driven Parsing**: The enhanced parser uses events for progress updates, allowing real-time UI feedback during large file processing.
 
-### G-code Analysis Output
-- Total layers and height
-- Color count with names/identifiers
-- Layer ranges per color (start/end)
-- Tool change locations
-- Filament usage estimates
-- Color overlap analysis
+4. **Styling**: Uses Tailwind CSS v4 (NOT v3!) with a custom dark theme. The app is dark mode by default (`class="dark"` on HTML element). See the critical Tailwind v4 notes at the top of this file.
 
-### Debug Features
-- Raw G-code preview with syntax highlighting
-- Tool change visualization timeline
-- Parser decision logs
-- Export analysis as JSON/CSV
+5. **Build System**: Vite handles both development and production builds with automatic optimization.
 
-### Optimization Features
-- Interactive slot assignment
-- Step-by-step swap instructions
-- Exact layer numbers for pauses
-- Time savings calculations
+## Common Tasks
 
-## Development Practices
+### Adding a New Parser Feature
+1. Update the type definitions in `src/types/index.ts`
+2. Implement the feature in `src/parser/gcodeParser.ts`
+3. Add corresponding tests in `src/parser/__tests__/`
+4. Update the UI in `src/app.ts` to display the new data
 
-### Parser Implementation
-- Line-by-line parsing for large files
-- Tool change detection (T0, T1, etc.)
-- Layer tracking (Z-height changes)
-- OrcaSlicer metadata extraction
+### Modifying the UI
+1. The main HTML structure is in `index.html`
+2. Dynamic UI updates are handled in `src/app.ts`
+3. Styles use Tailwind classes - check `tailwind.config.js` for custom theme
 
-### Error Handling
-- Comprehensive logging with debug levels
-- Parser warnings for problematic G-code
-- Graceful handling of malformed files
-
-### Testing Approach
-- Use sample.gcode for development testing
-- Test with files up to 200MB
-- Verify multi-color scenarios (>4 colors)
-- Performance benchmarking
-
-## Browser Compatibility
-- Modern browsers with ES6+ support
-- Chrome, Firefox, Safari, Edge
-
-## Future Considerations
-- Support for other slicers (PrusaSlicer, Cura)
-- Cloud storage integration
-- Mobile app version
-- OctoPrint/Klipper integration
+### Working with Test Fixtures
+Test G-code files are stored in `src/parser/__tests__/fixtures/`. When adding new test cases, place sample G-code files here and reference them in your tests.
