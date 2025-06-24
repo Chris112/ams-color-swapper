@@ -4,61 +4,38 @@ export function extractColorInfo(
   colorFirstSeen: Map<string, number>,
   colorLastSeen: Map<string, number>,
   totalLayers: number,
-  layerColorMap?: Map<number, string>
+  layerColorMap: Map<number, string>
 ): ColorInfo[] {
   const colors: ColorInfo[] = [];
 
-  // If we have a layer-by-layer map, use it for accurate counting
-  if (layerColorMap) {
-    const colorLayerCounts = new Map<string, Set<number>>();
-    
-    // Count actual layers where each color is used
-    for (const [layer, tool] of layerColorMap.entries()) {
-      if (!colorLayerCounts.has(tool)) {
-        colorLayerCounts.set(tool, new Set());
-      }
-      colorLayerCounts.get(tool)!.add(layer);
-    }
-    
-    // Build color info from actual usage
-    for (const [toolId, layers] of colorLayerCounts.entries()) {
-      const layerArray = Array.from(layers).sort((a, b) => a - b);
-      const firstLayer = layerArray[0];
-      const lastLayer = layerArray[layerArray.length - 1];
-      
-      colors.push({
-        id: toolId,
-        name: getColorName(toolId),
-        hexColor: getColorHex(toolId),
-        firstLayer,
-        lastLayer,
-        layerCount: layers.size,
-        usagePercentage: (layers.size / Math.max(totalLayers, 1)) * 100
-      });
-    }
-  } else {
-    // Fallback to old method
-    for (const [toolId, firstLayer] of colorFirstSeen.entries()) {
-      const lastLayer = colorLastSeen.get(toolId) || firstLayer;
-      const layerCount = lastLayer - firstLayer + 1;
-      
-      colors.push({
-        id: toolId,
-        name: getColorName(toolId),
-        hexColor: getColorHex(toolId),
-        firstLayer,
-        lastLayer,
-        layerCount,
-        usagePercentage: (layerCount / Math.max(totalLayers, 1)) * 100
-      });
-    }
+  // Count layers per color
+  const layerCounts = new Map<string, number>();
+  for (const [layer, color] of layerColorMap) {
+    layerCounts.set(color, (layerCounts.get(color) || 0) + 1);
   }
 
-  return colors.sort((a, b) => {
+  for (const [colorId, firstLayer] of colorFirstSeen) {
+    const lastLayer = colorLastSeen.get(colorId) || firstLayer;
+    const layerCount = layerCounts.get(colorId) || 0;
+
+    colors.push({
+      id: colorId,
+      name: `Color ${parseInt(colorId.substring(1)) + 1}`,
+      firstLayer,
+      lastLayer,
+      layerCount,
+      usagePercentage: totalLayers > 0 ? (layerCount / totalLayers) * 100 : 0,
+    });
+  }
+
+  // Sort by tool number
+  colors.sort((a, b) => {
     const toolA = parseInt(a.id.substring(1));
     const toolB = parseInt(b.id.substring(1));
     return toolA - toolB;
   });
+
+  return colors;
 }
 
 export function extractColorRanges(
@@ -69,64 +46,38 @@ export function extractColorRanges(
   let currentColor: string | null = null;
   let rangeStart = 0;
 
+  // Process layers in order
   for (let layer = 0; layer <= totalLayers; layer++) {
-    const color = layerColorMap.get(layer) || null;
-    
+    const color = layerColorMap.get(layer);
+
     if (color !== currentColor) {
+      // End previous range
       if (currentColor !== null && layer > 0) {
         ranges.push({
           colorId: currentColor,
           startLayer: rangeStart,
           endLayer: layer - 1,
-          continuous: true
+          continuous: true,
         });
       }
-      
-      if (color !== null) {
+
+      // Start new range
+      if (color) {
         currentColor = color;
         rangeStart = layer;
       }
     }
   }
 
+  // Add final range
   if (currentColor !== null) {
     ranges.push({
       colorId: currentColor,
       startLayer: rangeStart,
       endLayer: totalLayers,
-      continuous: true
+      continuous: true,
     });
   }
 
   return ranges;
-}
-
-function getColorName(toolId: string): string {
-  const colorNames: { [key: string]: string } = {
-    'T0': 'Color 1',
-    'T1': 'Color 2',
-    'T2': 'Color 3',
-    'T3': 'Color 4',
-    'T4': 'Color 5',
-    'T5': 'Color 6',
-    'T6': 'Color 7',
-    'T7': 'Color 8'
-  };
-  
-  return colorNames[toolId] || `Color ${toolId}`;
-}
-
-function getColorHex(toolId: string): string {
-  const colorHexes: { [key: string]: string } = {
-    'T0': '#E74C3C',
-    'T1': '#3498DB', 
-    'T2': '#2ECC71',
-    'T3': '#F39C12',
-    'T4': '#9B59B6',
-    'T5': '#1ABC9C',
-    'T6': '#34495E',
-    'T7': '#E67E22'
-  };
-  
-  return colorHexes[toolId] || '#95A5A6';
 }

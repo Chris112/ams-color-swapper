@@ -7,18 +7,27 @@ export interface GcodeStats {
     profile?: string;
     colorDefinitions?: string[];
   };
-  
+
   totalLayers: number;
   totalHeight: number;
   estimatedPrintTime?: number;
-  
+  printTime?: string;
+  printCost?: number;
+
   colors: ColorInfo[];
   toolChanges: ToolChange[];
   layerColorMap: Map<number, string>;
   colorUsageRanges: ColorRange[];
-  
+
   filamentEstimates?: FilamentUsage[];
-  
+  filamentUsage?: {
+    total: number;
+    model: number;
+    support: number;
+    flushed: number;
+    tower: number;
+  };
+
   parserWarnings: string[];
   parseTime: number;
 }

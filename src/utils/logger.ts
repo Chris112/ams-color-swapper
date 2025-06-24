@@ -2,37 +2,36 @@ import { DebugLog } from '../types';
 
 export class Logger {
   private logs: DebugLog[] = [];
-  private enabled: boolean = true;
+  private enabled: boolean;
 
   constructor(enabled: boolean = true) {
     this.enabled = enabled;
   }
 
-  private log(level: DebugLog['level'], message: string, context?: any) {
+  private log(level: 'info' | 'warn' | 'error' | 'debug', message: string, context?: any) {
     const log: DebugLog = {
       timestamp: Date.now(),
       level,
       message,
-      context
+      context,
     };
 
     this.logs.push(log);
 
     if (this.enabled) {
-      const prefix = `[${new Date().toISOString()}] [${level.toUpperCase()}]`;
-      
       switch (level) {
-        case 'error':
-          console.error(prefix, message, context || '');
+        case 'info':
+          console.log(`[INFO] ${message}`, context || '');
           break;
         case 'warn':
-          console.warn(prefix, message, context || '');
+          console.warn(`[WARN] ${message}`, context || '');
+          break;
+        case 'error':
+          console.error(`[ERROR] ${message}`, context || '');
           break;
         case 'debug':
-          console.debug(prefix, message, context || '');
+          console.debug(`[DEBUG] ${message}`, context || '');
           break;
-        default:
-          console.log(prefix, message, context || '');
       }
     }
   }
@@ -54,14 +53,14 @@ export class Logger {
   }
 
   getLogs(): DebugLog[] {
-    return [...this.logs];
+    return this.logs;
   }
 
-  clear() {
+  clearLogs() {
     this.logs = [];
   }
 
-  export(): string {
-    return JSON.stringify(this.logs, null, 2);
+  setEnabled(enabled: boolean) {
+    this.enabled = enabled;
   }
 }
