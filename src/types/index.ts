@@ -1,6 +1,7 @@
 export interface GcodeStats {
   fileName: string;
   fileSize: number;
+  rawContent?: string; // Add raw G-code content for geometry parsing
   slicerInfo?: {
     software: string;
     version: string;
@@ -99,5 +100,14 @@ export interface DebugLog {
   timestamp: number;
   level: 'info' | 'warn' | 'error' | 'debug';
   message: string;
-  context?: any;
+  context?: unknown;
 }
+
+// Alias for consistency across the codebase
+export type LogEntry = DebugLog;
+
+// Re-export error types
+export * from './errors';
+
+// Re-export Result type
+export * from './result';

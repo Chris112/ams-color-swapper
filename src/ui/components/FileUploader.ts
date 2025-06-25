@@ -1,6 +1,6 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
-import { appState } from '../../state/AppState';
+import { appState, AppStateData } from '../../state/AppState';
 import { addMagneticEffect, addGlowHover, add3DTiltEffect } from '../../utils/animations';
 
 export class FileUploader extends Component {
@@ -60,7 +60,7 @@ export class FileUploader extends Component {
     }
   }
 
-  protected shouldUpdate(oldState: any, newState: any): boolean {
+  protected shouldUpdate(oldState: AppStateData, newState: AppStateData): boolean {
     return (
       oldState.view !== newState.view ||
       oldState.isLoading !== newState.isLoading ||

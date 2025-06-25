@@ -1,5 +1,5 @@
 import { appState, AppStateData, StateListener } from '../state/AppState';
-import { eventBus } from './EventEmitter';
+import { eventBus, AppEventKey, AppEventMap } from './EventEmitter';
 
 export abstract class Component {
   protected element: HTMLElement;
@@ -42,11 +42,11 @@ export abstract class Component {
     return true;
   }
 
-  protected emit(event: string, data?: any): void {
+  protected emit<K extends AppEventKey>(event: K, data?: AppEventMap[K]): void {
     eventBus.emit(event, data);
   }
 
-  protected on(event: string, handler: (data: any) => void): () => void {
+  protected on<K extends AppEventKey>(event: K, handler: (data: AppEventMap[K]) => void): () => void {
     return eventBus.on(event, handler);
   }
 

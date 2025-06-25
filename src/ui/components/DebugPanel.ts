@@ -1,6 +1,6 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
-import { appState } from '../../state/AppState';
+import { appState, AppStateData } from '../../state/AppState';
 import { animateNumber, typewriterEffect } from '../../utils/animations';
 import { gcodeCache } from '../../services/GcodeCache';
 
@@ -50,7 +50,7 @@ export class DebugPanel extends Component {
     }
   }
 
-  protected shouldUpdate(oldState: any, newState: any): boolean {
+  protected shouldUpdate(oldState: AppStateData, newState: AppStateData): boolean {
     return (
       oldState.debugVisible !== newState.debugVisible ||
       oldState.debugTab !== newState.debugTab ||

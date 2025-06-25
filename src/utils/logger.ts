@@ -8,7 +8,7 @@ export class Logger {
     this.enabled = enabled;
   }
 
-  private log(level: 'info' | 'warn' | 'error' | 'debug', message: string, context?: any) {
+  private log(level: 'info' | 'warn' | 'error' | 'debug', message: string, context?: unknown) {
     const log: DebugLog = {
       timestamp: Date.now(),
       level,
@@ -36,19 +36,19 @@ export class Logger {
     }
   }
 
-  info(message: string, context?: any) {
+  info(message: string, context?: unknown) {
     this.log('info', message, context);
   }
 
-  warn(message: string, context?: any) {
+  warn(message: string, context?: unknown) {
     this.log('warn', message, context);
   }
 
-  error(message: string, context?: any) {
+  error(message: string, context?: unknown) {
     this.log('error', message, context);
   }
 
-  debug(message: string, context?: any) {
+  debug(message: string, context?: unknown) {
     this.log('debug', message, context);
   }
 

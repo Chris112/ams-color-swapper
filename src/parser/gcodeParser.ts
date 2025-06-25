@@ -40,6 +40,9 @@ export class GcodeParser {
     this.updateColorSeen(this.currentTool, 0);
 
     const reader = new BrowserFileReader(file);
+    
+    // Store raw content for geometry parsing
+    this.stats.rawContent = await file.text();
 
     await this.processLines(reader);
 

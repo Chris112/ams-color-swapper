@@ -3,34 +3,112 @@ import { eventBus, AppEvents } from './EventEmitter';
 import { FileUploader } from '../ui/components/FileUploader';
 import { ResultsView } from '../ui/components/ResultsView';
 import { DebugPanel } from '../ui/components/DebugPanel';
-import { GcodeParser } from '../parser/gcodeParser';
+import { FactoryFloorUI } from '../ui/components/FactoryFloorUI';
 import { Logger } from '../utils/logger';
-import { GcodeStats, OptimizationResult, SlotAssignment, LogEntry } from '../types';
-import { gcodeCache } from '../services/GcodeCache';
-import { generateFileHash } from '../utils/hash';
+import { Component } from './Component';
 import { parserWorkerService } from '../services/ParserWorkerService';
 
+// Factory Floor Components
+import { FactoryFloorScene } from '../ui/components/factory/FactoryFloorScene';
+import { FactoryFloorService } from '../services/FactoryFloorService';
+
+// Services
+import { FileProcessingService } from '../services/FileProcessingService';
+import { OptimizationService } from '../services/OptimizationService';
+import { ExportService } from '../services/ExportService';
+
+// Repositories
+import { 
+  GcodeRepository, 
+  CacheRepository, 
+  FileRepository,
+  ICacheRepository 
+} from '../repositories';
+
+// Commands
+import { 
+  CommandExecutor,
+  AnalyzeFileCommand,
+  ExportResultsCommand,
+  ClearCacheCommand,
+  ExportFormat
+} from '../commands';
+
 export class App {
-  private components: any[] = [];
+  private components: Component[] = [];
   private logger: Logger;
-  private parser: GcodeParser;
-  private useWebWorker = true; // Flag to use Web Worker
+  
+  // Services
+  private fileProcessingService: FileProcessingService;
+  private optimizationService: OptimizationService;
+  private exportService: ExportService;
+  
+  // Repositories
+  private gcodeRepository: GcodeRepository;
+  private cacheRepository: ICacheRepository;
+  private fileRepository: FileRepository;
+  
+  // Command executor
+  private commandExecutor: CommandExecutor;
+  
+  // Factory Floor
+  private factoryFloorScene: FactoryFloorScene | null = null;
+  private factoryFloorService: FactoryFloorService | null = null;
+  private factoryFloorUI: FactoryFloorUI | null = null;
+  private currentView: 'analysis' | 'factory' = 'analysis';
 
   constructor() {
     this.logger = new Logger();
-    this.parser = new GcodeParser(this.logger);
     
+    // Initialize repositories
+    this.gcodeRepository = new GcodeRepository();
+    this.cacheRepository = new CacheRepository();
+    this.fileRepository = new FileRepository();
+    
+    // Initialize services
+    this.fileProcessingService = new FileProcessingService(
+      this.gcodeRepository,
+      this.fileRepository,
+      this.cacheRepository,
+      this.logger
+    );
+    
+    this.optimizationService = new OptimizationService();
+    
+    this.exportService = new ExportService(
+      this.fileRepository,
+      this.optimizationService
+    );
+    
+    // Initialize command executor
+    this.commandExecutor = new CommandExecutor(this.logger);
+    
+    // Initialize UI components
     this.initializeComponents();
     this.attachEventListeners();
+    
+    // Initialize cache
+    this.initializeCache();
+  }
+
+  private async initializeCache(): Promise<void> {
+    const result = await this.cacheRepository.initialize();
+    if (!result.ok) {
+      this.logger.error('Failed to initialize cache', result.error);
+    }
   }
 
   private initializeComponents(): void {
-    // Initialize all components
     this.components = [
       new FileUploader(),
       new ResultsView(),
       new DebugPanel(),
     ];
+    
+    // Initialize factory floor UI separately when needed
+    this.factoryFloorUI = new FactoryFloorUI();
+    // Initialize factory floor UI immediately so button listeners work
+    this.factoryFloorUI.initialize();
   }
 
   private attachEventListeners(): void {
@@ -40,13 +118,13 @@ export class App {
     });
 
     // Export requested event
-    eventBus.on(AppEvents.EXPORT_REQUESTED, () => {
-      this.exportResults();
+    eventBus.on(AppEvents.EXPORT_REQUESTED, async () => {
+      await this.handleExportRequest();
     });
 
     // Reset requested event
     eventBus.on(AppEvents.RESET_REQUESTED, () => {
-      this.reset();
+      this.handleReset();
     });
 
     // Debug toggle event
@@ -57,379 +135,384 @@ export class App {
 
     // Clear cache event
     eventBus.on(AppEvents.CLEAR_CACHE, async () => {
-      try {
-        await gcodeCache.clear();
-        this.logger.info('Cache cleared successfully');
-        // Show a brief success message
-        const btn = document.getElementById('clearCacheBtn');
-        if (btn) {
-          const originalText = btn.innerHTML;
-          btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Cleared!';
-          btn.classList.add('text-vibrant-teal');
-          setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.classList.remove('text-vibrant-teal');
-          }, 2000);
-        }
-      } catch (error) {
-        this.logger.error('Failed to clear cache', error);
+      await this.handleClearCache();
+    });
+
+    // View toggle event
+    eventBus.on('VIEW_TOGGLE' as any, (view: 'analysis' | 'factory') => {
+      this.switchView(view);
+    });
+
+    // Factory floor events
+    eventBus.on('BUILD_SPEED_CHANGED' as any, (speed: number) => {
+      if (this.factoryFloorService) {
+        this.factoryFloorService.setBuildSpeed(speed);
+      }
+    });
+
+    eventBus.on('PAUSE_ALL_BUILDS' as any, () => {
+      if (this.factoryFloorService) {
+        this.factoryFloorService.pauseAllBuilds();
+      }
+    });
+
+    eventBus.on('RESUME_ALL_BUILDS' as any, () => {
+      if (this.factoryFloorService) {
+        this.factoryFloorService.resumeAllBuilds();
+      }
+    });
+
+    eventBus.on('CLEAR_FACTORY' as any, () => {
+      if (this.factoryFloorService) {
+        this.factoryFloorService.clearFactory();
       }
     });
   }
 
   private async handleFileSelected(file: File): Promise<void> {
-    try {
-      // Show loading state
-      appState.setLoading(true, 'Checking cache...', 5);
-
-      // Generate file hash for cache key
-      const cacheKey = await generateFileHash(file);
-      
-      // Check cache first
-      const cachedEntry = await gcodeCache.get(cacheKey);
-      
-      if (cachedEntry) {
-        // Cache hit!
-        this.logger.info(`Cache hit for ${file.name}`);
-        console.log('Using cached results:', { 
-          fileName: cachedEntry.fileName, 
-          cachedAt: new Date(cachedEntry.timestamp).toLocaleString() 
-        });
-        
-        // Log cached data for visualization planning
-        console.log('=== CACHED G-CODE PARSING DATA ===');
-        console.log('File Info:', {
-          fileName: cachedEntry.stats.fileName,
-          fileSize: `${(cachedEntry.stats.fileSize / 1024 / 1024).toFixed(2)} MB`,
-          parseTime: `${cachedEntry.stats.parseTime}ms`
-        });
-        
-        console.log('Slicer Info:', cachedEntry.stats.slicerInfo);
-        
-        console.log('Print Statistics:', {
-          totalLayers: cachedEntry.stats.totalLayers,
-          totalHeight: `${cachedEntry.stats.totalHeight}mm`,
-          estimatedPrintTime: cachedEntry.stats.printTime,
-          printTimeSeconds: cachedEntry.stats.estimatedPrintTime,
-          printCost: cachedEntry.stats.printCost ? `$${cachedEntry.stats.printCost}` : 'Not available'
-        });
-        
-        console.log('Filament Usage:', cachedEntry.stats.filamentUsage);
-        console.log('Filament Estimates by Tool:', cachedEntry.stats.filamentEstimates);
-        
-        console.log('Colors Found:', cachedEntry.stats.colors.map(c => ({
-          id: c.id,
-          name: c.name || 'Unknown',
-          hexColor: c.hexColor,
-          layers: `${c.firstLayer}-${c.lastLayer}`,
-          layerCount: c.layerCount,
-          usage: `${c.usagePercentage}%`
-        })));
-        
-        console.log('Tool Changes:', cachedEntry.stats.toolChanges.map(tc => ({
-          from: tc.fromTool,
-          to: tc.toTool,
-          atLayer: tc.layer,
-          atLine: tc.lineNumber,
-          zHeight: `${tc.zHeight}mm`
-        })));
-        
-        console.log('Layer-Color Map (first 10 layers):', 
-          Array.from(cachedEntry.stats.layerColorMap.entries()).slice(0, 10)
-        );
-        
-        console.log('Color Usage Ranges:', cachedEntry.stats.colorUsageRanges);
-        
-        console.log('Parser Warnings:', cachedEntry.stats.parserWarnings);
-        
-        console.log('Optimization Results:', {
-          totalColors: cachedEntry.optimization.totalColors,
-          requiredSlots: cachedEntry.optimization.requiredSlots,
-          timeSaved: `${cachedEntry.optimization.estimatedTimeSaved} seconds`,
-          slotAssignments: cachedEntry.optimization.slotAssignments,
-          manualSwaps: cachedEntry.optimization.manualSwaps,
-          canShareSlots: cachedEntry.optimization.canShareSlots
-        });
-        
-        console.log('=== END OF CACHED DATA ===');
-        
-        // Show brief loading message
-        appState.setLoading(true, 'Loading from cache...', 100);
-        
-        // Small delay for UI feedback
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Set results which will clear loading and switch view
-        appState.setAnalysisResults(cachedEntry.stats, cachedEntry.optimization, cachedEntry.logs);
-        return;
-      }
-
-      // Cache miss - proceed with parsing
-      this.logger.info(`Cache miss for ${file.name} - parsing file`);
-      appState.setLoading(true, 'Reading file...', 10);
-
-      let stats: GcodeStats;
-      let logs: LogEntry[];
-
-      // Use Web Worker if available, fallback to main thread
-      if (this.useWebWorker) {
-        try {
-          // Parse using Web Worker for non-blocking operation
-          const result = await parserWorkerService.parse(file, (progress, message) => {
-            appState.setLoading(true, message, progress);
-          });
-          
-          stats = result.stats;
-          logs = result.logs;
-          this.logger.info('Parsed using Web Worker - UI remained responsive');
-        } catch (error) {
-          // Fallback to main thread if Worker fails
-          this.logger.warn('Web Worker failed, falling back to main thread parsing', error);
-          
-          // Use original progress simulation
-          const progressInterval = setInterval(() => {
-            const state = appState.getState();
-            if (state.loadingProgress < 90) {
-              const newProgress = Math.min(state.loadingProgress + 5, 90);
-              const message = newProgress < 30 ? 'Reading file...' : 
-                             newProgress < 60 ? 'Parsing G-code...' : 
-                             'Analyzing colors...';
-              appState.setLoading(true, message, newProgress);
-            }
-          }, 100);
-
-          stats = await this.parser.parse(file);
-          logs = this.logger.getLogs();
-          clearInterval(progressInterval);
+    // Create and execute analyze command
+    const command = new AnalyzeFileCommand(
+      file,
+      this.fileProcessingService,
+      this.optimizationService,
+      this.cacheRepository,
+      this.logger,
+      {
+        useWebWorker: true,
+        useCache: true,
+        onProgress: (progress, message) => {
+          appState.setLoading(true, message, progress);
         }
-      } else {
-        // Original main thread parsing
-        const progressInterval = setInterval(() => {
-          const state = appState.getState();
-          if (state.loadingProgress < 90) {
-            const newProgress = Math.min(state.loadingProgress + 5, 90);
-            const message = newProgress < 30 ? 'Reading file...' : 
-                           newProgress < 60 ? 'Parsing G-code...' : 
-                           'Analyzing colors...';
-            appState.setLoading(true, message, newProgress);
-          }
-        }, 100);
-
-        stats = await this.parser.parse(file);
-        logs = this.logger.getLogs();
-        clearInterval(progressInterval);
       }
-      
-      appState.setLoading(true, 'Optimizing...', 95);
+    );
 
-      // Add a small delay to show the final progress
-      await new Promise(resolve => setTimeout(resolve, 300));
+    const result = await this.commandExecutor.execute(command);
 
-      // Generate optimization
-      const optimization = this.createOptimization(stats);
-      
-      // Logs are already retrieved above
-
-      // Log all parsed data for visualization planning
-      console.log('=== COMPLETE G-CODE PARSING DATA ===');
-      console.log('File Info:', {
-        fileName: stats.fileName,
-        fileSize: `${(stats.fileSize / 1024 / 1024).toFixed(2)} MB`,
-        parseTime: `${stats.parseTime}ms`
-      });
-      
-      console.log('Slicer Info:', stats.slicerInfo);
-      
-      console.log('Print Statistics:', {
-        totalLayers: stats.totalLayers,
-        totalHeight: `${stats.totalHeight}mm`,
-        estimatedPrintTime: stats.printTime,
-        printTimeSeconds: stats.estimatedPrintTime,
-        printCost: stats.printCost ? `$${stats.printCost}` : 'Not available'
-      });
-      
-      console.log('Filament Usage:', stats.filamentUsage);
-      console.log('Filament Estimates by Tool:', stats.filamentEstimates);
-      
-      console.log('Colors Found:', stats.colors.map(c => ({
-        id: c.id,
-        name: c.name || 'Unknown',
-        hexColor: c.hexColor,
-        layers: `${c.firstLayer}-${c.lastLayer}`,
-        layerCount: c.layerCount,
-        usage: `${c.usagePercentage}%`
-      })));
-      
-      console.log('Tool Changes:', stats.toolChanges.map(tc => ({
-        from: tc.fromTool,
-        to: tc.toTool,
-        atLayer: tc.layer,
-        atLine: tc.lineNumber,
-        zHeight: `${tc.zHeight}mm`
-      })));
-      
-      console.log('Layer-Color Map (first 10 layers):', 
-        Array.from(stats.layerColorMap.entries()).slice(0, 10)
-      );
-      
-      console.log('Color Usage Ranges:', stats.colorUsageRanges);
-      
-      console.log('Parser Warnings:', stats.parserWarnings);
-      
-      console.log('Optimization Results:', {
-        totalColors: optimization.totalColors,
-        requiredSlots: optimization.requiredSlots,
-        timeSaved: `${optimization.estimatedTimeSaved} seconds`,
-        slotAssignments: optimization.slotAssignments,
-        manualSwaps: optimization.manualSwaps,
-        canShareSlots: optimization.canShareSlots
-      });
-      
-      console.log('=== END OF PARSING DATA ===');
-
-      // Cache the results
-      await gcodeCache.set(cacheKey, file.name, file.size, stats, optimization, logs);
-      this.logger.info(`Results cached for ${file.name}`);
-
-      // Show 100% briefly before showing results
-      appState.setLoading(true, 'Complete!', 100);
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // Update state with results
-      console.log('Setting analysis results:', { stats, optimization, logsCount: logs.length });
-      appState.setAnalysisResults(stats, optimization, logs);
-
-    } catch (error) {
-      console.error('Error processing file:', error);
-      appState.setError(`Failed to process file: ${(error as Error).message}`);
+    if (!result.ok) {
+      console.error('Error processing file:', result.error);
+      appState.setError(`Failed to process file: ${result.error.message}`);
       appState.setLoading(false);
+      return;
     }
-  }
 
-  private createOptimization(stats: GcodeStats): OptimizationResult {
-    // Simple optimization for demo - in production this would be more sophisticated
-    const colorCount = stats.colors.length;
+    const { stats, optimization } = result.value;
+    const logs = this.logger.getLogs();
+
+    // Add slight delay for UI feedback
+    await new Promise(resolve => setTimeout(resolve, 200));
     
-    // For 4 or fewer colors, assign each to a slot
-    if (colorCount <= 4) {
-      const slotAssignments: SlotAssignment[] = stats.colors.map((color, index) => ({
-        slot: index + 1,
-        colors: [color.id],
-        isPermanent: true,
-      }));
+    // Update state with results
+    appState.setAnalysisResults(stats, optimization, logs);
 
-      return {
-        totalColors: colorCount,
-        requiredSlots: colorCount,
-        slotAssignments: slotAssignments.slice(0, 4),
-        manualSwaps: [],
-        estimatedTimeSaved: 0,
-        canShareSlots: [],
-      };
+    // Show view navigation now that analysis is complete
+    const viewNavigation = document.getElementById('viewNavigation');
+    if (viewNavigation) {
+      viewNavigation.style.display = 'block';
+      viewNavigation.classList.remove('hidden');
+      viewNavigation.removeAttribute('hidden');
     }
 
-    // For more than 4 colors, we need manual swaps
-    const permanentSlots = stats.colors.slice(0, 3).map((color, index) => ({
-      slot: index + 1,
-      colors: [color.id],
-      isPermanent: true,
-    }));
+    // Initialize factory floor UI now that results section is visible
+    if (this.factoryFloorUI) {
+      this.factoryFloorUI.initialize();
+    }
 
-    const sharedSlot: SlotAssignment = {
-      slot: 4,
-      colors: stats.colors.slice(3).map(c => c.id),
-      isPermanent: false,
-    };
-
-    const manualSwaps = this.generateManualSwaps(stats, sharedSlot);
-
-    return {
-      totalColors: colorCount,
-      requiredSlots: 4,
-      slotAssignments: [...permanentSlots, sharedSlot],
-      manualSwaps,
-      estimatedTimeSaved: manualSwaps.length * 120, // 2 minutes per swap saved
-      canShareSlots: sharedSlot.colors,
-    };
-  }
-
-  private generateManualSwaps(stats: GcodeStats, sharedSlot: SlotAssignment): any[] {
-    const swaps: any[] = [];
-    const sharedColors = sharedSlot.colors;
-
-    for (let i = 1; i < sharedColors.length; i++) {
-      const fromColor = stats.colors.find(c => c.id === sharedColors[i - 1]);
-      const toColor = stats.colors.find(c => c.id === sharedColors[i]);
-      
-      if (fromColor && toColor) {
-        swaps.push({
-          slot: sharedSlot.slot,
-          fromColor: fromColor.id,
-          toColor: toColor.id,
-          atLayer: toColor.firstLayer,
-          zHeight: 0, // Would calculate from layer height
-          reason: `Color ${toColor.id} starts at layer ${toColor.firstLayer}`,
-        });
+    // Add to factory floor if service is available
+    if (this.factoryFloorService) {
+      try {
+        const fileContent = await file.text();
+        await this.factoryFloorService.addPrint(file.name, fileContent, stats);
+      } catch (error) {
+        console.warn('Failed to add print to factory floor:', error);
       }
     }
-
-    return swaps;
   }
 
-  private exportResults(): void {
+  private async handleExportRequest(): Promise<void> {
     const state = appState.getState();
     if (!state.stats || !state.optimization) return;
 
-    const exportData = {
-      fileName: state.stats.fileName,
-      analysis: {
-        colors: state.stats.colors,
-        optimization: state.optimization,
-      },
-      instructions: this.generateInstructions(state.stats, state.optimization),
-      exportedAt: new Date().toISOString(),
-    };
+    // Create and execute export command
+    const command = new ExportResultsCommand(
+      state.stats,
+      state.optimization,
+      this.exportService,
+      ExportFormat.JSON
+    );
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `ams-optimization-${Date.now()}.json`;
-    a.click();
-
-    URL.revokeObjectURL(url);
-  }
-
-  private generateInstructions(stats: GcodeStats, opt: OptimizationResult): string {
-    let instructions = `AMS COLOR OPTIMIZATION REPORT\n`;
-    instructions += `============================\n\n`;
-    instructions += `File: ${stats.fileName}\n`;
-    instructions += `Total Colors: ${opt.totalColors}\n`;
-    instructions += `Required Slots: ${opt.requiredSlots}\n`;
-    instructions += `Manual Swaps: ${opt.manualSwaps.length}\n\n`;
-
-    instructions += `SLOT ASSIGNMENTS:\n`;
-    opt.slotAssignments.forEach(slot => {
-      instructions += `  Slot ${slot.slot}: ${slot.colors.join(', ')} ${slot.isPermanent ? '(Permanent)' : '(Shared)'}\n`;
-    });
-
-    if (opt.manualSwaps.length > 0) {
-      instructions += `\nMANUAL SWAP INSTRUCTIONS:\n`;
-      opt.manualSwaps.forEach((swap, index) => {
-        instructions += `  ${index + 1}. At layer ${swap.atLayer}: Remove ${swap.fromColor}, Insert ${swap.toColor} in Slot ${swap.slot}\n`;
-      });
+    const result = await this.commandExecutor.execute(command);
+    
+    if (!result.ok) {
+      this.logger.error('Failed to export results', result.error);
+      appState.setError('Failed to export results');
     }
-
-    return instructions;
   }
 
-  private reset(): void {
+  private async handleClearCache(): Promise<void> {
+    // Create and execute clear cache command
+    const command = new ClearCacheCommand(
+      this.cacheRepository,
+      this.logger
+    );
+
+    const result = await this.commandExecutor.execute(command);
+    
+    if (result.ok) {
+      // Show success feedback in UI
+      const btn = document.getElementById('clearCacheBtn');
+      if (btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Cleared!';
+        btn.classList.add('text-vibrant-teal');
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.classList.remove('text-vibrant-teal');
+        }, 2000);
+      }
+    } else {
+      appState.setError('Failed to clear cache');
+    }
+  }
+
+  private handleReset(): void {
     appState.reset();
     this.logger.clearLogs();
   }
 
+  private switchView(view: 'analysis' | 'factory'): void {
+    this.currentView = view;
+    
+    const analysisSection = document.getElementById('resultsSection');
+    const factorySection = document.getElementById('factorySection');
+    const viewNavigation = document.getElementById('viewNavigation');
+    
+    // Always show the navigation header when switching views (if results exist)
+    if (viewNavigation && appState.getState().stats) {
+      viewNavigation.style.display = 'block';
+      viewNavigation.classList.remove('hidden');
+      viewNavigation.removeAttribute('hidden');
+    }
+    
+    if (view === 'factory') {
+      // Show factory section FIRST so container has dimensions
+      if (analysisSection) {
+        analysisSection.style.display = 'none';
+        analysisSection.classList.add('hidden');
+        analysisSection.setAttribute('hidden', '');
+      }
+      if (factorySection) {
+        factorySection.style.display = 'block';
+        factorySection.classList.remove('hidden');
+        factorySection.removeAttribute('hidden');
+      }
+      
+      // Initialize factory floor AFTER showing the section
+      if (!this.factoryFloorScene) {
+        // Wait a frame for the layout to update
+        requestAnimationFrame(() => {
+          this.initializeFactoryFloor();
+        });
+      }
+    } else {
+      // Show analysis section, hide factory
+      if (analysisSection) {
+        analysisSection.style.display = 'block';
+        analysisSection.classList.remove('hidden');
+        analysisSection.removeAttribute('hidden');
+      }
+      if (factorySection) {
+        factorySection.style.display = 'none';
+        factorySection.classList.add('hidden');
+        factorySection.setAttribute('hidden', '');
+      }
+    }
+    
+    // Update toggle buttons
+    this.updateViewToggleButtons();
+  }
+
+  private initializeFactoryFloor(): void {
+    console.log('Initializing factory floor...');
+    const container = document.getElementById('factoryFloorContainer');
+    console.log('Container found:', container);
+    
+    if (!container) {
+      console.error('Factory floor container not found');
+      return;
+    }
+    
+    // Clear any loading messages
+    const loadingDivs = container.querySelectorAll('.absolute, div');
+    loadingDivs.forEach(div => {
+      if (div !== container && div.parentNode === container) {
+        console.log('Removing loading div:', div);
+        div.remove();
+      }
+    });
+    
+    try {
+      console.log('Creating FactoryFloorScene...');
+      this.factoryFloorScene = new FactoryFloorScene(container);
+      
+      console.log('Creating FactoryFloorService...');
+      this.factoryFloorService = new FactoryFloorService(this.factoryFloorScene, {
+        autoStartBuilding: true,
+        maxConcurrentBuilds: 3,
+        buildSpeed: 2,
+        persistData: true, // Re-enabled with IndexedDB
+        enableAnimations: true
+      });
+      
+      // Set up factory floor event listeners
+      this.setupFactoryFloorEvents();
+      
+      // Add current file to factory floor if available
+      this.addCurrentFileToFactory();
+      
+      console.log('Factory floor initialized successfully');
+      
+    } catch (error) {
+      console.error('Failed to initialize factory floor:', error);
+    }
+  }
+
+  private setupFactoryFloorEvents(): void {
+    if (!this.factoryFloorService) return;
+    
+    this.factoryFloorService.on('printSelected', (printId) => {
+      this.updateFactoryFloorUI();
+    });
+    
+    this.factoryFloorService.on('factoryStateChanged', (state) => {
+      this.updateFactoryStatsUI(state);
+    });
+    
+    this.factoryFloorService.on('buildingStarted', (printId) => {
+      console.log(`Started building print: ${printId}`);
+    });
+    
+    this.factoryFloorService.on('buildingCompleted', (printId) => {
+      console.log(`Completed building print: ${printId}`);
+    });
+  }
+
+  private async addCurrentFileToFactory(): Promise<void> {
+    if (!this.factoryFloorService) return;
+    
+    const state = appState.getState();
+    if (state.currentFile && state.stats) {
+      try {
+        console.log('Adding current file to factory floor:', state.currentFile.name);
+        
+        // Read the file content
+        const fileContent = await this.readFileAsText(state.currentFile);
+        
+        // Add to factory floor
+        await this.factoryFloorService.addPrint(
+          state.currentFile.name,
+          fileContent,
+          state.stats
+        );
+        
+        console.log('Successfully added current file to factory floor');
+      } catch (error) {
+        console.error('Failed to add current file to factory floor:', error);
+      }
+    }
+  }
+
+  private readFileAsText(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target?.result && typeof e.target.result === 'string') {
+          resolve(e.target.result);
+        } else {
+          reject(new Error('Failed to read file'));
+        }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(file);
+    });
+  }
+
+  private updateViewToggleButtons(): void {
+    const analysisBtn = document.getElementById('analysisViewBtn');
+    const factoryBtn = document.getElementById('factoryViewBtn');
+    
+    if (analysisBtn && factoryBtn) {
+      if (this.currentView === 'analysis') {
+        analysisBtn.classList.add('bg-vibrant-blue', 'text-white');
+        analysisBtn.classList.remove('bg-white/10', 'text-white/70');
+        factoryBtn.classList.remove('bg-vibrant-blue', 'text-white');
+        factoryBtn.classList.add('bg-white/10', 'text-white/70');
+      } else {
+        factoryBtn.classList.add('bg-vibrant-blue', 'text-white');
+        factoryBtn.classList.remove('bg-white/10', 'text-white/70');
+        analysisBtn.classList.remove('bg-vibrant-blue', 'text-white');
+        analysisBtn.classList.add('bg-white/10', 'text-white/70');
+      }
+    }
+  }
+
+  private updateFactoryFloorUI(): void {
+    if (!this.factoryFloorService) return;
+    
+    const selectedPrint = this.factoryFloorService.getSelectedPrint();
+    const infoPanel = document.getElementById('printInfoPanel');
+    
+    if (selectedPrint && infoPanel) {
+      infoPanel.innerHTML = `
+        <h4 class="text-lg font-semibold text-white mb-2">${selectedPrint.filename}</h4>
+        <div class="space-y-1 text-sm text-white/70">
+          <p>Layers: ${selectedPrint.stats.totalLayers}</p>
+          <p>Colors: ${selectedPrint.stats.colors.length}</p>
+          <p>Progress: ${Math.round(selectedPrint.buildProgress * 100)}%</p>
+          <p>Added: ${selectedPrint.dateAdded.toLocaleDateString()}</p>
+        </div>
+      `;
+      infoPanel.style.display = 'block';
+    } else if (infoPanel) {
+      infoPanel.style.display = 'none';
+    }
+  }
+
+  private updateFactoryStatsUI(state: any): void {
+    const statsPanel = document.getElementById('factoryStatsPanel');
+    if (statsPanel) {
+      statsPanel.innerHTML = `
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div class="glass rounded-lg p-3">
+            <div class="text-2xl font-bold text-vibrant-blue">${state.totalPrints}</div>
+            <div class="text-sm text-white/60">Total Prints</div>
+          </div>
+          <div class="glass rounded-lg p-3">
+            <div class="text-2xl font-bold text-vibrant-green">${state.activePrints}</div>
+            <div class="text-sm text-white/60">Building</div>
+          </div>
+          <div class="glass rounded-lg p-3">
+            <div class="text-2xl font-bold text-vibrant-purple">${state.completedPrints}</div>
+            <div class="text-sm text-white/60">Completed</div>
+          </div>
+          <div class="glass rounded-lg p-3">
+            <div class="text-2xl font-bold text-vibrant-orange">${state.queuedPrints}</div>
+            <div class="text-sm text-white/60">Queued</div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
   public destroy(): void {
+    // Clean up factory floor
+    if (this.factoryFloorService) {
+      this.factoryFloorService.dispose();
+    }
+    
+    if (this.factoryFloorUI) {
+      this.factoryFloorUI.destroy();
+    }
+    
     // Clean up all components
     this.components.forEach(component => component.destroy());
     
