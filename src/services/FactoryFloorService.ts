@@ -403,7 +403,7 @@ export class FactoryFloorService {
       
       // Note: We only load metadata, not the actual G-code content
       // Users will need to re-upload files to see the 3D visualization
-      console.log(`Found ${this.prints.size} persisted prints. Re-upload files to view them.`);
+      // Found persisted prints. Re-upload files to view them.
       
     } catch (error) {
       console.warn('Failed to load persisted factory floor data:', error);

@@ -44,17 +44,19 @@ export class AmsSlot {
   /**
    * Assign a color to this slot
    */
-  assignColor(color: Color): void {
+  assignColor(color: Color, allowOverlaps: boolean = false): void {
     if (this.isPermanent && this._colors.length > 0) {
       throw new Error('Cannot assign multiple colors to a permanent slot');
     }
     
-    // Check for overlaps with existing colors
-    const overlap = this._colors.find(c => c.overlapsWith(color));
-    if (overlap) {
-      throw new Error(
-        `Color ${color.id} overlaps with ${overlap.id} in slot ${this.slotNumber}`
-      );
+    // Check for overlaps with existing colors (only if not allowing overlaps)
+    if (!allowOverlaps) {
+      const overlap = this._colors.find(c => c.overlapsWith(color));
+      if (overlap) {
+        throw new Error(
+          `Color ${color.id} overlaps with ${overlap.id} in slot ${this.slotNumber}`
+        );
+      }
     }
     
     this._colors.push(color);

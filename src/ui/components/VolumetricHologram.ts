@@ -119,9 +119,9 @@ export class VolumetricHologram extends Component {
     );
     
     // Create visualization
-    this.createGeometryVisualization().catch(error => 
-      console.error('Failed to create geometry visualization:', error)
-    );
+    this.createGeometryVisualization().catch(error => {
+      // Error handled internally
+    });
     // Disable effects temporarily to avoid shader issues
     // this.setupEffects();
     
@@ -183,24 +183,15 @@ export class VolumetricHologram extends Component {
     }
 
     try {
-      console.log('Using custom G-code to geometry converter...');
-      
       // Use our own converter which separates extrusion from travel moves
       const { GcodeToGeometryConverter } = await import('../../parser/gcodeToGeometry');
       const converter = new GcodeToGeometryConverter();
       const geometry = converter.convertGcodeToGeometry(this.stats.rawContent, this.stats);
       
-      console.log('G-code geometry generated:', {
-        layersCount: geometry.layers.length,
-        totalLayers: geometry.totalLayers,
-        colorsCount: geometry.colors.size,
-        boundingBox: geometry.boundingBox
-      });
-
       this.createCustomVisualization(geometry);
 
     } catch (error) {
-      console.error('Failed to parse G-code with custom converter:', error);
+      // Failed to parse G-code with custom converter
       this.createErrorMessage(`G-code parsing failed: ${error.message}`);
     }
   }
@@ -224,11 +215,7 @@ export class VolumetricHologram extends Component {
       const size = box.getSize(new THREE.Vector3());
       const center = box.getCenter(new THREE.Vector3());
       
-      console.log('Custom geometry dimensions:', {
-        size: size,
-        center: center,
-        boundingBox: box
-      });
+      // Custom geometry dimensions calculated
       
       const maxDim = Math.max(size.x, size.y, size.z);
       const distance = maxDim * 2.5;
@@ -239,17 +226,16 @@ export class VolumetricHologram extends Component {
       // Store for cleanup
       this.hologramMesh = printMesh;
       
-      console.log('Custom G-code visualization created successfully');
+      // Custom G-code visualization created successfully
       
     } catch (error) {
-      console.error('Failed to create custom visualization:', error);
+      // Failed to create custom visualization
       this.createErrorMessage(`Visualization creation failed: ${error.message}`);
     }
   }
 
   private createThreeJSVisualization(gcodeObject: THREE.Group): void {
-    console.log('Creating Three.js visualization...');
-    console.log('G-code object children count:', gcodeObject.children.length);
+    // Creating Three.js visualization...
     
     // Add the G-code object to the scene first
     this.scene.add(gcodeObject);
@@ -262,11 +248,7 @@ export class VolumetricHologram extends Component {
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     
-    console.log('Print dimensions:', {
-      size: size,
-      center: center,
-      boundingBox: box
-    });
+    // Print dimensions calculated
     
     // Position camera to frame the print nicely
     const maxDim = Math.max(size.x, size.y, size.z);
@@ -278,7 +260,7 @@ export class VolumetricHologram extends Component {
     // Store for cleanup
     this.hologramMesh = gcodeObject;
     
-    console.log('Three.js G-code visualization created successfully');
+    // Three.js G-code visualization created successfully
   }
 
   private applyMultiColorMaterials(gcodeObject: THREE.Group): void {
@@ -286,23 +268,9 @@ export class VolumetricHologram extends Component {
     const colors = this.stats.colors || [];
     const toolChanges = this.stats.toolChanges || [];
     
-    console.log('Applying colors with data:', {
-      colorsCount: colors.length,
-      toolChangesCount: toolChanges.length,
-      colors: colors.map(c => ({ id: c.id, hex: c.hexColor }))
-    });
+    // Applying colors with data
 
     // Debug the actual structure
-    console.log('G-code object structure:');
-    gcodeObject.children.forEach((child, index) => {
-      console.log(`Child ${index}:`, {
-        type: child.type,
-        name: child.name,
-        userData: child.userData,
-        material: child.material,
-        geometry: child.geometry
-      });
-    });
 
     // Use bright colors for visualization
     const brightColors = [
@@ -318,7 +286,7 @@ export class VolumetricHologram extends Component {
 
     let objectIndex = 0;
 
-    console.log('Starting to traverse G-code object...');
+    // Starting to traverse G-code object...
 
     // First pass: collect all line objects and analyze them
     const lineObjects: Array<{
@@ -329,13 +297,7 @@ export class VolumetricHologram extends Component {
     }> = [];
 
     gcodeObject.traverse((child) => {
-      console.log('Traversing child:', {
-        type: child.type,
-        constructor: child.constructor.name,
-        material: child.material,
-        userData: child.userData,
-        name: child.name
-      });
+      // Traversing child
 
       if (child instanceof THREE.LineSegments || child instanceof THREE.Line) {
         const material = child.material as THREE.LineBasicMaterial;
@@ -344,7 +306,7 @@ export class VolumetricHologram extends Component {
           const positions = geometry.attributes.position.array as Float32Array;
           const vertexCount = positions.length / 3;
           
-          console.log(`Found object ${lineObjects.length} with ${vertexCount} vertices, name: "${child.name}"`);
+          // Found object with vertices
           
           // Check if this is likely a travel move object
           const isLikelyTravelMoves = this.isLikelyTravelObject(child, positions);
@@ -362,12 +324,12 @@ export class VolumetricHologram extends Component {
     // Second pass: process objects safely
     lineObjects.forEach((item, index) => {
       if (item.isTravel) {
-        console.log(`Removing travel move object ${index}`);
+        // Removing travel move object
         if (item.object.parent) {
           item.object.parent.remove(item.object);
         }
       } else {
-        console.log(`Processing extrusion object ${index}`);
+        // Processing extrusion object
         
         // This is likely extrusion - apply multiple colors
         if (item.vertexCount > 1000) {
@@ -383,12 +345,12 @@ export class VolumetricHologram extends Component {
           const colorIndex = objectIndex % brightColors.length;
           const color = brightColors[colorIndex];
           
-          console.log(`Setting object ${index} to color ${color}`);
+          // Setting object color
           
           try {
             material.color.setHex(parseInt(color.replace('#', ''), 16));
           } catch (e) {
-            console.error('Failed to parse color:', color, e);
+            // Failed to parse color
             material.color.setHex(0xff6b6b);
           }
         }
@@ -396,7 +358,7 @@ export class VolumetricHologram extends Component {
       }
     });
 
-    console.log(`Applied colors to ${objectIndex} objects`);
+    // Applied colors to objects
   }
 
   private isLikelyTravelObject(lineObject: THREE.LineSegments | THREE.Line, positions: Float32Array): boolean {
@@ -404,7 +366,7 @@ export class VolumetricHologram extends Component {
     if (lineObject.name) {
       const name = lineObject.name.toLowerCase();
       if (name.includes('move') || name.includes('travel') || name.includes('rapid')) {
-        console.log(`Object named "${lineObject.name}" identified as travel moves`);
+        // Object identified as travel moves
         return true;
       }
     }
@@ -412,7 +374,7 @@ export class VolumetricHologram extends Component {
     // Check userData
     if (lineObject.userData && lineObject.userData.type) {
       if (lineObject.userData.type === 'move' || lineObject.userData.type === 'travel') {
-        console.log(`Object with userData.type "${lineObject.userData.type}" identified as travel moves`);
+        // Object identified as travel moves
         return true;
       }
     }
@@ -444,7 +406,7 @@ export class VolumetricHologram extends Component {
     const avgDistance = totalDistance / segmentCount;
     zVariation = maxZ - minZ;
 
-    console.log(`Object analysis: avgDist=${avgDistance.toFixed(2)}, maxDist=${maxDistance.toFixed(2)}, zVar=${zVariation.toFixed(2)}`);
+    // Object analysis complete
 
     // Be much more conservative - only hide if it's clearly mostly travel moves
     // Objects with mixed content (extrusion + travel) should be kept and filtered later
@@ -466,7 +428,7 @@ export class VolumetricHologram extends Component {
     
     if (!parent) return;
     
-    console.log(`Splitting geometry with ${positions.length / 3} vertices into colored segments`);
+    // Splitting geometry into colored segments
     
     // Remove the original object
     parent.remove(lineObject);
@@ -475,11 +437,11 @@ export class VolumetricHologram extends Component {
     const filteredPositions = this.filterTravelSegments(positions);
     
     if (filteredPositions.length === 0) {
-      console.log('All segments were travel moves, skipping object');
+      // All segments were travel moves, skipping object
       return;
     }
     
-    console.log(`After filtering: ${filteredPositions.length / 3} vertices remaining`);
+    // After filtering vertices
     
     // Calculate how many segments to create (4 for the 4 colors)
     const segmentCount = 4;
@@ -515,7 +477,7 @@ export class VolumetricHologram extends Component {
       
       parent.add(segmentObject);
       
-      console.log(`Created segment ${i} with color ${color} (${segmentPositions.length / 3} vertices)`);
+      // Created segment with color
     }
   }
 
@@ -559,7 +521,7 @@ export class VolumetricHologram extends Component {
     const veryLongSegmentRatio = veryLongSegmentCount / totalSegments;
     const zJumpRatio = zJumpCount / totalSegments;
     
-    console.log(`Object analysis: avg=${avgSegmentLength.toFixed(2)}, long=${(longSegmentRatio * 100).toFixed(1)}%, veryLong=${(veryLongSegmentRatio * 100).toFixed(1)}%, zJumps=${(zJumpRatio * 100).toFixed(1)}%`);
+    // Object analysis complete
     
     // Hide if:
     // 1. More than 30% of segments are long (lowered from 60%)
@@ -602,7 +564,7 @@ export class VolumetricHologram extends Component {
       }
     }
     
-    console.log(`Filtered segments: kept ${filteredCount}/${totalCount} (${(filteredCount/totalCount*100).toFixed(1)}%)`);
+    // Filtered segments
     
     return new Float32Array(filtered);
   }

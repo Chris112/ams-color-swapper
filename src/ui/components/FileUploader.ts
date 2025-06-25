@@ -39,11 +39,7 @@ export class FileUploader extends Component {
   protected render(): void {
     const { view, isLoading, loadingProgress, loadingMessage } = this.state;
     
-    console.log('FileUploader render:', {
-      view,
-      isLoading,
-      shouldShow: view === 'upload'
-    });
+    // FileUploader render
     
     // Show/hide based on view
     this.toggle(view === 'upload');

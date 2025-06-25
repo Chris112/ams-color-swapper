@@ -21,13 +21,13 @@ self.addEventListener('message', async (event) => {
     case 'parse':
       try {
         initialize();
-        
-        const { fileContent, fileName, fileSize } = payload;
-        
+
+        const { fileContent, fileName } = payload;
+
         // Create a fake File object for the parser
         const blob = new Blob([fileContent], { type: 'text/plain' });
         const file = new File([blob], fileName, { type: 'text/plain' });
-        
+
         // Send progress updates
         let lastProgress = 0;
         const progressInterval = setInterval(() => {
@@ -36,36 +36,38 @@ self.addEventListener('message', async (event) => {
             type: 'progress',
             payload: {
               progress: lastProgress,
-              message: lastProgress < 30 ? 'Reading file...' : 
-                      lastProgress < 60 ? 'Parsing G-code...' : 
-                      'Analyzing colors...'
-            }
+              message:
+                lastProgress < 30
+                  ? 'Reading file...'
+                  : lastProgress < 60
+                    ? 'Parsing G-code...'
+                    : 'Analyzing colors...',
+            },
           });
         }, 200);
 
         // Parse the file
         const stats = await parser.parse(file);
-        
+
         clearInterval(progressInterval);
-        
+
         // Get logs
         const logs = logger.getLogs();
-        
+
         // Send results back to main thread
         self.postMessage({
           type: 'complete',
           payload: {
             stats,
-            logs
-          }
+            logs,
+          },
         });
-        
       } catch (error) {
         self.postMessage({
           type: 'error',
           payload: {
-            message: error instanceof Error ? error.message : 'Unknown error occurred'
-          }
+            message: error instanceof Error ? error.message : 'Unknown error occurred',
+          },
         });
       }
       break;

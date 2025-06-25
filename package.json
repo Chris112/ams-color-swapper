@@ -10,7 +10,8 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "check:types": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

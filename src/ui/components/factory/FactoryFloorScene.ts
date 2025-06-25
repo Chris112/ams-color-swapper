@@ -47,13 +47,13 @@ export class FactoryFloorScene {
   private readonly PRINT_SPACING = 3;   // Reduced spacing
   
   constructor(container: HTMLElement) {
-    console.log('FactoryFloorScene constructor called with container:', container);
+    // FactoryFloorScene constructor called
     this.container = container;
     this.eventEmitter = new EventEmitter();
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     
-    console.log('Initializing Three.js scene...');
+    // Initializing Three.js scene...
     this.initializeScene();
     this.setupLighting();
     this.setupFloor();
@@ -61,23 +61,22 @@ export class FactoryFloorScene {
     this.setupEventListeners();
     this.startRenderLoop();
     
-    console.log('FactoryFloorScene initialization complete');
+    // FactoryFloorScene initialization complete
     this.eventEmitter.emit('sceneReady');
   }
 
   private initializeScene(): void {
-    console.log('Setting up Three.js scene...');
+    // Setting up Three.js scene...
     
     // Scene setup
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0a0a0a);
-    console.log('Scene created:', this.scene);
+    // Scene created
     
     // Camera setup
     const containerWidth = this.container.clientWidth || 800;
     const containerHeight = this.container.clientHeight || 600;
-    console.log('Container dimensions:', containerWidth, 'x', containerHeight);
-    console.log('Container rect:', this.container.getBoundingClientRect());
+    // Container dimensions calculated
     
     this.camera = new THREE.PerspectiveCamera(
       75,
@@ -87,7 +86,7 @@ export class FactoryFloorScene {
     );
     this.camera.position.set(20, 15, 20);
     this.camera.lookAt(0, 0, 0);
-    console.log('Camera created at position:', this.camera.position, 'looking at (0,0,0)');
+    // Camera created and positioned
     
     // Renderer setup
     this.renderer = new THREE.WebGLRenderer({ 
@@ -103,7 +102,7 @@ export class FactoryFloorScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
     
-    console.log('Renderer created, adding to container...');
+    // Renderer created, adding to container...
     
     // Style the canvas to ensure it's visible
     const canvas = this.renderer.domElement;
@@ -115,13 +114,13 @@ export class FactoryFloorScene {
     canvas.style.left = '0';
     
     this.container.appendChild(canvas);
-    console.log('Canvas added to container with styling:', canvas);
+    // Canvas added to container with styling
     
     // Atmospheric fog - scaled for smaller scene
     this.fog = new THREE.Fog(0x0a0a0a, 20, 80); // Reduced distances
     this.scene.fog = this.fog;
     
-    console.log('Scene initialization complete');
+    // Scene initialization complete
   }
 
   private setupLighting(): void {
@@ -153,7 +152,7 @@ export class FactoryFloorScene {
   }
 
   private setupFloor(): void {
-    console.log('Setting up floor...');
+    // Setting up floor...
     
     // Grid helper for factory floor
     this.gridHelper = new THREE.GridHelper(
@@ -165,7 +164,7 @@ export class FactoryFloorScene {
     this.gridHelper.material.opacity = 0.3;
     this.gridHelper.material.transparent = true;
     this.scene.add(this.gridHelper);
-    console.log('Grid helper added');
+    // Grid helper added
     
     // Reflective floor plane
     const floorGeometry = new THREE.PlaneGeometry(this.FLOOR_SIZE, this.FLOOR_SIZE);
@@ -178,9 +177,9 @@ export class FactoryFloorScene {
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.scene.add(floor);
-    console.log('Floor plane added');
+    // Floor plane added
     
-    console.log('Factory floor setup complete');
+    // Factory floor setup complete
   }
 
   private setupControls(): void {
@@ -290,13 +289,12 @@ export class FactoryFloorScene {
       this.controls.update();
       this.renderer.render(this.scene, this.camera);
       
-      // Debug: log first few frames
+      // Debug: first few frames rendered
       if (frameCount < 5) {
-        console.log(`Render frame ${frameCount + 1}`);
         frameCount++;
       }
     };
-    console.log('Starting render loop...');
+    // Starting render loop...
     render();
   }
 
@@ -422,10 +420,7 @@ export class FactoryFloorScene {
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     
-    console.log('Print bounding box:', {
-      size: { x: size.x, y: size.y, z: size.z },
-      center: { x: center.x, y: center.y, z: center.z }
-    });
+    // Print bounding box calculated
     
     // Add debug helpers
     this.addDebugHelpers(object, box);
@@ -445,11 +440,7 @@ export class FactoryFloorScene {
       center.z + cameraDistance * 0.7
     );
     
-    console.log('Auto-positioning camera:', {
-      distance: cameraDistance,
-      position: cameraPosition,
-      target: center
-    });
+    // Auto-positioning camera
     
     this.animateCameraTo(cameraPosition, center);
   }
@@ -472,7 +463,7 @@ export class FactoryFloorScene {
     worldAxes.name = 'worldAxesHelper';
     this.scene.add(worldAxes);
     
-    console.log('Debug helpers added: bounding box, print axes, world axes');
+    // Debug helpers added: bounding box, print axes, world axes
   }
 
   public removeDebugHelpers(): void {
@@ -489,7 +480,7 @@ export class FactoryFloorScene {
     // Safety check: don't animate to extreme positions
     const maxDistance = 100;
     if (position.length() > maxDistance) {
-      console.warn('Camera position too far, clamping to safe distance');
+      // Camera position too far, clamping to safe distance
       position.normalize().multiplyScalar(maxDistance);
     }
     
