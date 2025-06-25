@@ -1,4 +1,4 @@
-import { appState, AppStateData, StateListener } from '../state/AppState';
+import { appState, AppStateData } from '../state/AppState';
 import { eventBus, AppEventKey, AppEventMap } from './EventEmitter';
 
 export abstract class Component {
@@ -37,7 +37,7 @@ export abstract class Component {
     }
   }
 
-  protected shouldUpdate(oldState: AppStateData, newState: AppStateData): boolean {
+  protected shouldUpdate(_oldState: AppStateData, _newState: AppStateData): boolean {
     // By default, always update. Components can override for optimization
     return true;
   }

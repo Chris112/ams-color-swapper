@@ -58,7 +58,7 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
       });
 
       // Save all prints (but only metadata, not full gcode content)
-      for (const [id, printData] of prints) {
+      for (const [_id, printData] of prints) {
         const storageData = {
           ...printData,
           // Don't store the full gcode content to save space

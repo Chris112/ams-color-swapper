@@ -1,6 +1,6 @@
 import { Color } from './Color';
 import { ToolChange } from './ToolChange';
-import { Slicer } from './Slicer';
+import { Slicer, FilamentUsage } from './Slicer';
 
 /**
  * Domain model representing a 3D print job
@@ -101,24 +101,4 @@ export class Print {
       throw new Error('Total height must be non-negative');
     }
   }
-}
-
-/**
- * Slicer information
- */
-export interface Slicer {
-  software: string;
-  version?: string;
-  profile?: string;
-}
-
-/**
- * Filament usage statistics
- */
-export interface FilamentUsage {
-  total: number;
-  model: number;
-  support: number;
-  flushed: number;
-  tower: number;
 }

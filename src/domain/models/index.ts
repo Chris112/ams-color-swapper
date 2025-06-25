@@ -1,5 +1,6 @@
 export { Color } from './Color';
-export { Print, type Slicer, type FilamentUsage } from './Print';
+export { Print } from './Print';
 export { ToolChange } from './ToolChange';
 export { AmsSlot } from './AmsSlot';
 export { AmsConfiguration } from './AmsConfiguration';
+export { type Slicer, type FilamentUsage } from './Slicer';

@@ -37,7 +37,8 @@ export class GcodeRepository implements IGcodeRepository {
   async parseContent(content: string, fileName: string): Promise<Result<GcodeStats>> {
     try {
       const startTime = Date.now();
-      const stats = await this.parser.parse(content, fileName);
+      const file = new File([content], fileName, { type: 'text/plain' });
+      const stats = await this.parser.parse(file);
       stats.parseTime = Date.now() - startTime;
       return Result.ok(stats);
     } catch (error) {

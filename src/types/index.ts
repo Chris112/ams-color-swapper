@@ -85,6 +85,8 @@ export interface ManualSwap {
   fromColor: string;
   toColor: string;
   atLayer: number;
+  pauseStartLayer: number;
+  pauseEndLayer: number;
   zHeight: number;
   reason: string;
 }
@@ -98,7 +100,7 @@ export interface ColorPair {
 
 export interface DebugLog {
   timestamp: number;
-  level: 'info' | 'warn' | 'error' | 'debug';
+  level: 'info' | 'warn' | 'error' | 'debug' | 'silly';
   message: string;
   context?: unknown;
 }

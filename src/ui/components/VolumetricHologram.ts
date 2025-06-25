@@ -8,58 +8,25 @@ import {
   VolumetricData 
 } from './volumetric/types';
 import { VoxelDataStructure } from './volumetric/VoxelDataStructure';
-import { HologramEffects } from './volumetric/HologramEffects';
+// import { HologramEffects } from './volumetric/HologramEffects'; // For future effects
 import { InteractionController } from './volumetric/InteractionController';
-import { GCodeLoader } from 'three/examples/jsm/loaders/GCodeLoader.js';
+// import { GCodeLoader } from 'three/examples/jsm/loaders/GCodeLoader.js'; // Not used
 
-// Shader sources
-const hologramVertexShader = `
-attribute float layer;
-attribute float voxelDensity;
-
-varying vec3 vColor;
-varying float vOpacity;
-
-void main() {
-  vColor = color;
-  vOpacity = voxelDensity * 0.8;
-  
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  gl_PointSize = 4.0;
-}
-`;
-
-const hologramFragmentShader = `
-precision mediump float;
-
-varying vec3 vColor;
-varying float vOpacity;
-
-void main() {
-  vec2 uv = gl_PointCoord;
-  float dist = length(uv - 0.5) * 2.0;
-  
-  if (dist > 1.0) discard;
-  
-  float alpha = smoothstep(1.0, 0.3, dist) * vOpacity;
-  gl_FragColor = vec4(vColor, alpha);
-}
-`;
+// Shader sources removed - not currently used
 
 export class VolumetricHologram extends Component {
   private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
-  private clock: THREE.Clock;
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
+  // private clock: THREE.Clock; // For future animation use
   
   private voxelStructure: VoxelDataStructure;
   private volumetricData: VolumetricData;
   private hologramMesh: THREE.Group | null = null;
-  private gcodeLoader: GCodeLoader;
   private hologramMaterial: THREE.ShaderMaterial | null = null;
   
-  private effects: HologramEffects;
-  private interactionController: InteractionController;
+  // private effects!: HologramEffects; // For future effects
+  private interactionController!: InteractionController;
   
   private config: HologramConfig = {
     resolution: new THREE.Vector3(128, 128, 128),
@@ -93,7 +60,7 @@ export class VolumetricHologram extends Component {
     
     // Initialize Three.js
     this.scene = new THREE.Scene();
-    this.clock = new THREE.Clock();
+    // this.clock = new THREE.Clock(); // Initialize when needed for animation
     
     // Initialize placeholder data (not used for real geometry)
     this.voxelStructure = new VoxelDataStructure(
@@ -108,7 +75,7 @@ export class VolumetricHologram extends Component {
     this.setupLights();
     
     // Initialize G-code loader
-    this.gcodeLoader = new GCodeLoader();
+    // this.gcodeLoader = new GCodeLoader(); // Not used - using custom converter
     
     // Initialize components
     this.interactionController = new InteractionController(
@@ -192,7 +159,7 @@ export class VolumetricHologram extends Component {
 
     } catch (error) {
       // Failed to parse G-code with custom converter
-      this.createErrorMessage(`G-code parsing failed: ${error.message}`);
+      this.createErrorMessage(`G-code parsing failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -230,391 +197,11 @@ export class VolumetricHologram extends Component {
       
     } catch (error) {
       // Failed to create custom visualization
-      this.createErrorMessage(`Visualization creation failed: ${error.message}`);
+      this.createErrorMessage(`Visualization creation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
-  private createThreeJSVisualization(gcodeObject: THREE.Group): void {
-    // Creating Three.js visualization...
-    
-    // Add the G-code object to the scene first
-    this.scene.add(gcodeObject);
-    
-    // Apply multi-color materials based on our color analysis
-    this.applyMultiColorMaterials(gcodeObject);
-    
-    // Calculate bounding box and position camera
-    const box = new THREE.Box3().setFromObject(gcodeObject);
-    const size = box.getSize(new THREE.Vector3());
-    const center = box.getCenter(new THREE.Vector3());
-    
-    // Print dimensions calculated
-    
-    // Position camera to frame the print nicely
-    const maxDim = Math.max(size.x, size.y, size.z);
-    const distance = maxDim * 2.5;
-    
-    this.camera.position.set(distance, distance * 0.8, distance);
-    this.camera.lookAt(center);
-    
-    // Store for cleanup
-    this.hologramMesh = gcodeObject;
-    
-    // Three.js G-code visualization created successfully
-  }
 
-  private applyMultiColorMaterials(gcodeObject: THREE.Group): void {
-    // Get colors from our analysis
-    const colors = this.stats.colors || [];
-    const toolChanges = this.stats.toolChanges || [];
-    
-    // Applying colors with data
-
-    // Debug the actual structure
-
-    // Use bright colors for visualization
-    const brightColors = [
-      '#ff6b6b', // Bright red
-      '#4ecdc4', // Bright teal
-      '#45b7d1', // Bright blue
-      '#f9ca24', // Bright yellow
-      '#f0932b', // Bright orange
-      '#eb4d4b', // Dark red
-      '#6c5ce7', // Purple
-      '#a29bfe'  // Light purple
-    ];
-
-    let objectIndex = 0;
-
-    // Starting to traverse G-code object...
-
-    // First pass: collect all line objects and analyze them
-    const lineObjects: Array<{
-      object: THREE.LineSegments | THREE.Line;
-      positions: Float32Array;
-      vertexCount: number;
-      isTravel: boolean;
-    }> = [];
-
-    gcodeObject.traverse((child) => {
-      // Traversing child
-
-      if (child instanceof THREE.LineSegments || child instanceof THREE.Line) {
-        const material = child.material as THREE.LineBasicMaterial;
-        if (material) {
-          const geometry = child.geometry;
-          const positions = geometry.attributes.position.array as Float32Array;
-          const vertexCount = positions.length / 3;
-          
-          // Found object with vertices
-          
-          // Check if this is likely a travel move object
-          const isLikelyTravelMoves = this.isLikelyTravelObject(child, positions);
-          
-          lineObjects.push({
-            object: child,
-            positions,
-            vertexCount,
-            isTravel: isLikelyTravelMoves
-          });
-        }
-      }
-    });
-
-    // Second pass: process objects safely
-    lineObjects.forEach((item, index) => {
-      if (item.isTravel) {
-        // Removing travel move object
-        if (item.object.parent) {
-          item.object.parent.remove(item.object);
-        }
-      } else {
-        // Processing extrusion object
-        
-        // This is likely extrusion - apply multiple colors
-        if (item.vertexCount > 1000) {
-          // Create multiple child objects with different colors
-          this.splitGeometryIntoColoredSegments(item.object, index, brightColors);
-        } else {
-          // Small geometry, just apply one color
-          const material = item.object.material as THREE.LineBasicMaterial;
-          material.opacity = 0.9;
-          material.transparent = true;
-          material.linewidth = 3;
-          
-          const colorIndex = objectIndex % brightColors.length;
-          const color = brightColors[colorIndex];
-          
-          // Setting object color
-          
-          try {
-            material.color.setHex(parseInt(color.replace('#', ''), 16));
-          } catch (e) {
-            // Failed to parse color
-            material.color.setHex(0xff6b6b);
-          }
-        }
-        objectIndex++;
-      }
-    });
-
-    // Applied colors to objects
-  }
-
-  private isLikelyTravelObject(lineObject: THREE.LineSegments | THREE.Line, positions: Float32Array): boolean {
-    // Check the object name - GCodeLoader often names travel moves differently
-    if (lineObject.name) {
-      const name = lineObject.name.toLowerCase();
-      if (name.includes('move') || name.includes('travel') || name.includes('rapid')) {
-        // Object identified as travel moves
-        return true;
-      }
-    }
-
-    // Check userData
-    if (lineObject.userData && lineObject.userData.type) {
-      if (lineObject.userData.type === 'move' || lineObject.userData.type === 'travel') {
-        // Object identified as travel moves
-        return true;
-      }
-    }
-
-    // Analyze the geometry - travel moves typically have:
-    // 1. Longer average segment lengths
-    // 2. More variation in Z coordinates
-    // 3. Segments that span large distances
-    let totalDistance = 0;
-    let maxDistance = 0;
-    let zVariation = 0;
-    let segmentCount = 0;
-    let minZ = Infinity, maxZ = -Infinity;
-
-    for (let i = 0; i < positions.length - 3; i += 6) {
-      const dx = positions[i + 3] - positions[i];
-      const dy = positions[i + 4] - positions[i + 1];
-      const dz = positions[i + 5] - positions[i + 2];
-      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      
-      totalDistance += distance;
-      maxDistance = Math.max(maxDistance, distance);
-      segmentCount++;
-      
-      minZ = Math.min(minZ, positions[i + 2], positions[i + 5]);
-      maxZ = Math.max(maxZ, positions[i + 2], positions[i + 5]);
-    }
-
-    const avgDistance = totalDistance / segmentCount;
-    zVariation = maxZ - minZ;
-
-    // Object analysis complete
-
-    // Be much more conservative - only hide if it's clearly mostly travel moves
-    // Objects with mixed content (extrusion + travel) should be kept and filtered later
-    const isHighAvgDistance = avgDistance > 15; // Much higher threshold
-    const isMostlyLongSegments = (segmentCount > 100) && (maxDistance > 100) && (avgDistance > 10);
-    
-    // Only hide if it's clearly a travel-only object
-    return isHighAvgDistance || isMostlyLongSegments;
-  }
-
-  private splitGeometryIntoColoredSegments(
-    lineObject: THREE.LineSegments | THREE.Line, 
-    objectIndex: number, 
-    colors: string[]
-  ): void {
-    const geometry = lineObject.geometry;
-    const positions = geometry.attributes.position.array as Float32Array;
-    const parent = lineObject.parent;
-    
-    if (!parent) return;
-    
-    // Splitting geometry into colored segments
-    
-    // Remove the original object
-    parent.remove(lineObject);
-    
-    // Filter out travel segments first
-    const filteredPositions = this.filterTravelSegments(positions);
-    
-    if (filteredPositions.length === 0) {
-      // All segments were travel moves, skipping object
-      return;
-    }
-    
-    // After filtering vertices
-    
-    // Calculate how many segments to create (4 for the 4 colors)
-    const segmentCount = 4;
-    const verticesPerSegment = Math.floor(filteredPositions.length / (segmentCount * 3));
-    
-    for (let i = 0; i < segmentCount; i++) {
-      const startIndex = i * verticesPerSegment * 3;
-      const endIndex = Math.min((i + 1) * verticesPerSegment * 3, filteredPositions.length);
-      
-      if (startIndex >= filteredPositions.length) break;
-      
-      // Create new geometry for this segment
-      const segmentPositions = filteredPositions.slice(startIndex, endIndex);
-      
-      if (segmentPositions.length < 6) continue; // Skip very small segments
-      
-      const segmentGeometry = new THREE.BufferGeometry();
-      segmentGeometry.setAttribute('position', new THREE.Float32BufferAttribute(segmentPositions, 3));
-      
-      // Create material with the appropriate color
-      const colorIndex = i % colors.length;
-      const color = colors[colorIndex];
-      const material = new THREE.LineBasicMaterial({
-        color: new THREE.Color(parseInt(color.replace('#', ''), 16)),
-        opacity: 0.9,
-        transparent: true,
-        linewidth: 3
-      });
-      
-      // Create new line segments object
-      const segmentObject = new THREE.LineSegments(segmentGeometry, material);
-      segmentObject.userData = { ...lineObject.userData, segmentIndex: i, isExtruding: true };
-      
-      parent.add(segmentObject);
-      
-      // Created segment with color
-    }
-  }
-
-  private shouldHideObject(lineObject: THREE.LineSegments | THREE.Line, positions: Float32Array): boolean {
-    // Check userData for hints from GCodeLoader
-    if (lineObject.userData) {
-      // Some loaders mark travel moves differently
-      if (lineObject.userData.type === 'move' || lineObject.userData.type === 'travel') {
-        return true;
-      }
-      // Check the object name
-      if (lineObject.name && lineObject.name.toLowerCase().includes('move')) {
-        return true;
-      }
-    }
-    
-    // Much more aggressive analysis to detect travel moves
-    let longSegmentCount = 0;
-    let veryLongSegmentCount = 0;
-    let zJumpCount = 0;
-    let totalSegments = 0;
-    let avgSegmentLength = 0;
-    
-    for (let i = 0; i < positions.length - 3; i += 6) { // Every pair of vertices
-      const dx = positions[i + 3] - positions[i];
-      const dy = positions[i + 4] - positions[i + 1]; 
-      const dz = positions[i + 5] - positions[i + 2];
-      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      
-      totalSegments++;
-      avgSegmentLength += distance;
-      
-      if (distance > 5) longSegmentCount++; // Lower threshold
-      if (distance > 15) veryLongSegmentCount++;
-      if (Math.abs(dz) > 0.5) zJumpCount++; // Z jumps indicate layer changes/travel
-    }
-    
-    avgSegmentLength /= totalSegments;
-    
-    const longSegmentRatio = longSegmentCount / totalSegments;
-    const veryLongSegmentRatio = veryLongSegmentCount / totalSegments;
-    const zJumpRatio = zJumpCount / totalSegments;
-    
-    // Object analysis complete
-    
-    // Hide if:
-    // 1. More than 30% of segments are long (lowered from 60%)
-    // 2. More than 10% are very long segments
-    // 3. More than 20% have Z jumps
-    // 4. Average segment length is high
-    return longSegmentRatio > 0.3 || veryLongSegmentRatio > 0.1 || zJumpRatio > 0.2 || avgSegmentLength > 8;
-  }
-
-  private filterTravelSegments(positions: Float32Array): Float32Array {
-    const filtered: number[] = [];
-    let filteredCount = 0;
-    let totalCount = 0;
-    
-    for (let i = 0; i < positions.length - 3; i += 6) { // Every pair of vertices (line segment)
-      const x1 = positions[i], y1 = positions[i + 1], z1 = positions[i + 2];
-      const x2 = positions[i + 3], y2 = positions[i + 4], z2 = positions[i + 5];
-      
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const dz = z2 - z1;
-      const distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      
-      totalCount++;
-      
-      // More balanced filtering - keep segments that are likely printing
-      // Filter out obvious travel moves but keep printing moves
-      const isReasonableLength = distance < 15; // Allow longer segments for print moves
-      const isSmallZChange = Math.abs(dz) < 2.0; // Allow some Z movement
-      const isNotMassiveJump = distance < 50; // Filter out only very long travel moves
-      
-      // Filter out edge movements (travel to build plate edges)
-      const isNotEdgeMovement = Math.abs(x1) < 100 && Math.abs(y1) < 100 && Math.abs(x2) < 100 && Math.abs(y2) < 100;
-      
-      // Keep most segments except obvious travel moves
-      if (isReasonableLength && isSmallZChange && isNotMassiveJump && isNotEdgeMovement) {
-        // Keep this segment - it's likely actual printing
-        filtered.push(x1, y1, z1, x2, y2, z2);
-        filteredCount++;
-      }
-    }
-    
-    // Filtered segments
-    
-    return new Float32Array(filtered);
-  }
-
-  private detectTravelMove(positions: Float32Array): boolean {
-    if (positions.length < 6) return false; // Short segments are likely print moves
-    
-    // Calculate segment properties
-    let maxSegmentLength = 0;
-    let hasLargeZJump = false;
-    
-    for (let i = 0; i < positions.length - 3; i += 3) {
-      const dx = positions[i + 3] - positions[i];
-      const dy = positions[i + 4] - positions[i + 1]; 
-      const dz = positions[i + 5] - positions[i + 2];
-      
-      const segmentLength = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      maxSegmentLength = Math.max(maxSegmentLength, segmentLength);
-      
-      // Large Z jumps (layer changes) are often travel moves
-      if (Math.abs(dz) > 1.0) {
-        hasLargeZJump = true;
-      }
-    }
-    
-    // More conservative detection: only flag as travel if very long segments or clear Z jumps
-    return maxSegmentLength > 20 || hasLargeZJump;
-  }
-
-  private estimateLayerFromPosition(positions: Float32Array): number {
-    if (positions.length < 3) return 0;
-    
-    // Use Z position to estimate layer (assuming 0.2mm layer height)
-    const z = positions[2]; // First Z position
-    return Math.floor(z / 0.2);
-  }
-
-  private getDefaultColor(index: number): string {
-    const defaultColors = [
-      '#FF6B6B', // Red
-      '#4ECDC4', // Teal  
-      '#45B7D1', // Blue
-      '#F9CA24', // Yellow
-      '#F0932B', // Orange
-      '#EB4D4B', // Dark Red
-      '#6C5CE7', // Purple
-      '#A29BFE'  // Light Purple
-    ];
-    return defaultColors[index % defaultColors.length];
-  }
 
   private createErrorMessage(message: string): void {
     const errorDiv = document.createElement('div');
@@ -631,24 +218,6 @@ export class VolumetricHologram extends Component {
     this.container.appendChild(errorDiv);
   }
 
-  
-  private setupEffects(): void {
-    if (this.config.enableEffects) {
-      this.effects.createGrid(this.volumetricData.dimensions);
-      
-      if (this.config.showScanlines) {
-        this.effects.createScanlines(this.volumetricData.dimensions);
-      }
-      
-      if (this.config.showParticles) {
-        this.effects.createAmbientParticles(
-          this.volumetricData.dimensions,
-          this.config.particleCount
-        );
-      }
-    }
-  }
-  
   private createUIOverlay(): void {
     const overlay = document.createElement('div');
     overlay.className = 'hologram-ui-overlay';
@@ -718,7 +287,7 @@ export class VolumetricHologram extends Component {
   private animate(): void {
     this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
     
-    const time = this.clock.getElapsedTime();
+    // const time = this.clock.getElapsedTime(); // For future animation use
     
     // Basic material updates can be added here later
     
@@ -755,23 +324,19 @@ export class VolumetricHologram extends Component {
     // Dispose Three.js resources
     if (this.hologramMesh) {
       this.scene.remove(this.hologramMesh);
-      // If it's a group (real geometry), dispose all children
-      if (this.hologramMesh instanceof THREE.Group) {
-        this.hologramMesh.traverse((child) => {
-          if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
-            if (child.geometry) child.geometry.dispose();
-            if (child.material) {
-              if (Array.isArray(child.material)) {
-                child.material.forEach(mat => mat.dispose());
-              } else {
-                child.material.dispose();
-              }
+      // Dispose all children (hologramMesh is always a Group)
+      this.hologramMesh.traverse((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.LineSegments) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(mat => mat.dispose());
+            } else {
+              child.material.dispose();
             }
           }
-        });
-      } else if (this.hologramMesh.geometry) {
-        this.hologramMesh.geometry.dispose();
-      }
+        }
+      });
     }
     
     if (this.hologramMaterial) {

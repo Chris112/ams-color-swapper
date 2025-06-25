@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GcodeStats, ColorInfo, ToolChange } from '../types';
+import { GcodeStats, ColorInfo } from '../types';
 
 export interface GcodePath {
   points: THREE.Vector3[];
@@ -27,22 +27,19 @@ export interface PrintGeometry {
 
 export class GcodeToGeometryConverter {
   private readonly LINE_WIDTH = 0.4;
-  private readonly LAYER_HEIGHT = 0.2;
-  private readonly EXTRUSION_MULTIPLIER = 1.0;
   // Scale factor to convert mm coordinates to reasonable Three.js units
   // Typical print bed: 220x220mm -> scale to ~22x22 three.js units (divide by 10)
   private readonly SCALE_FACTOR = 0.1;
   
   // Scaled dimensions for Three.js
   private get scaledLineWidth(): number { return this.LINE_WIDTH * this.SCALE_FACTOR; }
-  private get scaledLayerHeight(): number { return this.LAYER_HEIGHT * this.SCALE_FACTOR; }
   
-  private currentPosition: THREE.Vector3;
-  private currentTool: number;
-  private currentLayer: number;
-  private isExtruding: boolean;
-  private paths: GcodePath[];
-  private colors: Map<number, string>;
+  private currentPosition!: THREE.Vector3;
+  private currentTool!: number;
+  private currentLayer!: number;
+  private isExtruding!: boolean;
+  private paths!: GcodePath[];
+  private colors!: Map<number, string>;
   
   constructor() {
     this.reset();
@@ -140,7 +137,7 @@ export class GcodeToGeometryConverter {
       this.paths.push(currentPath);
     }
     
-    return this.generateGeometry();
+    return this.generateGeometry(stats);
   }
   
   private setupColors(colorInfos: ColorInfo[]): void {
@@ -227,7 +224,7 @@ export class GcodeToGeometryConverter {
     return commands;
   }
   
-  private generateGeometry(): PrintGeometry {
+  private generateGeometry(stats: GcodeStats): PrintGeometry {
     const layerMap = new Map<number, GcodePath[]>();
     
     // Group paths by layer
@@ -316,8 +313,7 @@ export class GcodeToGeometryConverter {
         transparent: false,
         opacity: 1.0,
         // Add some material properties to make filament more visible
-        emissive: new THREE.Color(color).multiplyScalar(0.1), // Slight glow
-        shininess: 30
+        emissive: new THREE.Color(color).multiplyScalar(0.1) // Slight glow
       });
       
       layerGeometries.push({
@@ -406,8 +402,8 @@ export class GcodeToGeometryConverter {
     
     if (minZ === Infinity || maxZ === -Infinity) return layers;
     
-    const zRange = maxZ - minZ;
-    const layerHeight = zRange / targetLayerCount;
+    // const zRange = maxZ - minZ; // Available for layer height calculation
+    // const layerHeight = zRange / targetLayerCount; // For future layer calculation
     
     // Redistributing geometry across layers
     
@@ -415,8 +411,9 @@ export class GcodeToGeometryConverter {
     
     // Create new geometry layers distributed by Z height
     for (let layerIndex = 0; layerIndex < targetLayerCount; layerIndex++) {
-      const layerMinZ = minZ + (layerIndex * layerHeight);
-      const layerMaxZ = minZ + ((layerIndex + 1) * layerHeight);
+      // Calculate layer bounds for future use
+      // const layerMinZ = minZ + (layerIndex * layerHeight);
+      // const layerMaxZ = minZ + ((layerIndex + 1) * layerHeight);
       
       // For simplicity, just clone the original geometry and assign it to different layers
       // In a more sophisticated implementation, we'd actually split the geometry by Z

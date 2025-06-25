@@ -1,17 +1,18 @@
 import * as THREE from 'three';
-import { EventEmitter } from '../core/EventEmitter';
+import { EventEmitter, EventHandler } from '../core/EventEmitter';
 import { FactoryFloorScene, PrintObject } from '../ui/components/factory/FactoryFloorScene';
 import { PrintBuilder, PrintBuilderManager, BuildState } from '../ui/components/factory/PrintBuilder';
 import { GcodeStats } from '../types';
 import { IFactoryFloorRepository, FactoryFloorRepository } from '../repositories';
+import { GcodeToGeometryConverter } from '../parser/gcodeToGeometry';
 
 export interface FactoryFloorEvents {
-  printAdded: (printId: string) => void;
-  printRemoved: (printId: string) => void;
-  printSelected: (printId: string | null) => void;
-  buildingStarted: (printId: string) => void;
-  buildingCompleted: (printId: string) => void;
-  factoryStateChanged: (state: FactoryState) => void;
+  printAdded: { printId: string };
+  printRemoved: { printId: string };
+  printSelected: { printId: string | null };
+  buildingStarted: { printId: string };
+  buildingCompleted: { printId: string };
+  factoryStateChanged: { state: FactoryState };
 }
 
 export interface PrintData {
@@ -22,6 +23,7 @@ export interface PrintData {
   dateAdded: Date;
   buildProgress: number;
   isBuilding: boolean;
+  needsReload?: boolean;
 }
 
 export interface FactoryState {
@@ -49,7 +51,6 @@ export class FactoryFloorService {
   private prints: Map<string, PrintData> = new Map();
   private selectedPrintId: string | null = null;
   private activeBuildCount: number = 0;
-  private storageKey = 'factoryFloorPrints';
   
   constructor(
     scene: FactoryFloorScene,
@@ -78,13 +79,13 @@ export class FactoryFloorService {
   
   private setupEventListeners(): void {
     // Scene events
-    this.scene.on('printClicked', (printId) => {
-      this.selectPrint(printId);
+    this.scene.on('printClicked', (data: { printId: string }) => {
+      this.selectPrint(data.printId);
     });
     
     // Builder manager events
-    this.builderManager.on('builderStateChanged', (printId, state) => {
-      this.handleBuilderStateChange(printId, state);
+    this.builderManager.on('builderStateChanged', (data: { id: string; state: BuildState }) => {
+      this.handleBuilderStateChange(data.id, data.state);
     });
   }
   
@@ -96,14 +97,14 @@ export class FactoryFloorService {
       case BuildState.BUILDING:
         printData.isBuilding = true;
         this.activeBuildCount++;
-        this.eventEmitter.emit('buildingStarted', printId);
+        this.eventEmitter.emit('buildingStarted', { printId });
         break;
         
       case BuildState.COMPLETE:
         printData.isBuilding = false;
         printData.buildProgress = 1;
         this.activeBuildCount = Math.max(0, this.activeBuildCount - 1);
-        this.eventEmitter.emit('buildingCompleted', printId);
+        this.eventEmitter.emit('buildingCompleted', { printId });
         this.tryStartNextBuild();
         break;
         
@@ -174,11 +175,11 @@ export class FactoryFloorService {
       this.scene.addPrint(printObject);
       
       // Set up builder event listeners
-      builder.on('layerComplete', (layer, totalLayers) => {
-        printData.buildProgress = layer / totalLayers;
+      builder.on('layerComplete', (data: { layer: number; totalLayers: number }) => {
+        printData.buildProgress = data.layer / data.totalLayers;
       });
       
-      this.eventEmitter.emit('printAdded', printId);
+      this.eventEmitter.emit('printAdded', { printId });
       this.emitFactoryStateChanged();
       
       // Auto-start building if enabled and we have capacity
@@ -194,7 +195,7 @@ export class FactoryFloorService {
       
     } catch (error) {
       console.error('Failed to add print:', error);
-      throw new Error(`Failed to process G-code file: ${error.message}`);
+      throw new Error(`Failed to process G-code file: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -233,10 +234,10 @@ export class FactoryFloorService {
     
     if (this.selectedPrintId === printId) {
       this.selectedPrintId = null;
-      this.eventEmitter.emit('printSelected', null);
+      this.eventEmitter.emit('printSelected', { printId: null });
     }
     
-    this.eventEmitter.emit('printRemoved', printId);
+    this.eventEmitter.emit('printRemoved', { printId });
     this.emitFactoryStateChanged();
     
     if (this.config.persistData) {
@@ -279,7 +280,7 @@ export class FactoryFloorService {
   
   public selectPrint(printId: string | null): void {
     this.selectedPrintId = printId;
-    this.eventEmitter.emit('printSelected', printId);
+    this.eventEmitter.emit('printSelected', { printId });
     
     if (printId) {
       this.scene.focusOnPrint(printId);
@@ -364,7 +365,7 @@ export class FactoryFloorService {
   }
   
   private emitFactoryStateChanged(): void {
-    this.eventEmitter.emit('factoryStateChanged', this.getFactoryState());
+    this.eventEmitter.emit('factoryStateChanged', { state: this.getFactoryState() });
   }
   
   private generatePrintId(): string {
@@ -421,14 +422,14 @@ export class FactoryFloorService {
   // Event handling
   public on<K extends keyof FactoryFloorEvents>(
     event: K,
-    handler: FactoryFloorEvents[K]
+    handler: EventHandler<FactoryFloorEvents[K]>
   ): void {
     this.eventEmitter.on(event, handler);
   }
   
   public off<K extends keyof FactoryFloorEvents>(
     event: K,
-    handler: FactoryFloorEvents[K]
+    handler: EventHandler<FactoryFloorEvents[K]>
   ): void {
     this.eventEmitter.off(event, handler);
   }

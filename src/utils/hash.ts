@@ -35,6 +35,31 @@ export async function generateFileHash(file: File): Promise<string> {
 }
 
 /**
+ * Algorithm version for cache busting
+ * Update this when making changes to the parsing algorithm
+ */
+const ALGORITHM_VERSION = '2.0.0';
+
+/**
+ * Get build-time git commit hash (injected by Vite)
+ */
+function getGitCommitHash(): string {
+  // In production, this would be injected at build time
+  // For development, use timestamp as fallback
+  return import.meta.env.VITE_GIT_COMMIT_HASH || Date.now().toString(36);
+}
+
+/**
+ * Generate a cache key that includes both file hash and algorithm version
+ * This ensures cache is busted when algorithm changes
+ */
+export async function generateCacheKey(file: File): Promise<string> {
+  const fileHash = await generateFileHash(file);
+  const algorithmVersion = `${ALGORITHM_VERSION}-${getGitCommitHash()}`;
+  return `${fileHash}-${algorithmVersion}`;
+}
+
+/**
  * Generate a quick hash using file metadata (less secure but much faster)
  * Uses file name, size, and last modified date
  */

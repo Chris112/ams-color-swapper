@@ -123,6 +123,19 @@
               <canvas id="colorTimeline" class="w-full h-32 rounded-xl glass"></canvas>
             </div>
 
+            <!-- Filament Usage by Color -->
+            <div class="card-glass animate-scale-in" style="animation-delay: 0.3s">
+              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-teal">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                Filament Usage
+              </h3>
+              <div id="filamentUsage">
+                <!-- Filament usage chart will be populated here -->
+              </div>
+            </div>
+
             <!-- 3D Hologram Visualization - DISABLED FOR NOW -->
             <div class="col-span-full card-glass animate-scale-in" style="animation-delay: 0.3s; display: none;">
               <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
@@ -329,7 +342,7 @@
       <footer class="glass-heavy border-t border-white/10 mt-auto">
         <div class="max-w-container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <p class="text-center text-body text-white/60">
-            <span class="gradient-text font-semibold">AMS Color Swapper</span> v1.0 &bull; Paint your prints in motion &bull; Print smarter, not harder
+            <span class="gradient-text font-semibold">AMS Color Swapper</span> &bull; Paint your prints in motion &bull; Print smarter, not harder
           </p>
         </div>
       </footer>

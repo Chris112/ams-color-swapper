@@ -74,13 +74,22 @@ export class AmsConfiguration {
         const fromColor = sortedColors[i - 1];
         const toColor = sortedColors[i];
 
+        // Calculate the valid range for pausing
+        // Can pause after the previous color ends and before the next color starts
+        const pauseStartLayer = fromColor.lastLayer + 1;
+        const pauseEndLayer = toColor.firstLayer - 1;
+
         swaps.push({
           slot: slot.slotNumber,
           fromColor: fromColor.id,
           toColor: toColor.id,
           atLayer: toColor.firstLayer,
+          pauseStartLayer: pauseStartLayer,
+          pauseEndLayer: pauseEndLayer,
           zHeight: 0, // Would be calculated from layer height
-          reason: `Color ${toColor.displayName} starts at layer ${toColor.firstLayer}`
+          reason: pauseEndLayer >= pauseStartLayer 
+            ? `Pause between layers ${pauseStartLayer}-${pauseEndLayer} to swap colors`
+            : `Colors are adjacent - pause at layer ${toColor.firstLayer}`
         });
       }
     });

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { generateFileHash, generateQuickHash } from '../hash';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { generateFileHash, generateQuickHash, generateCacheKey } from '../hash';
 
 // Mock crypto.subtle.digest
 const mockDigest = vi.fn();
@@ -116,6 +116,108 @@ describe('hash utilities', () => {
       
       // Same name, size, and lastModified should produce same hash
       expect(hash1).toBe(hash2);
+    });
+  });
+
+  describe('generateCacheKey', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      // Mock the git commit hash
+      vi.stubEnv('VITE_GIT_COMMIT_HASH', 'abc123');
+    });
+
+    it('should generate cache key with file hash and algorithm version', async () => {
+      const mockFile = new File(['test content'], 'test.gcode', {
+        type: 'text/plain',
+      });
+
+      // Mock file.slice for generateFileHash
+      const originalSlice = mockFile.slice.bind(mockFile);
+      mockFile.slice = vi.fn((start, end) => {
+        const blob = originalSlice(start, end);
+        blob.arrayBuffer = vi.fn().mockResolvedValue(new TextEncoder().encode('test content').buffer);
+        return blob;
+      });
+
+      // Mock crypto digest
+      const mockHashBuffer = new ArrayBuffer(32);
+      const mockHashArray = new Uint8Array(mockHashBuffer);
+      for (let i = 0; i < 32; i++) {
+        mockHashArray[i] = i;
+      }
+      mockDigest.mockResolvedValue(mockHashBuffer);
+
+      const cacheKey = await generateCacheKey(mockFile);
+      
+      // Cache key should include both file hash and version
+      expect(cacheKey).toContain('-'); // Should have separator
+      expect(cacheKey).toMatch(/^[0-9a-f]{64}-2\.0\.0-/); // File hash + version prefix
+    });
+
+    it('should generate different cache keys for same file when algorithm version changes', async () => {
+      const mockFile = new File(['test content'], 'test.gcode', {
+        type: 'text/plain',
+      });
+
+      // Mock file.slice
+      const originalSlice = mockFile.slice.bind(mockFile);
+      mockFile.slice = vi.fn((start, end) => {
+        const blob = originalSlice(start, end);
+        blob.arrayBuffer = vi.fn().mockResolvedValue(new TextEncoder().encode('test content').buffer);
+        return blob;
+      });
+
+      // Mock crypto digest with consistent hash
+      const mockHashBuffer = new ArrayBuffer(32);
+      const mockHashArray = new Uint8Array(mockHashBuffer);
+      for (let i = 0; i < 32; i++) {
+        mockHashArray[i] = i;
+      }
+      mockDigest.mockResolvedValue(mockHashBuffer);
+
+      // Generate first cache key
+      const cacheKey1 = await generateCacheKey(mockFile);
+      
+      // Simulate git commit hash change
+      vi.stubEnv('VITE_GIT_COMMIT_HASH', 'def456');
+      
+      // Generate second cache key for same file
+      const cacheKey2 = await generateCacheKey(mockFile);
+      
+      // Cache keys should be different due to different git commit hash
+      expect(cacheKey1).not.toBe(cacheKey2);
+      
+      // But they should have the same file hash part
+      const fileHash1 = cacheKey1.split('-')[0];
+      const fileHash2 = cacheKey2.split('-')[0];
+      expect(fileHash1).toBe(fileHash2);
+    });
+
+    it('should use timestamp fallback when git commit hash is not available', async () => {
+      // Remove git commit hash env var
+      vi.stubEnv('VITE_GIT_COMMIT_HASH', undefined);
+      
+      const mockFile = new File(['test content'], 'test.gcode', {
+        type: 'text/plain',
+      });
+
+      // Mock file.slice
+      const originalSlice = mockFile.slice.bind(mockFile);
+      mockFile.slice = vi.fn((start, end) => {
+        const blob = originalSlice(start, end);
+        blob.arrayBuffer = vi.fn().mockResolvedValue(new TextEncoder().encode('test content').buffer);
+        return blob;
+      });
+
+      // Mock crypto digest
+      const mockHashBuffer = new ArrayBuffer(32);
+      mockDigest.mockResolvedValue(mockHashBuffer);
+
+      const cacheKey = await generateCacheKey(mockFile);
+      
+      // Should still generate a valid cache key
+      expect(cacheKey).toContain('-2.0.0-'); // Should have version
+      expect(cacheKey.split('-').length).toBeGreaterThanOrEqual(3); // file hash, version, timestamp
     });
   });
 });

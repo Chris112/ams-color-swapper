@@ -1,11 +1,11 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import { EventEmitter } from '../../../core/EventEmitter';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EventEmitter, EventHandler } from '../../../core/EventEmitter';
 
 export interface FactoryFloorEvents {
-  printClicked: (printId: string) => void;
-  sceneReady: () => void;
-  animationProgress: (progress: number) => void;
+  printClicked: { printId: string };
+  sceneReady: void;
+  animationProgress: { progress: number };
 }
 
 export interface PrintObject {
@@ -21,24 +21,24 @@ export interface PrintObject {
 }
 
 export class FactoryFloorScene {
-  private scene: THREE.Scene;
-  private camera: THREE.PerspectiveCamera;
-  private renderer: THREE.WebGLRenderer;
-  private controls: OrbitControls;
+  private scene!: THREE.Scene;
+  private camera!: THREE.PerspectiveCamera;
+  private renderer!: THREE.WebGLRenderer;
+  private controls!: OrbitControls;
   private eventEmitter: EventEmitter<FactoryFloorEvents>;
   
   private container: HTMLElement;
   private animationId: number | null = null;
   private prints: Map<string, PrintObject> = new Map();
-  private gridHelper: THREE.GridHelper;
+  private gridHelper!: THREE.GridHelper;
   private raycaster: THREE.Raycaster;
   private mouse: THREE.Vector2;
   
   // Fog and atmosphere settings
-  private fog: THREE.Fog;
-  private ambientLight: THREE.AmbientLight;
-  private directionalLight: THREE.DirectionalLight;
-  private spotLight: THREE.SpotLight;
+  private fog!: THREE.Fog;
+  private ambientLight!: THREE.AmbientLight;
+  private directionalLight!: THREE.DirectionalLight;
+  private spotLight!: THREE.SpotLight;
   
   // Floor settings (scaled to match print dimensions)
   // Typical print bed: 220x220mm -> 22x22 units after scaling
@@ -260,7 +260,7 @@ export class FactoryFloorScene {
       // Find the print that contains this mesh
       for (const [id, printObj] of this.prints) {
         if (this.isChildOf(clickedObject, printObj.mesh)) {
-          this.eventEmitter.emit('printClicked', id);
+          this.eventEmitter.emit('printClicked', { printId: id });
           break;
         }
       }
@@ -508,14 +508,14 @@ export class FactoryFloorScene {
 
   public on<K extends keyof FactoryFloorEvents>(
     event: K,
-    handler: FactoryFloorEvents[K]
+    handler: EventHandler<FactoryFloorEvents[K]>
   ): void {
     this.eventEmitter.on(event, handler);
   }
 
   public off<K extends keyof FactoryFloorEvents>(
     event: K,
-    handler: FactoryFloorEvents[K]
+    handler: EventHandler<FactoryFloorEvents[K]>
   ): void {
     this.eventEmitter.off(event, handler);
   }

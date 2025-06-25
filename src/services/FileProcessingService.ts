@@ -1,8 +1,8 @@
 import { Result, GcodeStats, FileError } from '../types';
-import { IGcodeRepository, IFileRepository, ICacheRepository } from '../repositories';
+import { IFileRepository, ICacheRepository } from '../repositories';
 import { Logger } from '../utils/logger';
 import { parserWorkerService } from './ParserWorkerService';
-import { appState } from '../state/AppState';
+import { GcodeParser } from '../parser/gcodeParser';
 
 export interface FileProcessingOptions {
   useWebWorker?: boolean;
@@ -12,7 +12,6 @@ export interface FileProcessingOptions {
 
 export class FileProcessingService {
   constructor(
-    private gcodeRepository: IGcodeRepository,
     private fileRepository: IFileRepository,
     private cacheRepository: ICacheRepository,
     private logger: Logger
@@ -101,25 +100,20 @@ export class FileProcessingService {
     file: File,
     onProgress: (progress: number, message: string) => void
   ): Promise<Result<GcodeStats>> {
-    // Simulate progress for UI feedback
-    const progressInterval = setInterval(() => {
-      const state = appState.getState();
-      if (state.loadingProgress < 90) {
-        const newProgress = Math.min(state.loadingProgress + 5, 90);
-        const message = newProgress < 30 ? 'Reading file...' : 
-                       newProgress < 60 ? 'Parsing G-code...' : 
-                       'Analyzing colors...';
-        onProgress(newProgress, message);
-      }
-    }, 100);
-
+    // Create a parser with progress callback
+    const parser = new GcodeParser(this.logger, onProgress);
+    
     try {
-      const result = await this.gcodeRepository.parseFile(file);
-      clearInterval(progressInterval);
-      return result;
+      const stats = await parser.parse(file);
+      return Result.ok(stats);
     } catch (error) {
-      clearInterval(progressInterval);
-      throw error;
+      return Result.err(
+        new FileError(
+          `Failed to parse file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          file.name,
+          error
+        )
+      );
     }
   }
 }

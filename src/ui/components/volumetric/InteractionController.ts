@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { VoxelData, InteractionState, ViewMode, HologramEvents } from './types';
 
 export class InteractionController {
