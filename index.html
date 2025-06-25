@@ -66,13 +66,24 @@
           </div>
         </section>
 
+        <!-- View Navigation Header (shown when results are available) -->
+        <section id="viewNavigation" class="text-center mb-8" hidden>
+          <h2 id="fileName" class="text-white font-black mb-2" style="font-size: 3.5rem; line-height: 1.1;"></h2>
+          <p class="text-white/60">Analysis Complete</p>
+          
+          <!-- View Toggle Buttons -->
+          <div class="flex justify-center gap-2 mt-6">
+            <button id="analysisViewBtn" class="px-4 py-2 rounded-lg bg-vibrant-blue text-white font-medium text-sm transition-all duration-300 hover:scale-105">
+              Analysis View
+            </button>
+            <button id="factoryViewBtn" class="px-4 py-2 rounded-lg bg-white/10 text-white/70 font-medium text-sm transition-all duration-300 hover:scale-105">
+              Factory Floor
+            </button>
+          </div>
+        </section>
+
         <!-- Results Section -->
         <section id="resultsSection" class="animate-slide-up" hidden>
-          <!-- File Name Header -->
-          <div class="text-center mb-8">
-            <h2 id="fileName" class="text-white font-black mb-2" style="font-size: 3.5rem; line-height: 1.1;"></h2>
-            <p class="text-white/60">Analysis Complete</p>
-          </div>
           
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- File Statistics -->
@@ -102,8 +113,21 @@
               <canvas id="colorTimeline" class="w-full h-32 rounded-xl glass"></canvas>
             </div>
 
+            <!-- 3D Hologram Visualization -->
+            <div class="col-span-full card-glass animate-scale-in" style="animation-delay: 0.3s">
+              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-cyan">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                </svg>
+                3D Volumetric Hologram
+              </h3>
+              <div id="hologramContainer" class="w-full h-96 rounded-xl glass bg-black/50 overflow-hidden">
+                <!-- Hologram visualization will be created here -->
+              </div>
+            </div>
+
             <!-- Optimization Results -->
-            <div class="card-glass animate-scale-in" style="animation-delay: 0.3s">
+            <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
               <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-orange">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -175,6 +199,86 @@
               </svg>
               Clear Cache
             </button>
+          </div>
+        </section>
+
+        <!-- Factory Floor Section -->
+        <section id="factorySection" class="animate-slide-up" hidden>
+          <!-- Factory Stats Panel -->
+          <div id="factoryStatsPanel" class="mb-8">
+            <!-- Stats will be populated by JavaScript -->
+          </div>
+          
+          <!-- Factory Floor Container -->
+          <div class="card-glass">
+            <div class="flex justify-between items-center mb-4">
+              <h3 class="text-h3 text-white flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-cyan">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                3D Print Factory Floor
+              </h3>
+              
+              <!-- Factory Controls -->
+              <div class="flex gap-2">
+                <button id="pauseAllBtn" class="btn-glass-sm inline-flex items-center gap-1 text-xs">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"></path>
+                  </svg>
+                  Pause All
+                </button>
+                <button id="clearFactoryBtn" class="btn-glass-sm inline-flex items-center gap-1 text-xs">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                  </svg>
+                  Clear All
+                </button>
+              </div>
+            </div>
+            
+            <!-- 3D Factory Floor Viewport -->
+            <div id="factoryFloorContainer" class="w-full h-96 rounded-xl glass bg-black/50 overflow-hidden relative">
+              <!-- Three.js scene will be created here -->
+              <div class="absolute inset-0 flex items-center justify-center text-white/50">
+                <div class="text-center">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-16 h-16 mx-auto mb-4 animate-pulse">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                  </svg>
+                  <p class="text-lg font-medium">Factory Floor Loading...</p>
+                  <p class="text-sm mt-1">Upload G-code files to populate your virtual factory</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Factory Controls Panel -->
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Build Speed Control -->
+              <div class="glass rounded-lg p-3">
+                <label class="block text-sm font-medium text-white mb-2">Build Speed</label>
+                <div class="flex items-center gap-3">
+                  <span class="text-xs text-white/60">0.5x</span>
+                  <input id="buildSpeedSlider" type="range" min="0.5" max="5" step="0.5" value="2" 
+                         class="flex-1 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider">
+                  <span class="text-xs text-white/60">5x</span>
+                </div>
+                <div class="text-center mt-1">
+                  <span id="buildSpeedValue" class="text-sm text-vibrant-cyan font-medium">2.0x</span>
+                </div>
+              </div>
+              
+              <!-- Print Info Panel -->
+              <div id="printInfoPanel" class="glass rounded-lg p-3" style="display: none;">
+                <h4 class="text-sm font-medium text-white mb-2">Selected Print</h4>
+                <!-- Print details will be populated here -->
+              </div>
+            </div>
+          </div>
+          
+          <!-- Factory Instructions -->
+          <div class="mt-6 text-center text-white/60">
+            <p class="text-sm">
+              Click and drag to orbit • Scroll to zoom • Click prints for details • Upload more files to expand your factory
+            </p>
           </div>
         </section>
 

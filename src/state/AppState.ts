@@ -1,4 +1,4 @@
-import { GcodeStats, OptimizationResult } from '../types';
+import { GcodeStats, OptimizationResult, LogEntry } from '../types';
 
 export interface AppStateData {
   currentFile: File | null;
@@ -7,7 +7,7 @@ export interface AppStateData {
   loadingProgress: number;
   stats: GcodeStats | null;
   optimization: OptimizationResult | null;
-  logs: any[];
+  logs: LogEntry[];
   error: string | null;
   view: 'upload' | 'results';
   debugVisible: boolean;
@@ -60,7 +60,7 @@ export class AppState {
     this.setState({ error, isLoading: false });
   }
 
-  setAnalysisResults(stats: GcodeStats, optimization: OptimizationResult, logs: any[]): void {
+  setAnalysisResults(stats: GcodeStats, optimization: OptimizationResult, logs: LogEntry[]): void {
     console.log('AppState: Setting analysis results, switching to results view');
     this.setState({
       stats,

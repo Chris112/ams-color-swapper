@@ -1,13 +1,16 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
+import { AppStateData } from '../../state/AppState';
 import { fileStatsTemplate, colorStatsTemplate, optimizationTemplate, swapInstructionsTemplate } from '../templates';
 import { animateNumber, staggerAnimation, addRippleEffect, add3DTiltEffect, addGlowHover } from '../../utils/animations';
+import { VolumetricHologram } from './VolumetricHologram';
 
 export class ResultsView extends Component {
   private exportBtn: HTMLElement;
   private newFileBtn: HTMLElement;
   private toggleDebugBtn: HTMLElement;
   private clearCacheBtn: HTMLElement;
+  private volumetricHologram: VolumetricHologram | null = null;
 
   constructor() {
     super('#resultsSection');
@@ -46,18 +49,25 @@ export class ResultsView extends Component {
     // Show/hide based on view
     this.toggle(view === 'results');
     
+    // Clean up hologram when not in results view
+    if (view !== 'results' && this.volumetricHologram) {
+      this.volumetricHologram.destroy();
+      this.volumetricHologram = null;
+    }
+    
     if (view === 'results' && stats && optimization) {
       console.log('Updating results view components');
       this.updateFileName();
       this.updateFileStats();
       this.updateColorStats();
+      this.updateVolumetricHologram();
       this.updateOptimization();
       this.updateSwapInstructions();
       this.drawColorTimeline();
     }
   }
 
-  protected shouldUpdate(oldState: any, newState: any): boolean {
+  protected shouldUpdate(oldState: AppStateData, newState: AppStateData): boolean {
     return (
       oldState.view !== newState.view ||
       oldState.stats !== newState.stats ||
@@ -205,6 +215,55 @@ export class ResultsView extends Component {
     }
   }
 
+  private updateVolumetricHologram(): void {
+    if (!this.state.stats) return;
+    
+    const container = document.getElementById('hologramContainer');
+    if (!container) return;
+    
+    // Clean up existing hologram
+    if (this.volumetricHologram) {
+      this.volumetricHologram.destroy();
+      this.volumetricHologram = null;
+    }
+    
+    // Create new hologram with delay for smooth transition
+    setTimeout(() => {
+      try {
+        this.volumetricHologram = new VolumetricHologram(
+          '#hologramContainer',
+          this.state.stats!,
+          {
+            enableEffects: true,
+            showScanlines: true,
+            showParticles: true
+          },
+          {
+            onLayerChange: (layer: number) => {
+              console.log('Hologram layer changed:', layer);
+            },
+            onVoxelClick: (voxel: any) => {
+              console.log('Voxel clicked:', voxel);
+            }
+          }
+        );
+      } catch (error) {
+        console.error('Failed to create volumetric hologram:', error);
+        container.innerHTML = `
+          <div class="flex items-center justify-center h-full text-white/60">
+            <div class="text-center">
+              <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <p>Hologram visualization unavailable</p>
+              <p class="text-sm mt-1">WebGL may not be supported</p>
+            </div>
+          </div>
+        `;
+      }
+    }, 300);
+  }
+
   private drawColorTimeline(): void {
     const canvas = document.getElementById('colorTimeline') as HTMLCanvasElement;
     if (!canvas || !this.state.stats) return;
@@ -277,5 +336,13 @@ export class ResultsView extends Component {
       (B < 255 ? B < 1 ? 0 : B : 255))
       .toString(16)
       .slice(1);
+  }
+
+  protected cleanup(): void {
+    // Clean up hologram when component is destroyed
+    if (this.volumetricHologram) {
+      this.volumetricHologram.destroy();
+      this.volumetricHologram = null;
+    }
   }
 }

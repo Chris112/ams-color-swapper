@@ -1,9 +1,26 @@
-export type EventHandler<T = any> = (data: T) => void;
+import type { GcodeStats, OptimizationResult } from '../types';
+
+export type EventHandler<T = unknown> = (data: T) => void;
+
+// Define event data types
+export interface AppEventMap {
+  'file:selected': File;
+  'analysis:start': void;
+  'analysis:complete': { stats: GcodeStats; optimization: OptimizationResult };
+  'analysis:error': Error;
+  'export:requested': void;
+  'reset:requested': void;
+  'debug:toggle': void;
+  'tab:change': 'logs' | 'performance' | 'raw';
+  'cache:clear': void;
+}
+
+export type AppEventKey = keyof AppEventMap;
 
 export class EventEmitter {
   private events = new Map<string, Set<EventHandler>>();
 
-  on<T = any>(event: string, handler: EventHandler<T>): () => void {
+  on<K extends AppEventKey>(event: K, handler: EventHandler<AppEventMap[K]>): () => void {
     if (!this.events.has(event)) {
       this.events.set(event, new Set());
     }
@@ -23,7 +40,7 @@ export class EventEmitter {
     }
   }
 
-  emit<T = any>(event: string, data?: T): void {
+  emit<K extends AppEventKey>(event: K, data?: AppEventMap[K]): void {
     const handlers = this.events.get(event);
     if (handlers) {
       handlers.forEach(handler => handler(data));

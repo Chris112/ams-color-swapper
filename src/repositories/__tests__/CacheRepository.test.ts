@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { GcodeCache } from '../GcodeCache';
+import { CacheRepository } from '../CacheRepository';
 import { GcodeStats, OptimizationResult, DebugLog } from '../../types';
 
 // Mock IndexedDB for testing
@@ -10,8 +10,8 @@ const mockIndexedDB = {
 
 global.indexedDB = mockIndexedDB as any;
 
-describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
-  let cache: GcodeCache;
+describe('CacheRepository', () => {
+  let repository: CacheRepository;
   let mockDb: any;
   let mockObjectStore: any;
   let mockTransaction: any;
@@ -55,8 +55,8 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
     mockIndexedDB.open.mockReturnValue(openRequest);
 
-    // Create cache instance
-    cache = new GcodeCache();
+    // Create repository instance
+    repository = new CacheRepository();
 
     // Simulate successful DB open
     setTimeout(() => {
@@ -68,30 +68,56 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
   describe('initialize', () => {
     it('should open IndexedDB connection', async () => {
-      await cache.initialize();
+      const result = await repository.initialize();
+      expect(result.ok).toBe(true);
       expect(mockIndexedDB.open).toHaveBeenCalledWith('ams-gcode-cache', 1);
     });
 
     it('should create object store on upgrade', async () => {
-      // Setup a fresh mock for this test
+      // Clear previous mocks
+      vi.clearAllMocks();
+      
+      // Setup a fresh mock database
+      const upgradeDb = {
+        objectStoreNames: {
+          contains: vi.fn(() => false),
+        },
+        createObjectStore: vi.fn(() => mockObjectStore),
+      };
+      
+      let capturedUpgradeHandler: any = null;
       const upgradeRequest = {
+        set onupgradeneeded(handler: any) {
+          capturedUpgradeHandler = handler;
+        },
         onsuccess: null as any,
         onerror: null as any,
-        onupgradeneeded: null as any,
-        result: mockDb,
+        result: upgradeDb,
       };
       
       mockIndexedDB.open.mockReturnValue(upgradeRequest);
       
-      // Create a new cache instance to capture the upgrade handler
-      const newCache = new GcodeCache();
+      // Create a new repository instance and call initialize
+      const newRepository = new CacheRepository();
+      const initPromise = newRepository.initialize();
       
-      // Trigger upgrade
-      if (upgradeRequest.onupgradeneeded) {
-        upgradeRequest.onupgradeneeded({ target: upgradeRequest });
+      // Wait for the handler to be set
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      // Now trigger the upgrade event
+      if (capturedUpgradeHandler) {
+        const event = { target: { result: upgradeDb } };
+        capturedUpgradeHandler(event);
       }
       
-      expect(mockDb.createObjectStore).toHaveBeenCalledWith(
+      // Trigger success to complete initialization
+      if (upgradeRequest.onsuccess) {
+        upgradeRequest.onsuccess();
+      }
+      
+      await initPromise;
+      
+      expect(upgradeDb.createObjectStore).toHaveBeenCalledWith(
         'parsed-results',
         { keyPath: 'key' }
       );
@@ -100,11 +126,14 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
   describe('get', () => {
     it('should retrieve cached entry', async () => {
+      // Initialize first
+      await repository.initialize();
+
       const mockEntry = {
         key: 'test-hash',
         fileName: 'test.gcode',
         fileSize: 1000,
-        stats: { layerColorMap: { '0': 'T0', '1': 'T1' } },
+        stats: { layerColorMap: [['0', 'T0'], ['1', 'T1']] },
         optimization: {},
         logs: [],
         timestamp: Date.now(),
@@ -119,7 +148,7 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
       mockObjectStore.get.mockReturnValue(getRequest);
 
-      const promise = cache.get('test-hash');
+      const promise = repository.get('test-hash');
 
       // Simulate successful get
       setTimeout(() => {
@@ -130,12 +159,16 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
       const result = await promise;
       
-      expect(result).toBeTruthy();
-      expect(result?.fileName).toBe('test.gcode');
-      expect(result?.stats.layerColorMap).toBeInstanceOf(Map);
+      expect(result.ok).toBe(true);
+      if (result.ok && result.value) {
+        expect(result.value.fileName).toBe('test.gcode');
+        expect(result.value.stats.layerColorMap).toBeInstanceOf(Map);
+      }
     });
 
     it('should return null for non-existent entry', async () => {
+      await repository.initialize();
+
       const getRequest = {
         onsuccess: null as any,
         onerror: null as any,
@@ -144,7 +177,7 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
       mockObjectStore.get.mockReturnValue(getRequest);
 
-      const promise = cache.get('non-existent');
+      const promise = repository.get('non-existent');
 
       setTimeout(() => {
         if (getRequest.onsuccess) {
@@ -153,15 +186,20 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
       }, 0);
 
       const result = await promise;
-      expect(result).toBeNull();
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBeNull();
+      }
     });
 
     it('should remove expired entries', async () => {
+      await repository.initialize();
+
       const expiredEntry = {
         key: 'expired-hash',
         fileName: 'expired.gcode',
         fileSize: 1000,
-        stats: {},
+        stats: { layerColorMap: [] },
         optimization: {},
         logs: [],
         timestamp: Date.now() - (100 * 24 * 60 * 60 * 1000), // 100 days ago
@@ -182,7 +220,7 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
       mockObjectStore.get.mockReturnValue(getRequest);
       mockObjectStore.delete.mockReturnValue(deleteRequest);
 
-      const promise = cache.get('expired-hash');
+      const promise = repository.get('expired-hash');
 
       setTimeout(() => {
         if (getRequest.onsuccess) {
@@ -197,12 +235,17 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
       }, 10);
 
       const result = await promise;
-      expect(result).toBeNull();
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value).toBeNull();
+      }
     });
   });
 
   describe('set', () => {
     it('should store cache entry', async () => {
+      await repository.initialize();
+
       const stats: GcodeStats = {
         fileName: 'test.gcode',
         fileSize: 1000,
@@ -234,7 +277,7 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
       mockObjectStore.put.mockReturnValue(putRequest);
 
-      const promise = cache.set('test-hash', 'test.gcode', 1000, stats, optimization, logs);
+      const promise = repository.set('test-hash', 'test.gcode', 1000, stats, optimization, logs);
 
       setTimeout(() => {
         if (putRequest.onsuccess) {
@@ -242,8 +285,9 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
         }
       }, 0);
 
-      await promise;
+      const result = await promise;
 
+      expect(result.ok).toBe(true);
       expect(mockObjectStore.put).toHaveBeenCalledWith(
         expect.objectContaining({
           key: 'test-hash',
@@ -257,6 +301,8 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
   describe('clear', () => {
     it('should clear all cache entries', async () => {
+      await repository.initialize();
+
       const clearRequest = {
         onsuccess: null as any,
         onerror: null as any,
@@ -264,7 +310,7 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
       mockObjectStore.clear.mockReturnValue(clearRequest);
 
-      const promise = cache.clear();
+      const promise = repository.clear();
 
       setTimeout(() => {
         if (clearRequest.onsuccess) {
@@ -272,22 +318,27 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
         }
       }, 0);
 
-      await promise;
+      const result = await promise;
+      expect(result.ok).toBe(true);
       expect(mockObjectStore.clear).toHaveBeenCalled();
     });
   });
 
   describe('getMetadata', () => {
     it('should return cache metadata', async () => {
+      await repository.initialize();
+
       const mockEntries = [
         {
           key: 'hash1',
           fileName: 'file1.gcode',
+          fileSize: 1000,
           timestamp: Date.now() - 1000,
         },
         {
           key: 'hash2',
           fileName: 'file2.gcode',
+          fileSize: 2000,
           timestamp: Date.now(),
         },
       ];
@@ -300,7 +351,7 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
 
       mockObjectStore.getAll.mockReturnValue(getAllRequest);
 
-      const promise = cache.getMetadata();
+      const promise = repository.getMetadata();
 
       setTimeout(() => {
         if (getAllRequest.onsuccess) {
@@ -308,11 +359,14 @@ describe.skip('GcodeCache (deprecated - using CacheRepository now)', () => {
         }
       }, 0);
 
-      const metadata = await promise;
+      const result = await promise;
       
-      expect(metadata.totalEntries).toBe(2);
-      expect(metadata.totalSize).toBeGreaterThan(0);
-      expect(metadata.oldestEntry).toBeLessThan(metadata.newestEntry);
+      expect(result.ok).toBe(true);
+      if (result.ok) {
+        expect(result.value.totalEntries).toBe(2);
+        expect(result.value.totalSize).toBe(3000);
+        expect(result.value.oldestEntry).toBeLessThan(result.value.newestEntry);
+      }
     });
   });
 });
