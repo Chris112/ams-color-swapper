@@ -125,6 +125,43 @@ describe('AmsConfiguration', () => {
       }
     });
 
+    it('should calculate pause layer ranges correctly', () => {
+      const config = new AmsConfiguration('intervals');
+      const colors = [
+        createColor('T0', 0, 30),      // Ends at layer 30
+        createColor('T1', 60, 100),    // Starts at layer 60 (gap between 31-59)
+        createColor('T2', 110, 150),   // Starts at layer 110 (gap between 101-109)
+        createColor('T3', 151, 200)    // Starts at layer 151 (adjacent to T2)
+      ];
+      
+      config.assignColors(colors);
+      const swaps = config.getManualSwaps();
+      
+      // Find swap from T0 to T1
+      const swap1 = swaps.find(s => s.fromColor === 'T0' && s.toColor === 'T1');
+      if (swap1) {
+        expect(swap1.pauseStartLayer).toBe(31);
+        expect(swap1.pauseEndLayer).toBe(59);
+        expect(swap1.reason).toContain('Pause between layers 31-59');
+      }
+      
+      // Find swap from T1 to T2
+      const swap2 = swaps.find(s => s.fromColor === 'T1' && s.toColor === 'T2');
+      if (swap2) {
+        expect(swap2.pauseStartLayer).toBe(101);
+        expect(swap2.pauseEndLayer).toBe(109);
+        expect(swap2.reason).toContain('Pause between layers 101-109');
+      }
+      
+      // Find swap from T2 to T3 (adjacent colors)
+      const swap3 = swaps.find(s => s.fromColor === 'T2' && s.toColor === 'T3');
+      if (swap3) {
+        expect(swap3.pauseStartLayer).toBe(151);
+        expect(swap3.pauseEndLayer).toBe(150);
+        expect(swap3.reason).toContain('Colors are adjacent - pause at layer 151');
+      }
+    });
+
     it('should calculate correct time saved', () => {
       const config = new AmsConfiguration();
       const colors = [

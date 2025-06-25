@@ -6,10 +6,10 @@ let parser: GcodeParser;
 let logger: Logger;
 
 // Initialize parser and logger once
-function initialize() {
-  if (!parser) {
-    logger = new Logger();
-    parser = new GcodeParser(logger);
+function initialize(onProgress?: (progress: number, message: string) => void) {
+  if (!parser || onProgress) {
+    logger = new Logger('ParserWorker');
+    parser = new GcodeParser(logger, onProgress);
   }
 }
 
@@ -20,7 +20,15 @@ self.addEventListener('message', async (event) => {
   switch (type) {
     case 'parse':
       try {
-        initialize();
+        // Create progress callback
+        const progressCallback = (progress: number, message: string) => {
+          self.postMessage({
+            type: 'progress',
+            payload: { progress, message }
+          });
+        };
+
+        initialize(progressCallback);
 
         const { fileContent, fileName } = payload;
 
@@ -28,28 +36,8 @@ self.addEventListener('message', async (event) => {
         const blob = new Blob([fileContent], { type: 'text/plain' });
         const file = new File([blob], fileName, { type: 'text/plain' });
 
-        // Send progress updates
-        let lastProgress = 0;
-        const progressInterval = setInterval(() => {
-          lastProgress = Math.min(lastProgress + 10, 90);
-          self.postMessage({
-            type: 'progress',
-            payload: {
-              progress: lastProgress,
-              message:
-                lastProgress < 30
-                  ? 'Reading file...'
-                  : lastProgress < 60
-                    ? 'Parsing G-code...'
-                    : 'Analyzing colors...',
-            },
-          });
-        }, 200);
-
-        // Parse the file
+        // Parse the file with real progress tracking
         const stats = await parser.parse(file);
-
-        clearInterval(progressInterval);
 
         // Get logs
         const logs = logger.getLogs();

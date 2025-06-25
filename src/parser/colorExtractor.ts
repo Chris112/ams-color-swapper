@@ -10,7 +10,7 @@ export function extractColorInfo(
 
   // Count layers per color
   const layerCounts = new Map<string, number>();
-  for (const [layer, color] of layerColorMap) {
+  for (const [_layer, color] of layerColorMap) {
     layerCounts.set(color, (layerCounts.get(color) || 0) + 1);
   }
 

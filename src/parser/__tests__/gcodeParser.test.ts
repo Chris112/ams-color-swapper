@@ -5,7 +5,12 @@ import { GcodeStats } from '../../types';
 // Mock file for browser testing
 function createMockFile(content: string, name: string): File {
   const blob = new Blob([content], { type: 'text/plain' });
-  return new File([blob], name, { type: 'text/plain' });
+  const file = new File([blob], name, { type: 'text/plain' });
+  
+  // Add the text() method that returns a Promise<string>
+  (file as any).text = async () => content;
+  
+  return file;
 }
 
 describe('GcodeParser - Client Side', () => {

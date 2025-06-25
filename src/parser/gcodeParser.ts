@@ -1,4 +1,4 @@
-import { GcodeStats, ToolChange, ColorInfo } from '../types';
+import { GcodeStats, ToolChange } from '../types';
 import { Logger } from '../utils/logger';
 import { BrowserFileReader } from '../utils/fileReader';
 import { calculateStatistics } from './statistics';
@@ -15,9 +15,11 @@ export class GcodeParser {
   private colorLastSeen: Map<string, number> = new Map();
   private lineNumber: number = 0;
   private startTime: number = 0;
+  private onProgress?: (progress: number, message: string) => void;
 
-  constructor(logger?: Logger) {
-    this.logger = logger || new Logger();
+  constructor(logger?: Logger, onProgress?: (progress: number, message: string) => void) {
+    this.logger = logger || new Logger('GcodeParser');
+    this.onProgress = onProgress;
     this.stats = {
       toolChanges: [],
       layerColorMap: new Map(),
@@ -29,6 +31,10 @@ export class GcodeParser {
   async parse(file: File): Promise<GcodeStats> {
     this.startTime = Date.now();
     this.logger.info(`Starting G-code parse for ${file.name}`);
+    
+    if (this.onProgress) {
+      this.onProgress(10, 'Reading file...');
+    }
 
     this.stats.fileName = file.name;
     this.stats.fileSize = file.size;
@@ -42,12 +48,22 @@ export class GcodeParser {
     const reader = new BrowserFileReader(file);
     
     // Store raw content for geometry parsing
+    if (this.onProgress) {
+      this.onProgress(20, 'Loading file content...');
+    }
     this.stats.rawContent = await file.text();
 
+    if (this.onProgress) {
+      this.onProgress(30, 'Parsing G-code...');
+    }
     await this.processLines(reader);
 
     const parseTime = Date.now() - this.startTime;
     this.logger.info(`Parse completed in ${parseTime}ms`);
+    
+    if (this.onProgress) {
+      this.onProgress(85, 'Analyzing colors...');
+    }
 
     const completeStats = await calculateStatistics(
       this.stats as GcodeStats,
@@ -72,15 +88,52 @@ export class GcodeParser {
       }];
     }
 
-    // Parser complete stats
+    // Log analysis summary
+    this.logger.info('G-code Analysis Summary', {
+      fileName: file.name,
+      parseTime: `${parseTime}ms`,
+      totalLayers: completeStats.totalLayers,
+      totalHeight: `${completeStats.totalHeight}mm`,
+      uniqueColors: completeStats.colors.length,
+      toolChanges: completeStats.toolChanges?.length || 0,
+      filamentUsage: completeStats.filamentUsage?.total ? `${completeStats.filamentUsage.total.toFixed(2)}mm` : 'N/A',
+      printTime: completeStats.printTime || 'N/A'
+    });
+    
+    // Log color details
+    completeStats.colors.forEach((color, index) => {
+      this.logger.info(`Color ${index + 1}`, {
+        id: color.id,
+        name: color.name,
+        hex: color.hexColor,
+        usage: `${color.usagePercentage?.toFixed(2)}%`,
+        layers: `${color.firstLayer}-${color.lastLayer}`,
+        layerCount: color.layerCount
+      });
+    });
+    
+    // Log optimization potential
+    if (completeStats.colors.length > 4) {
+      this.logger.info(`Optimization needed: ${completeStats.colors.length} colors detected, but AMS only has 4 slots`);
+    }
 
     return completeStats;
   }
 
   private async processLines(reader: BrowserFileReader): Promise<void> {
+    // Estimate total lines based on file size (rough estimate: 50 bytes per line average)
+    const estimatedLines = Math.max(Math.floor(this.stats.fileSize! / 50), 1000);
+    let progressInterval = Math.max(Math.floor(estimatedLines / 20), 100); // Update every 5%
+    
     for await (const line of reader.readLines()) {
       this.lineNumber++;
       await this.parseLine(line.trim());
+      
+      // Report progress periodically
+      if (this.onProgress && this.lineNumber % progressInterval === 0) {
+        const progress = Math.min(30 + Math.floor((this.lineNumber / estimatedLines) * 50), 80);
+        this.onProgress(progress, `Processing line ${this.lineNumber.toLocaleString()}...`);
+      }
     }
   }
 
@@ -163,7 +216,7 @@ export class GcodeParser {
         this.currentLayer = newLayer;
         this.layerColorMap.set(this.currentLayer, this.currentTool);
         this.updateColorSeen(this.currentTool, this.currentLayer);
-        this.logger.debug(`Layer ${this.currentLayer} - Tool: ${this.currentTool}`);
+        this.logger.silly(`Layer ${this.currentLayer} - Tool: ${this.currentTool}`);
       }
     }
 
@@ -224,7 +277,31 @@ export class GcodeParser {
           this.stats.filamentUsage.total = Math.round(totalWeight * 100) / 100;
         }
 
+        // Store per-color filament weights
+        if (!this.stats.filamentEstimates) {
+          this.stats.filamentEstimates = [];
+        }
+        
+        // Map weights to tool IDs (T0, T1, T2, etc.)
+        weights.forEach((weight, index) => {
+          if (weight > 0) {
+            const toolId = `T${index}`;
+            // Check if we already have an entry for this tool
+            const existingEntry = this.stats.filamentEstimates!.find(e => e.colorId === toolId);
+            if (existingEntry) {
+              existingEntry.weight = weight;
+            } else {
+              this.stats.filamentEstimates!.push({
+                colorId: toolId,
+                length: 0, // We'll update this if we find length data
+                weight: weight,
+              });
+            }
+          }
+        });
+
         this.logger.info(`Total filament usage: ${this.stats.filamentUsage.total}g`);
+        this.logger.info(`Per-color weights: ${weights.map((w, i) => `T${i}: ${w}g`).join(', ')}`);
       }
     }
 
@@ -247,7 +324,8 @@ export class GcodeParser {
           };
         }
 
-        // Update model and support values
+        // Update filament usage values
+        this.stats.filamentUsage.total = total;
         this.stats.filamentUsage.model = model;
         this.stats.filamentUsage.support = support;
       }
@@ -336,7 +414,7 @@ export class GcodeParser {
       };
 
       this.toolChanges.push(change);
-      this.logger.debug(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
+      this.logger.silly(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
 
       this.currentTool = tool;
       // Don't update the layer color map here - wait for the layer change

@@ -3,12 +3,22 @@ import { DebugLog } from '../types';
 export class Logger {
   private logs: DebugLog[] = [];
   private enabled: boolean;
+  private logLevel: 'silly' | 'debug' | 'info' | 'warn' | 'error' = 'debug';
+  private componentName?: string;
 
-  constructor(enabled: boolean = true) {
+  constructor(componentName?: string, enabled: boolean = true) {
+    this.componentName = componentName;
     this.enabled = enabled;
   }
 
-  private log(level: 'info' | 'warn' | 'error' | 'debug', message: string, context?: unknown) {
+  private shouldLog(level: 'info' | 'warn' | 'error' | 'debug' | 'silly'): boolean {
+    const levels = ['silly', 'debug', 'info', 'warn', 'error'];
+    const currentLevelIndex = levels.indexOf(this.logLevel);
+    const messageLevelIndex = levels.indexOf(level);
+    return messageLevelIndex >= currentLevelIndex;
+  }
+
+  private log(level: 'info' | 'warn' | 'error' | 'debug' | 'silly', message: string, context?: unknown) {
     const log: DebugLog = {
       timestamp: Date.now(),
       level,
@@ -18,19 +28,25 @@ export class Logger {
 
     this.logs.push(log);
 
-    if (this.enabled) {
+    if (this.enabled && this.shouldLog(level)) {
+      const prefix = this.componentName ? `[${level.toUpperCase()}] [${this.componentName}]` : `[${level.toUpperCase()}]`;
+      const formattedMessage = `${prefix} ${message}`;
+      
       switch (level) {
         case 'info':
-          console.log(`[INFO] ${message}`, context || '');
+          console.log(formattedMessage, context || '');
           break;
         case 'warn':
-          console.warn(`[WARN] ${message}`, context || '');
+          console.warn(formattedMessage, context || '');
           break;
         case 'error':
-          console.error(`[ERROR] ${message}`, context || '');
+          console.error(formattedMessage, context || '');
           break;
         case 'debug':
-          console.debug(`[DEBUG] ${message}`, context || '');
+          console.debug(formattedMessage, context || '');
+          break;
+        case 'silly':
+          console.debug(formattedMessage, context || '');
           break;
       }
     }
@@ -52,6 +68,10 @@ export class Logger {
     this.log('debug', message, context);
   }
 
+  silly(message: string, context?: unknown) {
+    this.log('silly', message, context);
+  }
+
   getLogs(): DebugLog[] {
     return this.logs;
   }
@@ -62,5 +82,13 @@ export class Logger {
 
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
+  }
+
+  setLogLevel(level: 'silly' | 'debug' | 'info' | 'warn' | 'error') {
+    this.logLevel = level;
+  }
+
+  getLogLevel(): string {
+    return this.logLevel;
   }
 }

@@ -8,10 +8,11 @@ import { ExamplePanel } from '../ui/components/ExamplePanel';
 import { Logger } from '../utils/logger';
 import { Component } from './Component';
 import { parserWorkerService } from '../services/ParserWorkerService';
+import { gcodeCache } from '../services/GcodeCache';
 
 // Factory Floor Components
 import { FactoryFloorScene } from '../ui/components/factory/FactoryFloorScene';
-import { FactoryFloorService } from '../services/FactoryFloorService';
+import { FactoryFloorService, FactoryState } from '../services/FactoryFloorService';
 
 // Services
 import { FileProcessingService } from '../services/FileProcessingService';
@@ -20,7 +21,6 @@ import { ExportService } from '../services/ExportService';
 
 // Repositories
 import { 
-  GcodeRepository, 
   CacheRepository, 
   FileRepository,
   ICacheRepository 
@@ -45,7 +45,6 @@ export class App {
   private exportService: ExportService;
   
   // Repositories
-  private gcodeRepository: GcodeRepository;
   private cacheRepository: ICacheRepository;
   private fileRepository: FileRepository;
   
@@ -62,13 +61,11 @@ export class App {
     this.logger = new Logger();
     
     // Initialize repositories
-    this.gcodeRepository = new GcodeRepository();
     this.cacheRepository = new CacheRepository();
     this.fileRepository = new FileRepository();
     
     // Initialize services
     this.fileProcessingService = new FileProcessingService(
-      this.gcodeRepository,
       this.fileRepository,
       this.cacheRepository,
       this.logger
@@ -96,6 +93,27 @@ export class App {
     const result = await this.cacheRepository.initialize();
     if (!result.ok) {
       this.logger.error('Failed to initialize cache', result.error);
+      return;
+    }
+    
+    // Clean up cache entries with old algorithm versions
+    try {
+      // Initialize gcodeCache if not already done
+      await gcodeCache.initialize();
+      
+      // Clean up old algorithm versions
+      const deletedCount = await gcodeCache.cleanupOldAlgorithmVersions();
+      if (deletedCount > 0) {
+        this.logger.info(`Cleaned up ${deletedCount} cache entries with outdated algorithm versions`);
+      }
+      
+      // Also clean up expired entries
+      const expiredCount = await gcodeCache.cleanupExpired();
+      if (expiredCount > 0) {
+        this.logger.info(`Cleaned up ${expiredCount} expired cache entries`);
+      }
+    } catch (error) {
+      this.logger.warn('Cache cleanup failed', error);
     }
   }
 
@@ -407,19 +425,19 @@ export class App {
   private setupFactoryFloorEvents(): void {
     if (!this.factoryFloorService) return;
     
-    this.factoryFloorService.on('printSelected', (printId) => {
+    this.factoryFloorService.on('printSelected', (_data: { printId: string | null }) => {
       this.updateFactoryFloorUI();
     });
     
-    this.factoryFloorService.on('factoryStateChanged', (state) => {
-      this.updateFactoryStatsUI(state);
+    this.factoryFloorService.on('factoryStateChanged', (data: { state: FactoryState }) => {
+      this.updateFactoryStatsUI(data.state);
     });
     
-    this.factoryFloorService.on('buildingStarted', (printId) => {
+    this.factoryFloorService.on('buildingStarted', (_data: { printId: string }) => {
       // Started building print
     });
     
-    this.factoryFloorService.on('buildingCompleted', (printId) => {
+    this.factoryFloorService.on('buildingCompleted', (_data: { printId: string }) => {
       // Completed building print
     });
   }
@@ -505,7 +523,7 @@ export class App {
     }
   }
 
-  private updateFactoryStatsUI(state: any): void {
+  private updateFactoryStatsUI(state: FactoryState): void {
     const statsPanel = document.getElementById('factoryStatsPanel');
     if (statsPanel) {
       statsPanel.innerHTML = `

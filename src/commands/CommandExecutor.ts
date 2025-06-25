@@ -6,7 +6,7 @@ import { Logger } from '../utils/logger';
  * Executes commands and manages command history
  */
 export class CommandExecutor {
-  private history: ICommand[] = [];
+  private history: ICommand<any>[] = [];
   private currentIndex: number = -1;
 
   constructor(private logger: Logger) {}
@@ -69,7 +69,7 @@ export class CommandExecutor {
   /**
    * Get command history
    */
-  getHistory(): ReadonlyArray<ICommand> {
+  getHistory(): ReadonlyArray<ICommand<any>> {
     return [...this.history];
   }
 
@@ -82,7 +82,7 @@ export class CommandExecutor {
     this.logger.info('Command history cleared');
   }
 
-  private addToHistory(command: ICommand): void {
+  private addToHistory(command: ICommand<any>): void {
     // Remove any commands after current index
     this.history = this.history.slice(0, this.currentIndex + 1);
     

@@ -90,13 +90,13 @@ export function getUserMessage(error: unknown): string {
   if (isAppError(error)) {
     switch (error.code) {
       case 'PARSE_ERROR':
-        return `Failed to parse G-code file${error.line ? ` at line ${error.line}` : ''}`;
+        return `Failed to parse G-code file${(error as ParseError).line ? ` at line ${(error as ParseError).line}` : ''}`;
       case 'VALIDATION_ERROR':
-        return `Invalid file format${error.field ? ` (${error.field})` : ''}`;
+        return `Invalid file format${(error as ValidationError).field ? ` (${(error as ValidationError).field})` : ''}`;
       case 'CACHE_ERROR':
         return 'Failed to access cached data';
       case 'FILE_ERROR':
-        return `Failed to read file${error.fileName ? ` "${error.fileName}"` : ''}`;
+        return `Failed to read file${(error as FileError).fileName ? ` "${(error as FileError).fileName}"` : ''}`;
       case 'WORKER_ERROR':
         return 'Background processing failed';
       default:

@@ -1,15 +1,15 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { AppStateData } from '../../state/AppState';
-import { fileStatsTemplate, colorStatsTemplate, optimizationTemplate, swapInstructionsTemplate } from '../templates';
+import { fileStatsTemplate, colorStatsTemplate, optimizationTemplate, swapInstructionsTemplate, filamentUsageTemplate } from '../templates';
 import { animateNumber, staggerAnimation, addRippleEffect, add3DTiltEffect, addGlowHover } from '../../utils/animations';
 import { VolumetricHologram } from './VolumetricHologram';
 
 export class ResultsView extends Component {
-  private exportBtn: HTMLElement;
-  private newFileBtn: HTMLElement;
-  private toggleDebugBtn: HTMLElement;
-  private clearCacheBtn: HTMLElement;
+  private exportBtn!: HTMLElement;
+  private newFileBtn!: HTMLElement;
+  private toggleDebugBtn!: HTMLElement;
+  private clearCacheBtn!: HTMLElement;
   private volumetricHologram: VolumetricHologram | null = null;
 
   constructor() {
@@ -21,8 +21,7 @@ export class ResultsView extends Component {
     const clearCacheBtn = this.element.querySelector('#clearCacheBtn');
     
     if (!exportBtn || !newFileBtn || !toggleDebugBtn || !clearCacheBtn) {
-      console.error('ResultsView: Required buttons not found');
-      return;
+      throw new Error('ResultsView: Required buttons not found in DOM');
     }
     
     this.exportBtn = exportBtn as HTMLElement;
@@ -54,6 +53,7 @@ export class ResultsView extends Component {
       this.updateFileName();
       this.updateFileStats();
       this.updateColorStats();
+      this.updateFilamentUsage();
       this.updateVolumetricHologram();
       this.updateOptimization();
       this.updateSwapInstructions();
@@ -154,6 +154,50 @@ export class ResultsView extends Component {
     }
   }
 
+  private updateFilamentUsage(): void {
+    const container = document.getElementById('filamentUsage');
+    if (container && this.state.stats && this.state.stats.filamentEstimates) {
+      container.innerHTML = filamentUsageTemplate(
+        this.state.stats.filamentEstimates,
+        this.state.stats.colors
+      );
+      
+      // Animate the progress bars
+      setTimeout(() => {
+        const bars = container.querySelectorAll('[style*="width"]');
+        bars.forEach((bar) => {
+          const el = bar as HTMLElement;
+          const width = el.style.width;
+          el.style.width = '0%';
+          el.style.transition = 'none';
+          
+          setTimeout(() => {
+            el.style.transition = 'width 1s ease-out';
+            el.style.width = width;
+          }, 100);
+        });
+      }, 100);
+      
+      // Animate numbers
+      const numbers = container.querySelectorAll('.text-xl, .text-4xl');
+      numbers.forEach((el) => {
+        const text = el.textContent || '';
+        const match = text.match(/^([\d.]+)(.*)/);
+        if (match) {
+          const num = parseFloat(match[1]);
+          const suffix = match[2] || '';
+          animateNumber(el as HTMLElement, 0, num, 1000, suffix);
+        }
+      });
+      
+      // Add 3D tilt effect to cards
+      const cards = container.querySelectorAll('.glass');
+      cards.forEach((card) => {
+        add3DTiltEffect(card as HTMLElement, 5);
+      });
+    }
+  }
+
   private updateOptimization(): void {
     const container = document.getElementById('optimizationResults');
     if (container && this.state.optimization) {
@@ -220,12 +264,14 @@ export class ResultsView extends Component {
     
     // Clean up existing hologram
     if (this.volumetricHologram) {
-      this.volumetricHologram.destroy();
+      this.volumetricHologram!.destroy();
       this.volumetricHologram = null;
     }
     
     // Create new hologram with delay for smooth transition
     setTimeout(() => {
+      if (!container) return;
+      
       try {
         this.volumetricHologram = new VolumetricHologram(
           '#hologramContainer',

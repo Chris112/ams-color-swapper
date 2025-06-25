@@ -1,14 +1,14 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { appState, AppStateData } from '../../state/AppState';
-import { addMagneticEffect, addGlowHover, add3DTiltEffect } from '../../utils/animations';
+import { addMagneticEffect, addGlowHover } from '../../utils/animations';
 
 export class FileUploader extends Component {
-  private dropZone?: HTMLElement;
-  private fileInput?: HTMLInputElement;
-  private progressBar?: HTMLElement;
-  private progressFill?: HTMLElement;
-  private progressText?: HTMLElement;
+  private dropZone!: HTMLElement;
+  private fileInput!: HTMLInputElement;
+  private progressBar!: HTMLElement;
+  private progressFill!: HTMLElement;
+  private progressText!: HTMLElement;
 
   constructor() {
     super('#uploadSection');

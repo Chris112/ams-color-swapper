@@ -1,14 +1,14 @@
 import * as THREE from 'three';
-import { EventEmitter } from '../../../core/EventEmitter';
+import { EventEmitter, EventHandler } from '../../../core/EventEmitter';
 import type { PrintGeometry } from '../../../parser/gcodeToGeometry';
 
 export interface PrintBuilderEvents {
-  layerComplete: (layer: number, totalLayers: number) => void;
-  buildComplete: () => void;
-  buildStarted: () => void;
-  buildPaused: () => void;
-  buildResumed: () => void;
-  speedChanged: (speed: number) => void;
+  layerComplete: { layer: number; totalLayers: number };
+  buildComplete: void;
+  buildStarted: void;
+  buildPaused: void;
+  buildResumed: void;
+  speedChanged: { speed: number };
 }
 
 export enum BuildState {
@@ -28,12 +28,12 @@ export interface BuilderConfig {
 export class PrintBuilder {
   private eventEmitter: EventEmitter<PrintBuilderEvents>;
   private geometry: PrintGeometry;
-  private group: THREE.Group;
+  private group!: THREE.Group;
   private config: BuilderConfig;
   
   private state: BuildState = BuildState.IDLE;
   private currentLayer: number = -1;
-  private targetLayer: number = -1;
+  // private targetLayer: number = -1; // Currently only written, not read
   private speed: number = 2; // layers per second
   private animationId: number | null = null;
   private startTime: number = 0;
@@ -122,7 +122,7 @@ export class PrintBuilder {
     
     this.isPlaying = true;
     this.state = BuildState.BUILDING;
-    this.targetLayer = this.geometry.totalLayers - 1;
+    // this.targetLayer = this.geometry.totalLayers - 1; // For future use
     this.startTime = Date.now();
     this.pausedTime = 0;
     
@@ -164,7 +164,7 @@ export class PrintBuilder {
   
   public setSpeed(speed: number): void {
     this.speed = Math.max(0.1, Math.min(speed, 20)); // Clamp between 0.1 and 20
-    this.eventEmitter.emit('speedChanged', this.speed);
+    this.eventEmitter.emit('speedChanged', { speed: this.speed });
   }
   
   public getSpeed(): number {
@@ -228,7 +228,7 @@ export class PrintBuilder {
       this.currentLayer = targetLayer;
       this.setVisibleLayer(this.currentLayer);
       
-      this.eventEmitter.emit('layerComplete', this.currentLayer, this.geometry.totalLayers);
+      this.eventEmitter.emit('layerComplete', { layer: this.currentLayer, totalLayers: this.geometry.totalLayers });
       
       if (this.currentLayer >= this.geometry.totalLayers - 1) {
         this.state = BuildState.COMPLETE;
@@ -297,13 +297,15 @@ export class PrintBuilder {
       let maxY = -Infinity;
       
       layerMeshes.forEach(mesh => {
-        const geometry = mesh.geometry;
-        const positions = geometry.getAttribute('position');
-        if (positions) {
-          for (let i = 1; i < positions.count * 3; i += 3) { // Every 3rd element is Y
-            const y = positions.array[i];
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y);
+        if (mesh instanceof THREE.Mesh) {
+          const geometry = mesh.geometry;
+          const positions = geometry.getAttribute('position');
+          if (positions) {
+            for (let i = 1; i < positions.count * 3; i += 3) { // Every 3rd element is Y
+              const y = positions.array[i];
+              minY = Math.min(minY, y);
+              maxY = Math.max(maxY, y);
+            }
           }
         }
       });
@@ -337,14 +339,14 @@ export class PrintBuilder {
   // Event handling methods
   public on<K extends keyof PrintBuilderEvents>(
     event: K,
-    handler: PrintBuilderEvents[K]
+    handler: EventHandler<PrintBuilderEvents[K]>
   ): void {
     this.eventEmitter.on(event, handler);
   }
   
   public off<K extends keyof PrintBuilderEvents>(
     event: K,
-    handler: PrintBuilderEvents[K]
+    handler: EventHandler<PrintBuilderEvents[K]>
   ): void {
     this.eventEmitter.off(event, handler);
   }
@@ -396,7 +398,7 @@ export class PrintBuilder {
 // Utility class for managing multiple print builders
 export class PrintBuilderManager {
   private builders: Map<string, PrintBuilder> = new Map();
-  private eventEmitter: EventEmitter<{ builderStateChanged: (id: string, state: BuildState) => void }>;
+  private eventEmitter: EventEmitter<{ builderStateChanged: { id: string; state: BuildState } }>;
   
   constructor() {
     this.eventEmitter = new EventEmitter();
@@ -410,16 +412,16 @@ export class PrintBuilderManager {
     this.builders.set(id, builder);
     
     // Listen to builder events
-    builder.on('buildStarted', () => {
-      this.eventEmitter.emit('builderStateChanged', id, BuildState.BUILDING);
+    builder.on('buildStarted', (_data: void) => {
+      this.eventEmitter.emit('builderStateChanged', { id, state: BuildState.BUILDING });
     });
     
-    builder.on('buildPaused', () => {
-      this.eventEmitter.emit('builderStateChanged', id, BuildState.PAUSED);
+    builder.on('buildPaused', (_data: void) => {
+      this.eventEmitter.emit('builderStateChanged', { id, state: BuildState.PAUSED });
     });
     
-    builder.on('buildComplete', () => {
-      this.eventEmitter.emit('builderStateChanged', id, BuildState.COMPLETE);
+    builder.on('buildComplete', (_data: void) => {
+      this.eventEmitter.emit('builderStateChanged', { id, state: BuildState.COMPLETE });
     });
   }
   
@@ -451,7 +453,7 @@ export class PrintBuilderManager {
     this.builders.forEach(builder => builder.setSpeed(speed));
   }
   
-  public on(event: 'builderStateChanged', handler: (id: string, state: BuildState) => void): void {
+  public on(event: 'builderStateChanged', handler: (data: { id: string; state: BuildState }) => void): void {
     this.eventEmitter.on(event, handler);
   }
   

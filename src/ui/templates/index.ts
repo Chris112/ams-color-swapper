@@ -1,4 +1,4 @@
-import { GcodeStats, Color, OptimizationResult, ManualSwap } from '../../types';
+import { GcodeStats, OptimizationResult, ManualSwap, ColorInfo } from '../../types';
 
 // Utility function to format file size
 const formatFileSize = (bytes: number): string => {
@@ -31,16 +31,17 @@ export const fileStatsTemplate = (stats: GcodeStats): string => {
 };
 
 // Color statistics template
-export const colorStatsTemplate = (colors: Color[]): string => {
+export const colorStatsTemplate = (colors: ColorInfo[]): string => {
   return colors.map((color, index) => `
     <div class="glass rounded-2xl p-4 hover:scale-105 transition-all duration-300 group animate-scale-in" style="animation-delay: ${index * 0.05}s">
       <div class="flex items-center gap-3">
         <div class="color-swatch" style="background-color: ${color.hexColor || '#888888'}"></div>
         <div class="flex-1">
-          <div class="font-semibold text-white">${color.name || color.id}</div>
-          <div class="text-sm text-white/60">
-            Layers ${color.firstLayer}-${color.lastLayer} 
-            <span class="text-vibrant-pink">${color.usagePercentage ? color.usagePercentage.toFixed(1) : '0.0'}%</span>
+          <div class="font-semibold text-white mb-1">${color.name || color.id}</div>
+          <div class="text-xs text-white/60 space-y-1">
+            <div>First Layer: <span class="text-vibrant-cyan font-medium">${color.firstLayer}</span></div>
+            <div>Last Layer: <span class="text-vibrant-cyan font-medium">${color.lastLayer}</span></div>
+            <div>Usage: <span class="text-vibrant-pink font-medium">${color.usagePercentage.toFixed(1)}%</span></div>
           </div>
         </div>
       </div>
@@ -98,6 +99,68 @@ export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats)
   return statsHtml + '<h4 class="text-h3 text-white mt-8 mb-4">Slot Assignments</h4><div class="space-y-4">' + slotsHtml + '</div>';
 };
 
+// Filament usage visualization template
+export const filamentUsageTemplate = (filamentEstimates: any[], colors: ColorInfo[]): string => {
+  if (!filamentEstimates || filamentEstimates.length === 0) {
+    return '';
+  }
+
+  // Calculate total weight for percentage calculations
+  const totalWeight = filamentEstimates.reduce((sum, est) => sum + (est.weight || 0), 0);
+  
+  // Sort by weight descending
+  const sortedEstimates = [...filamentEstimates].sort((a, b) => (b.weight || 0) - (a.weight || 0));
+  
+  // Find max weight for scaling bars
+  const maxWeight = Math.max(...filamentEstimates.map(est => est.weight || 0));
+
+  const chartHtml = sortedEstimates.map((estimate, index) => {
+    const color = colors.find(c => c.id === estimate.colorId);
+    const weight = estimate.weight || 0;
+    const percentage = totalWeight > 0 ? (weight / totalWeight * 100).toFixed(1) : '0';
+    const barWidth = maxWeight > 0 ? (weight / maxWeight * 100) : 0;
+    
+    return `
+      <div class="glass rounded-xl p-4 hover:scale-[1.02] transition-all duration-300 animate-scale-in" style="animation-delay: ${index * 0.05}s">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-3">
+            <div class="w-6 h-6 rounded-full shadow-lg ring-2 ring-white/20" 
+                 style="background-color: ${color?.hexColor || '#888888'}"></div>
+            <span class="font-semibold text-white">${color?.name || estimate.colorId}</span>
+          </div>
+          <div class="text-right">
+            <div class="text-xl font-bold gradient-text">${weight.toFixed(1)}g</div>
+            <div class="text-xs text-white/60">${percentage}%</div>
+          </div>
+        </div>
+        <div class="relative h-6 bg-white/10 rounded-full overflow-hidden">
+          <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out hover:brightness-110"
+               style="width: ${barWidth}%; background: linear-gradient(90deg, ${color?.hexColor || '#888888'}CC, ${color?.hexColor || '#888888'}FF)">
+            <div class="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 rounded-full"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const summaryHtml = `
+    <div class="glass rounded-2xl p-6 mb-6 text-center">
+      <div class="text-4xl font-black gradient-text mb-2">${totalWeight.toFixed(1)}g</div>
+      <div class="text-sm text-white/60 uppercase tracking-wider">Total Filament Usage</div>
+    </div>
+  `;
+
+  return `
+    <div class="space-y-4">
+      ${summaryHtml}
+      <h4 class="text-h3 text-white mb-4">Filament Usage by Color</h4>
+      <div class="space-y-3">
+        ${chartHtml}
+      </div>
+    </div>
+  `;
+};
+
 // Swap instructions template
 export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats): string => {
   if (swaps.length === 0) {
@@ -133,7 +196,10 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats)
             <line x1="8" y1="2" x2="8" y2="6"></line>
             <line x1="3" y1="10" x2="21" y2="10"></line>
           </svg>
-          <span class="font-semibold text-white">Layer ${swap.atLayer}</span>
+          ${swap.pauseEndLayer >= swap.pauseStartLayer 
+            ? `<span class="font-semibold text-white">Pause between layers ${swap.pauseStartLayer}-${swap.pauseEndLayer}</span>`
+            : `<span class="font-semibold text-white">Pause at layer ${swap.atLayer}</span>`
+          }
           ${swap.zHeight ? `<span class="text-sm"> • Z${swap.zHeight.toFixed(2)}mm</span>` : ''}
         </div>
         

@@ -1,7 +1,7 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { appState, AppStateData } from '../../state/AppState';
-import { animateNumber, typewriterEffect } from '../../utils/animations';
+import { animateNumber } from '../../utils/animations';
 import { gcodeCache } from '../../services/GcodeCache';
 
 export class DebugPanel extends Component {
@@ -30,7 +30,7 @@ export class DebugPanel extends Component {
   }
 
   protected render(): void {
-    const { debugVisible, debugTab, logs, stats, optimization } = this.state;
+    const { debugVisible, debugTab } = this.state;
     
     // Show/hide debug panel
     this.toggle(debugVisible);

@@ -6,7 +6,7 @@ export class VoxelDataStructure {
   private voxels: Map<string, VoxelData> = new Map();
   private dimensions: Vector3;
   private voxelSize: number;
-  private resolution: Vector3;
+  // private resolution: Vector3; // Not currently used
   private colors: Color[] = [];
   
   constructor(
@@ -14,12 +14,12 @@ export class VoxelDataStructure {
     resolution: Vector3 = new Vector3(128, 128, 128),
     voxelSize: number = 1.0
   ) {
-    this.resolution = resolution;
+    // this.resolution = resolution; // Store if needed later
     this.voxelSize = voxelSize;
     
     // Use fallback values if stats are incomplete
     const height = stats.totalHeight || 100;
-    const layers = stats.totalLayers || 50;
+    // const layers = stats.totalLayers || 50; // Available if needed
     
     this.dimensions = new Vector3(
       resolution.x * voxelSize,

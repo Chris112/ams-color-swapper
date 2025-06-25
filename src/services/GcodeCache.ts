@@ -77,7 +77,9 @@ export class GcodeCache {
 
         // Reconstruct Maps from stored data
         if (entry.stats.layerColorMap) {
-          entry.stats.layerColorMap = new Map(Object.entries(entry.stats.layerColorMap));
+          entry.stats.layerColorMap = new Map(
+            Object.entries(entry.stats.layerColorMap).map(([k, v]) => [Number(k), v])
+          );
         }
 
         resolve(entry);
@@ -216,6 +218,45 @@ export class GcodeCache {
 
       request.onerror = () => reject(new Error('Failed to cleanup expired entries'));
     });
+  }
+
+  async cleanupOldAlgorithmVersions(): Promise<number> {
+    if (!this.db) await this.initialize();
+    
+    // Get current algorithm version to compare against
+    const currentVersion = await this.getCurrentAlgorithmVersion();
+    let deletedCount = 0;
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction([GcodeCache.STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(GcodeCache.STORE_NAME);
+      const request = store.openCursor();
+
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          const entry = cursor.value as CacheEntry;
+          // Check if the cache key doesn't match current algorithm version
+          // Cache keys now include algorithm version, so entries with different versions won't match
+          if (!entry.key.includes(currentVersion)) {
+            cursor.delete();
+            deletedCount++;
+          }
+          cursor.continue();
+        } else {
+          resolve(deletedCount);
+        }
+      };
+
+      request.onerror = () => reject(new Error('Failed to cleanup old algorithm versions'));
+    });
+  }
+
+  private async getCurrentAlgorithmVersion(): Promise<string> {
+    // This should match the version generation in hash.ts
+    const ALGORITHM_VERSION = '2.0.0';
+    const gitCommitHash = import.meta.env.VITE_GIT_COMMIT_HASH || Date.now().toString(36);
+    return `${ALGORITHM_VERSION}-${gitCommitHash}`;
   }
 }
 

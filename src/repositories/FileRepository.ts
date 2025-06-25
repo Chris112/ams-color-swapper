@@ -1,5 +1,6 @@
 import { IFileRepository } from './interfaces';
 import { Result, FileError } from '../types';
+import { generateCacheKey } from '../utils/hash';
 
 export class FileRepository implements IFileRepository {
   async readAsText(file: File): Promise<Result<string>> {
@@ -19,18 +20,9 @@ export class FileRepository implements IFileRepository {
 
   async calculateHash(file: File): Promise<Result<string>> {
     try {
-      // Create a hash using file metadata as a simple implementation
-      // For production, you might want to use Web Crypto API with actual file content
-      const hashData = `${file.name}-${file.size}-${file.lastModified}`;
-      
-      // Use Web Crypto API for better hashing
-      const encoder = new TextEncoder();
-      const data = encoder.encode(hashData);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      
-      return Result.ok(hashHex);
+      // Use the new cache key generator that includes algorithm version
+      const cacheKey = await generateCacheKey(file);
+      return Result.ok(cacheKey);
     } catch (error) {
       return Result.err(
         new FileError(

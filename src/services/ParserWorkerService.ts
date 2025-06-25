@@ -55,7 +55,7 @@ export class ParserWorkerService {
         }
       };
 
-      this.worker.addEventListener('message', handleMessage);
+      this.worker?.addEventListener('message', handleMessage);
 
       // Read file content and send to worker
       const reader = new FileReader();

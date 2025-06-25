@@ -18,14 +18,14 @@ vi.mock('../../parser/gcodeParser', () => ({
   GcodeParser: vi.fn().mockImplementation(() => ({
     parse: vi.fn().mockImplementation(async (input, fileName) => {
       // Handle both string content and File objects
-      let content = '';
+      // let content = ''; // Not used in mock
       let fileSize = 1000;
       
       if (typeof input === 'string') {
-        content = input;
+        // content = input;
         fileSize = input.length;
       } else if (input instanceof File) {
-        content = await input.text();
+        // content = await input.text();
         fileSize = input.size;
         fileName = input.name;
       }
@@ -78,7 +78,7 @@ describe('GcodeRepository', () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ValidationError);
-        expect(result.error.field).toBe('fileExtension');
+        expect((result.error as ValidationError).field).toBe('fileExtension');
       }
     });
 
@@ -91,7 +91,7 @@ describe('GcodeRepository', () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ValidationError);
-        expect(result.error.field).toBe('fileSize');
+        expect((result.error as ValidationError).field).toBe('fileSize');
       }
     });
 
@@ -104,7 +104,7 @@ describe('GcodeRepository', () => {
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ValidationError);
-        expect(result.error.field).toBe('fileSize');
+        expect((result.error as ValidationError).field).toBe('fileSize');
       }
     });
   });

@@ -57,7 +57,7 @@ export class ExamplePanel {
       this.hide();
     } catch (error) {
       console.error('Failed to load example:', error);
-      alert(`Failed to load example: ${error.message}`);
+      alert(`Failed to load example: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

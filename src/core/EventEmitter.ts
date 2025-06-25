@@ -17,31 +17,31 @@ export interface AppEventMap {
 
 export type AppEventKey = keyof AppEventMap;
 
-export class EventEmitter {
-  private events = new Map<string, Set<EventHandler>>();
+export class EventEmitter<TEventMap = AppEventMap> {
+  private events = new Map<string, Set<EventHandler<any>>>();
 
-  on<K extends AppEventKey>(event: K, handler: EventHandler<AppEventMap[K]>): () => void {
-    if (!this.events.has(event)) {
-      this.events.set(event, new Set());
+  on<K extends keyof TEventMap>(event: K, handler: EventHandler<TEventMap[K]>): () => void {
+    if (!this.events.has(event as string)) {
+      this.events.set(event as string, new Set());
     }
-    this.events.get(event)!.add(handler);
+    this.events.get(event as string)!.add(handler as EventHandler<any>);
 
     // Return unsubscribe function
     return () => this.off(event, handler);
   }
 
-  off(event: string, handler: EventHandler): void {
-    const handlers = this.events.get(event);
+  off<K extends keyof TEventMap>(event: K, handler: EventHandler<TEventMap[K]>): void {
+    const handlers = this.events.get(event as string);
     if (handlers) {
-      handlers.delete(handler);
+      handlers.delete(handler as EventHandler<any>);
       if (handlers.size === 0) {
-        this.events.delete(event);
+        this.events.delete(event as string);
       }
     }
   }
 
-  emit<K extends AppEventKey>(event: K, data?: AppEventMap[K]): void {
-    const handlers = this.events.get(event);
+  emit<K extends keyof TEventMap>(event: K, data?: TEventMap[K]): void {
+    const handlers = this.events.get(event as string);
     if (handlers) {
       handlers.forEach(handler => handler(data));
     }
