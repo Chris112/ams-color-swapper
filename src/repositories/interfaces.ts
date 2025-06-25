@@ -8,12 +8,12 @@ export interface IGcodeRepository {
    * Parse a G-code file and extract statistics
    */
   parseFile(file: File): Promise<Result<GcodeStats>>;
-  
+
   /**
    * Parse G-code content directly
    */
   parseContent(content: string, fileName: string): Promise<Result<GcodeStats>>;
-  
+
   /**
    * Validate if a file is a valid G-code file
    */
@@ -28,12 +28,12 @@ export interface ICacheRepository {
    * Initialize the cache storage
    */
   initialize(): Promise<Result<void>>;
-  
+
   /**
    * Get cached analysis results
    */
   get(key: string): Promise<Result<CachedAnalysis | null>>;
-  
+
   /**
    * Store analysis results in cache
    */
@@ -45,12 +45,12 @@ export interface ICacheRepository {
     optimization: OptimizationResult,
     logs: DebugLog[]
   ): Promise<Result<void>>;
-  
+
   /**
    * Clear all cached data
    */
   clear(): Promise<Result<void>>;
-  
+
   /**
    * Get cache metadata
    */
@@ -65,12 +65,12 @@ export interface IFileRepository {
    * Read file content as text
    */
   readAsText(file: File): Promise<Result<string>>;
-  
+
   /**
    * Calculate file hash for caching
    */
   calculateHash(file: File): Promise<Result<string>>;
-  
+
   /**
    * Download content as a file
    */

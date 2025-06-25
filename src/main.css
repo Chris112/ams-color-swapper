@@ -2,9 +2,9 @@
 
 /* Base styles */
 body {
-  background-color: #0A0A0B;
-  color: #FFFFFF;
-  background-image: 
+  background-color: #0a0a0b;
+  color: #ffffff;
+  background-image:
     radial-gradient(circle at 20% 50%, rgba(255, 0, 110, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 80% 80%, rgba(131, 56, 236, 0.1) 0%, transparent 50%),
     radial-gradient(circle at 40% 20%, rgba(0, 150, 255, 0.1) 0%, transparent 50%);
@@ -28,7 +28,7 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(to right, #FF006E, #8338EC, #3B82F6);
+  background: linear-gradient(to right, #ff006e, #8338ec, #3b82f6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -46,7 +46,7 @@ body {
 .progress-bar-fill {
   @apply absolute inset-y-0 left-0 rounded-full transition-all duration-300 ease-out;
   height: 100%;
-  background: linear-gradient(90deg, #FF006E, #8338EC, #0096FF);
+  background: linear-gradient(90deg, #ff006e, #8338ec, #0096ff);
   background-size: 200% 200%;
   animation: gradientShift 3s ease infinite;
   box-shadow: 0 0 20px currentColor;
@@ -61,12 +61,7 @@ body {
   left: 0;
   bottom: 0;
   right: 0;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   transform: translateX(-100%);
   animation: shimmer 1.5s infinite;
 }
@@ -79,7 +74,7 @@ body {
   color: white;
   border-radius: 12px;
   overflow: hidden;
-  background: linear-gradient(135deg, #FF006E, #8338EC);
+  background: linear-gradient(135deg, #ff006e, #8338ec);
   background-size: 200% 200%;
   animation: gradientShift 5s ease infinite;
   box-shadow: 0 4px 20px rgba(131, 56, 236, 0.4);
@@ -149,11 +144,6 @@ body {
 /* Color swatch styles */
 .color-swatch {
   position: relative;
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  border: 3px solid rgba(255, 255, 255, 0.9);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -176,9 +166,11 @@ body {
   inset: -2px;
   border-radius: 24px;
   padding: 2px;
-  background: linear-gradient(90deg, #FF006E, #8338EC, #3B82F6, #FF006E);
+  background: linear-gradient(90deg, #ff006e, #8338ec, #3b82f6, #ff006e);
   background-size: 300% 100%;
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   opacity: 0.5;
@@ -195,7 +187,11 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 24px;
-  background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 0, 110, 0.1), transparent 50%);
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 0, 110, 0.1),
+    transparent 50%
+  );
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -223,12 +219,13 @@ body {
 #dropZone.drag-over::before {
   opacity: 1;
   animation: borderMove 1s linear infinite;
-  background: linear-gradient(90deg, #FF006E, #00DC82, #0096FF, #FF006E);
+  background: linear-gradient(90deg, #ff006e, #00dc82, #0096ff, #ff006e);
 }
 
 /* Animations */
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(255, 0, 110, 0.3);
   }
   50% {
@@ -237,7 +234,8 @@ body {
 }
 
 @keyframes gradientShift {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -252,19 +250,28 @@ body {
 }
 
 @keyframes shake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
-  10%, 30%, 50%, 70%, 90% {
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
     transform: translateX(-10px);
   }
-  20%, 40%, 60%, 80% {
+  20%,
+  40%,
+  60%,
+  80% {
     transform: translateX(10px);
   }
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
   50% {
@@ -331,7 +338,8 @@ body {
 }
 
 @keyframes glowPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 20px rgba(255, 0, 110, 0.5);
   }
   50% {
@@ -341,7 +349,9 @@ body {
 
 /* Tab transitions */
 .tab-content {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .tab-content[hidden] {
@@ -351,7 +361,9 @@ body {
 
 /* Debug panel animations */
 #debugSection {
-  transition: max-height 0.3s ease, opacity 0.3s ease;
+  transition:
+    max-height 0.3s ease,
+    opacity 0.3s ease;
 }
 
 /* Number counter animation */
@@ -443,13 +455,13 @@ body {
 
 /* Gradient backgrounds */
 .bg-gradient-neon {
-  background: linear-gradient(135deg, #FF006E, #8338EC, #3B82F6);
+  background: linear-gradient(135deg, #ff006e, #8338ec, #3b82f6);
   background-size: 200% 200%;
   animation: gradientShift 5s ease infinite;
 }
 
 .bg-gradient-spectrum {
-  background: linear-gradient(180deg, #FF006E, #FF8C00, #FFD600, #00DC82, #0096FF, #8338EC);
+  background: linear-gradient(180deg, #ff006e, #ff8c00, #ffd600, #00dc82, #0096ff, #8338ec);
   background-size: 100% 200%;
   animation: gradientShift 10s ease infinite;
 }
@@ -482,7 +494,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(45deg, #0096FF, #8338EC);
+  background: linear-gradient(45deg, #0096ff, #8338ec);
   cursor: pointer;
   border: 2px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
@@ -497,7 +509,7 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: linear-gradient(45deg, #0096FF, #8338EC);
+  background: linear-gradient(45deg, #0096ff, #8338ec);
   cursor: pointer;
   border: 2px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
@@ -513,4 +525,225 @@ body {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* Enhanced Color Analysis Styles */
+.timeline-segment {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.timeline-segment:hover {
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.3);
+  z-index: 5;
+}
+
+.timeline-segment.highlighted {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+  z-index: 10 !important;
+}
+
+.interactive-swatch {
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.interactive-swatch:hover {
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.interactive-swatch:active {
+  transform: scale(0.95);
+}
+
+.color-card {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.color-card:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+}
+
+.color-card.expanded {
+  transform: translateY(-2px);
+}
+
+.expandable-details {
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.expand-btn svg {
+  transition: transform 0.3s ease;
+}
+
+/* Enhanced Color Swatch Styles - sizes now controlled by Tailwind classes */
+.interactive-swatch {
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.interactive-swatch:hover {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Interactive Timeline Enhancements */
+#colorTimeline {
+  position: relative;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+}
+
+#colorTimeline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 0, 110, 0.1) 0%,
+    rgba(131, 56, 236, 0.1) 50%,
+    rgba(0, 150, 255, 0.1) 100%
+  );
+  opacity: 0.3;
+  border-radius: inherit;
+}
+
+/* Toast Notifications */
+.toast-enter {
+  animation: toastSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes toastSlideIn {
+  from {
+    transform: translateX(100%) scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Modal Enhancements */
+.modal-backdrop {
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+}
+
+/* Progress Bar Enhancements for Color Cards */
+.color-usage-bar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.color-usage-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transform: translateX(-100%);
+  animation: shimmer 2s infinite;
+}
+
+/* Enhanced Button Interactions */
+.btn-glass-sm {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.btn-glass-sm::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-glass-sm:hover::before {
+  left: 100%;
+}
+
+.btn-glass-sm:hover {
+  transform: translateY(-1px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Color Card Number Badge */
+.color-card .color-number-badge {
+  background: linear-gradient(45deg, #ff006e, #8338ec);
+  box-shadow: 0 2px 8px rgba(255, 0, 110, 0.3);
+  transition: all 0.3s ease;
+}
+
+.color-card:hover .color-number-badge {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(255, 0, 110, 0.5);
+}
+
+/* Hover Effects for Layer Timeline */
+.timeline-hover-info {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 20;
+}
+
+.timeline-segment:hover .timeline-hover-info {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Accessibility Enhancements */
+.timeline-segment:focus,
+.interactive-swatch:focus,
+.color-card:focus {
+  outline: 2px solid #0096ff;
+  outline-offset: 2px;
+}
+
+/* Responsive Enhancements */
+@media (max-width: 768px) {
+  .color-card {
+    margin-bottom: 1rem;
+  }
+
+  .timeline-segment {
+    min-width: 2px;
+  }
+
+  .expandable-details {
+    font-size: 0.875rem;
+  }
 }

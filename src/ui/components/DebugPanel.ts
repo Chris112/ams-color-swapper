@@ -15,7 +15,7 @@ export class DebugPanel extends Component {
 
   constructor() {
     super('#debugSection');
-    
+
     this.tabButtons = this.element.querySelectorAll('[data-tab]');
     this.logsTab = this.element.querySelector('#logsTab')!;
     this.performanceTab = this.element.querySelector('#performanceTab')!;
@@ -23,7 +23,7 @@ export class DebugPanel extends Component {
     this.parserLogs = this.element.querySelector('#parserLogs')!;
     this.performanceStats = this.element.querySelector('#performanceStats')!;
     this.rawData = this.element.querySelector('#rawData')!;
-    
+
     this.attachEventListeners();
     this.addMicroInteractions();
     this.initialize();
@@ -31,14 +31,14 @@ export class DebugPanel extends Component {
 
   protected render(): void {
     const { debugVisible, debugTab } = this.state;
-    
+
     // Show/hide debug panel
     this.toggle(debugVisible);
-    
+
     if (debugVisible) {
       // Update active tab
       this.setActiveTab(debugTab);
-      
+
       // Update content based on active tab
       if (debugTab === 'logs') {
         this.updateLogs();
@@ -61,7 +61,7 @@ export class DebugPanel extends Component {
   }
 
   private attachEventListeners(): void {
-    this.tabButtons.forEach(btn => {
+    this.tabButtons.forEach((btn) => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab') as 'logs' | 'performance' | 'raw';
         if (tab) {
@@ -81,11 +81,11 @@ export class DebugPanel extends Component {
 
   private setActiveTab(tab: string): void {
     // Update button styles with smooth transitions
-    this.tabButtons.forEach(btn => {
+    this.tabButtons.forEach((btn) => {
       const isActive = btn.getAttribute('data-tab') === tab;
       if (isActive) {
         btn.classList.add('text-white', 'border-b-2');
-        
+
         // Apply gradient border based on tab
         if (tab === 'logs') {
           btn.classList.add('border-vibrant-pink');
@@ -94,14 +94,20 @@ export class DebugPanel extends Component {
         } else {
           btn.classList.add('border-vibrant-blue');
         }
-        
+
         btn.classList.remove('text-white/60', 'hover:text-white', 'border-transparent');
       } else {
-        btn.classList.remove('text-white', 'border-b-2', 'border-vibrant-pink', 'border-vibrant-purple', 'border-vibrant-blue');
+        btn.classList.remove(
+          'text-white',
+          'border-b-2',
+          'border-vibrant-pink',
+          'border-vibrant-purple',
+          'border-vibrant-blue'
+        );
         btn.classList.add('text-white/60', 'hover:text-white', 'border-transparent');
       }
     });
-    
+
     // Smooth tab transitions
     const tabs = [this.logsTab, this.performanceTab, this.rawTab];
     tabs.forEach((tabEl, index) => {
@@ -110,7 +116,7 @@ export class DebugPanel extends Component {
         tabEl.classList.remove('hidden');
         tabEl.style.opacity = '0';
         tabEl.style.transform = 'translateY(10px)';
-        
+
         requestAnimationFrame(() => {
           tabEl.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
           tabEl.style.opacity = '1';
@@ -127,41 +133,49 @@ export class DebugPanel extends Component {
 
   private updateLogs(): void {
     const { logs } = this.state;
-    
+
     if (logs.length === 0) {
       this.parserLogs.innerHTML = '<p class="text-gray-500">No logs available</p>';
       return;
     }
-    
-    const logHtml = logs.map((log, index) => {
-      const time = new Date(log.timestamp).toLocaleTimeString();
-      const levelColor = log.level === 'error' ? 'text-vibrant-pink' : 
-                        log.level === 'warn' ? 'text-vibrant-orange' : 
-                        log.level === 'info' ? 'text-vibrant-blue' : 'text-white/70';
-      return `<div class="${levelColor} animate-fade-in" style="animation-delay: ${index * 20}ms">
+
+    const logHtml = logs
+      .map((log, index) => {
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        const levelColor =
+          log.level === 'error'
+            ? 'text-vibrant-pink'
+            : log.level === 'warn'
+              ? 'text-vibrant-orange'
+              : log.level === 'info'
+                ? 'text-vibrant-blue'
+                : 'text-white/70';
+        return `<div class="${levelColor} animate-fade-in" style="animation-delay: ${index * 20}ms">
         <span class="text-white/50">[${time}]</span> 
         <span class="font-semibold">[${log.level.toUpperCase()}]</span> 
         ${log.message}
       </div>`;
-    }).join('');
-    
+      })
+      .join('');
+
     this.parserLogs.innerHTML = logHtml;
   }
 
   private async updatePerformance(): Promise<void> {
     const { stats } = this.state;
-    
+
     if (!stats) {
-      this.performanceStats.innerHTML = '<p class="text-gray-500">No performance data available</p>';
+      this.performanceStats.innerHTML =
+        '<p class="text-gray-500">No performance data available</p>';
       return;
     }
-    
+
     const maxLineNumber = stats.toolChanges.reduce((max, tc) => Math.max(max, tc.lineNumber), 0);
-    
+
     // Get cache metadata
     const cacheMetadata = await gcodeCache.getMetadata();
     const cacheSize = (cacheMetadata.totalSize / 1024).toFixed(1); // Convert to KB
-    
+
     this.performanceStats.innerHTML = `
       <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform animate-scale-in" style="animation-delay: 0ms">
         <div class="text-4xl font-bold gradient-text stat-value" data-value="${stats.parseTime}">0</div>
@@ -188,7 +202,7 @@ export class DebugPanel extends Component {
         <div class="text-sm text-white/60 uppercase tracking-wider mt-2">Cache Size (KB)</div>
       </div>
     `;
-    
+
     // Animate the numbers
     setTimeout(() => {
       const statElements = this.performanceStats.querySelectorAll('.stat-value[data-value]');
@@ -201,12 +215,12 @@ export class DebugPanel extends Component {
 
   private updateRawData(): void {
     const { stats, optimization } = this.state;
-    
+
     if (!stats || !optimization) {
       this.rawData.textContent = 'No data available';
       return;
     }
-    
+
     const data = {
       stats: {
         fileName: stats.fileName,
@@ -224,7 +238,7 @@ export class DebugPanel extends Component {
         slotAssignments: optimization.slotAssignments,
       },
     };
-    
+
     this.rawData.textContent = JSON.stringify(data, null, 2);
   }
 }

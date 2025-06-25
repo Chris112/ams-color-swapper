@@ -15,7 +15,7 @@ export class FactoryFloorUI {
 
   public initialize(): void {
     if (this.initialized) return;
-    
+
     this.initializeElements();
     this.attachEventListeners();
     this.initialized = true;
@@ -81,7 +81,7 @@ export class FactoryFloorUI {
         </svg>
         Resume All
       `;
-      
+
       // Update click handler for resume
       this.pauseAllBtn.onclick = () => {
         eventBus.emit('RESUME_ALL_BUILDS' as any);
@@ -94,7 +94,7 @@ export class FactoryFloorUI {
         </svg>
         Pause All
       `;
-      
+
       // Restore original click handler
       this.pauseAllBtn.onclick = () => {
         eventBus.emit('PAUSE_ALL_BUILDS' as any);
@@ -162,13 +162,15 @@ export class FactoryFloorUI {
     }
   }
 
-  public updatePrintInfo(printInfo: {
-    filename: string;
-    layers: number;
-    colors: number;
-    progress: number;
-    dateAdded: string;
-  } | null): void {
+  public updatePrintInfo(
+    printInfo: {
+      filename: string;
+      layers: number;
+      colors: number;
+      progress: number;
+      dateAdded: string;
+    } | null
+  ): void {
     const infoPanel = document.getElementById('printInfoPanel');
     if (!infoPanel) return;
 
@@ -215,10 +217,10 @@ export class FactoryFloorUI {
       { id: 'factoryViewBtn', text: 'Switch to Factory Floor View' },
       { id: 'pauseAllBtn', text: 'Pause/Resume all building animations' },
       { id: 'clearFactoryBtn', text: 'Remove all prints from factory floor' },
-      { id: 'buildSpeedSlider', text: 'Adjust animation speed for all prints' }
+      { id: 'buildSpeedSlider', text: 'Adjust animation speed for all prints' },
     ];
 
-    controls.forEach(control => {
+    controls.forEach((control) => {
       const element = document.getElementById(control.id);
       if (element) {
         element.title = control.text;

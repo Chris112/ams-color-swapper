@@ -38,21 +38,21 @@ export class FileRepository implements IFileRepository {
     try {
       const blob = new Blob([content], { type: mimeType });
       const url = URL.createObjectURL(blob);
-      
+
       const link = document.createElement('a');
       link.href = url;
       link.download = fileName;
       link.style.display = 'none';
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       // Clean up
       setTimeout(() => {
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
       }, 100);
-      
+
       return Result.ok(undefined);
     } catch (error) {
       return Result.err(

@@ -30,17 +30,17 @@ export class ExamplePanel {
       if (!response.ok) {
         throw new Error(`Failed to load ${filename}`);
       }
-      
+
       const gcodeContent = await response.text();
-      
+
       // Create a synthetic file object with a fixed lastModified time for consistent caching
-      const file = new File([gcodeContent], filename, { 
+      const file = new File([gcodeContent], filename, {
         type: 'text/plain',
-        lastModified: 1640995200000 // Fixed timestamp: Jan 1, 2022
+        lastModified: 1640995200000, // Fixed timestamp: Jan 1, 2022
       });
-      
+
       // No longer emit event - file input change event handles everything
-      
+
       // Trigger file input change event to integrate with existing file handling
       const fileInput = document.getElementById('fileInput') as HTMLInputElement;
       if (fileInput) {
@@ -48,12 +48,12 @@ export class ExamplePanel {
         const dataTransfer = new DataTransfer();
         dataTransfer.items.add(file);
         fileInput.files = dataTransfer.files;
-        
+
         // Trigger change event
         const event = new Event('change', { bubbles: true });
         fileInput.dispatchEvent(event);
       }
-      
+
       this.hide();
     } catch (error) {
       console.error('Failed to load example:', error);
@@ -80,19 +80,25 @@ export class ExamplePanel {
           </p>
           
           <div class="grid gap-4">
-            ${this.examples.map(example => `
+            ${this.examples
+              .map(
+                (example) => `
               <div class="bg-gray-700 rounded-lg overflow-hidden hover:bg-gray-600 cursor-pointer transition-all hover:scale-[1.02]"
                    data-filename="${example.filename}" data-name="${example.name}">
                 <div class="flex gap-4">
                   <!-- Image Column -->
                   <div class="w-48 h-48 flex-shrink-0 relative overflow-hidden" style="background: linear-gradient(135deg, ${example.placeholderColor}22, ${example.placeholderColor}44);">
-                    ${example.imageUrl ? `
+                    ${
+                      example.imageUrl
+                        ? `
                       <img src="${example.imageUrl}" 
                            alt="${example.name}"
                            class="absolute inset-0 w-full h-full object-cover"
                            loading="lazy"
                            onerror="this.style.display='none'">
-                    ` : ''}
+                    `
+                        : ''
+                    }
                     <div class="absolute inset-0 flex flex-col items-center justify-center ${example.imageUrl ? 'opacity-0 hover:opacity-100 transition-opacity bg-black/50' : ''}">
                       <div class="w-20 h-20 rounded-full flex items-center justify-center mb-2" style="background-color: ${example.placeholderColor}">
                         <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -133,7 +139,9 @@ export class ExamplePanel {
                   </div>
                 </div>
               </div>
-            `).join('')}
+            `
+              )
+              .join('')}
           </div>
         </div>
       </div>
@@ -144,7 +152,7 @@ export class ExamplePanel {
     closeButton?.addEventListener('click', () => this.hide());
 
     // Add click handlers for examples
-    this.container.querySelectorAll('[data-filename]').forEach(element => {
+    this.container.querySelectorAll('[data-filename]').forEach((element) => {
       element.addEventListener('click', () => {
         const filename = element.getAttribute('data-filename')!;
         const name = element.getAttribute('data-name')!;

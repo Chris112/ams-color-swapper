@@ -6,10 +6,10 @@ import { GcodeStats } from '../../types';
 function createMockFile(content: string, name: string): File {
   const blob = new Blob([content], { type: 'text/plain' });
   const file = new File([blob], name, { type: 'text/plain' });
-  
+
   // Add the text() method that returns a Promise<string>
   (file as any).text = async () => content;
-  
+
   return file;
 }
 
@@ -66,7 +66,7 @@ G1 X150 Y150 E5.0`;
     });
 
     it('should extract filament usage', () => {
-      expect(stats.filamentUsage?.total).toBeCloseTo(96.53, 1);
+      expect(stats.filamentUsageStats?.total).toBeCloseTo(96.53, 1);
     });
   });
 

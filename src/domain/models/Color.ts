@@ -52,13 +52,7 @@ export class Color {
     firstLayer: number;
     lastLayer: number;
   }): Color {
-    return new Color(
-      data.id,
-      data.name,
-      data.hexColor,
-      data.firstLayer,
-      data.lastLayer
-    );
+    return new Color(data.id, data.name, data.hexColor, data.firstLayer, data.lastLayer);
   }
 
   private validate(): void {

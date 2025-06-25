@@ -26,9 +26,9 @@ export default defineConfig({
     format: 'es',
   },
   optimizeDeps: {
-    exclude: ['src/workers/parserWorker.ts']
+    exclude: ['src/workers/parserWorker.ts'],
   },
   define: {
     'import.meta.env.VITE_GIT_COMMIT_HASH': JSON.stringify(getGitCommitHash()),
-  }
+  },
 });

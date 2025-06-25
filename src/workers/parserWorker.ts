@@ -24,7 +24,7 @@ self.addEventListener('message', async (event) => {
         const progressCallback = (progress: number, message: string) => {
           self.postMessage({
             type: 'progress',
-            payload: { progress, message }
+            payload: { progress, message },
           });
         };
 

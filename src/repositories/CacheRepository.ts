@@ -197,8 +197,8 @@ export class CacheRepository implements ICacheRepository {
       const metadata: CacheMetadata = {
         totalEntries: entries.length,
         totalSize: entries.reduce((sum, entry) => sum + (entry.fileSize || 0), 0),
-        oldestEntry: Math.min(...entries.map(e => e.timestamp)),
-        newestEntry: Math.max(...entries.map(e => e.timestamp)),
+        oldestEntry: Math.min(...entries.map((e) => e.timestamp)),
+        newestEntry: Math.max(...entries.map((e) => e.timestamp)),
       };
 
       return Result.ok(metadata);

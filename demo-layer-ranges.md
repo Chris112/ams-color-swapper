@@ -1,16 +1,19 @@
 # Layer Range Feature Demo
 
 ## Overview
+
 The AMS Color Swapper now shows layer ranges where users can pause their print for manual color swaps, instead of just showing a single layer number.
 
 ## Example Scenarios
 
 ### Scenario 1: Colors with Gaps
+
 - **Red** (T0): Layers 0-30
 - **Blue** (T1): Layers 60-100
 - **Green** (T2): Layers 110-150
 
 **Manual Swap Instructions:**
+
 1. **Pause between layers 31-59** to swap from Red to Blue
    - This gives you a 29-layer window to pause the print
    - You can pause at any convenient layer in this range
@@ -19,14 +22,15 @@ The AMS Color Swapper now shows layer ranges where users can pause their print f
    - This gives you a 9-layer window to pause the print
 
 ### Scenario 2: Adjacent Colors (No Gap)
+
 - **Red** (T0): Layers 0-30
 - **Blue** (T1): Layers 31-60
 - **Green** (T2): Layers 61-90
 
 **Manual Swap Instructions:**
+
 1. **Pause at layer 31** to swap from Red to Blue
    - Colors are adjacent, so you must pause exactly at this layer
-   
 2. **Pause at layer 61** to swap from Blue to Green
    - Colors are adjacent, so you must pause exactly at this layer
 
@@ -46,6 +50,7 @@ The AMS Color Swapper now shows layer ranges where users can pause their print f
 ## Technical Details
 
 The system calculates:
+
 - `pauseStartLayer` = Previous color's last layer + 1
 - `pauseEndLayer` = Next color's first layer - 1
 

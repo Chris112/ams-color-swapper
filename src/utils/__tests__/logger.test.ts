@@ -25,13 +25,16 @@ describe('Logger', () => {
   describe('log levels', () => {
     it('should respect log level hierarchy', () => {
       const logger = new Logger('TestComponent');
-      
+
       // Default is debug level
       logger.silly('silly message');
       logger.debug('debug message');
       logger.info('info message');
-      
-      expect(consoleSpy.debug).not.toHaveBeenCalledWith('[SILLY] [TestComponent] silly message', '');
+
+      expect(consoleSpy.debug).not.toHaveBeenCalledWith(
+        '[SILLY] [TestComponent] silly message',
+        ''
+      );
       expect(consoleSpy.debug).toHaveBeenCalledWith('[DEBUG] [TestComponent] debug message', '');
       expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] [TestComponent] info message', '');
     });
@@ -39,10 +42,10 @@ describe('Logger', () => {
     it('should show silly messages when log level is silly', () => {
       const logger = new Logger('TestComponent');
       logger.setLogLevel('silly');
-      
+
       logger.silly('silly message');
       logger.debug('debug message');
-      
+
       expect(consoleSpy.debug).toHaveBeenCalledWith('[SILLY] [TestComponent] silly message', '');
       expect(consoleSpy.debug).toHaveBeenCalledWith('[DEBUG] [TestComponent] debug message', '');
     });
@@ -50,12 +53,12 @@ describe('Logger', () => {
     it('should hide debug and silly messages when log level is info', () => {
       const logger = new Logger('TestComponent');
       logger.setLogLevel('info');
-      
+
       logger.silly('silly message');
       logger.debug('debug message');
       logger.info('info message');
       logger.warn('warn message');
-      
+
       expect(consoleSpy.debug).not.toHaveBeenCalled();
       expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] [TestComponent] info message', '');
       expect(consoleSpy.warn).toHaveBeenCalledWith('[WARN] [TestComponent] warn message', '');
@@ -66,14 +69,14 @@ describe('Logger', () => {
     it('should include component name in log output', () => {
       const logger = new Logger('MyComponent');
       logger.info('test message');
-      
+
       expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] [MyComponent] test message', '');
     });
 
     it('should work without component name', () => {
       const logger = new Logger();
       logger.info('test message');
-      
+
       expect(consoleSpy.log).toHaveBeenCalledWith('[INFO] test message', '');
     });
   });
@@ -82,13 +85,13 @@ describe('Logger', () => {
     it('should store all logs regardless of log level', () => {
       const logger = new Logger('TestComponent');
       logger.setLogLevel('error'); // Only show errors
-      
+
       logger.silly('silly');
       logger.debug('debug');
       logger.info('info');
       logger.warn('warn');
       logger.error('error');
-      
+
       const logs = logger.getLogs();
       expect(logs).toHaveLength(5);
       expect(logs[0].level).toBe('silly');

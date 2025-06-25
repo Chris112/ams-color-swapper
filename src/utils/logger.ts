@@ -18,7 +18,11 @@ export class Logger {
     return messageLevelIndex >= currentLevelIndex;
   }
 
-  private log(level: 'info' | 'warn' | 'error' | 'debug' | 'silly', message: string, context?: unknown) {
+  private log(
+    level: 'info' | 'warn' | 'error' | 'debug' | 'silly',
+    message: string,
+    context?: unknown
+  ) {
     const log: DebugLog = {
       timestamp: Date.now(),
       level,
@@ -29,9 +33,11 @@ export class Logger {
     this.logs.push(log);
 
     if (this.enabled && this.shouldLog(level)) {
-      const prefix = this.componentName ? `[${level.toUpperCase()}] [${this.componentName}]` : `[${level.toUpperCase()}]`;
+      const prefix = this.componentName
+        ? `[${level.toUpperCase()}] [${this.componentName}]`
+        : `[${level.toUpperCase()}]`;
       const formattedMessage = `${prefix} ${message}`;
-      
+
       switch (level) {
         case 'info':
           console.log(formattedMessage, context || '');

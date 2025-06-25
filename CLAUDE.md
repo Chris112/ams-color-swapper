@@ -7,27 +7,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **This project uses Tailwind CSS v4 - DO NOT use v3 syntax!**
 
 ### Key Differences:
+
 1. **NO @apply with custom colors** - Use direct CSS properties instead
+
    ```css
    /* ❌ WRONG - This will cause errors */
    .my-class {
      @apply bg-brand-blue from-brand-purple;
    }
-   
+
    /* ✅ CORRECT - Use CSS properties */
    .my-class {
-     background-color: #0070F3;
-     background: linear-gradient(to right, #0070F3, #8B5CF6);
+     background-color: #0070f3;
+     background: linear-gradient(to right, #0070f3, #8b5cf6);
    }
    ```
 
 2. **Custom colors ARE available in HTML** - Use them directly in class names
+
    ```html
    <!-- ✅ CORRECT - These work in HTML -->
-   <div class="bg-brand-blue text-brand-purple border-brand-teal">
+   <div class="bg-brand-blue text-brand-purple border-brand-teal"></div>
    ```
 
 3. **@apply is ONLY for built-in Tailwind utilities**
+
    ```css
    /* ✅ CORRECT - Built-in utilities work */
    .my-class {
@@ -128,15 +132,18 @@ src/
 ## Common Tasks
 
 ### Adding a New Parser Feature
+
 1. Update the type definitions in `src/types/index.ts`
 2. Implement the feature in `src/parser/gcodeParser.ts`
 3. Add corresponding tests in `src/parser/__tests__/`
 4. Update the UI in `src/app.ts` to display the new data
 
 ### Modifying the UI
+
 1. The main HTML structure is in `index.html`
 2. Dynamic UI updates are handled in `src/app.ts`
 3. Styles use Tailwind classes - check `tailwind.config.js` for custom theme
 
 ### Working with Test Fixtures
+
 Test G-code files are stored in `src/parser/__tests__/fixtures/`. When adding new test cases, place sample G-code files here and reference them in your tests.

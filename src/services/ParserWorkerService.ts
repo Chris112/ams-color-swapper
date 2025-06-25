@@ -7,7 +7,7 @@ export interface ParseResult {
 
 export class ParserWorkerService {
   private worker: Worker | null = null;
-  
+
   constructor() {
     this.initializeWorker();
   }
@@ -15,10 +15,9 @@ export class ParserWorkerService {
   private initializeWorker(): void {
     try {
       // Create worker with proper Vite syntax
-      this.worker = new Worker(
-        new URL('../workers/parserWorker.ts', import.meta.url),
-        { type: 'module' }
-      );
+      this.worker = new Worker(new URL('../workers/parserWorker.ts', import.meta.url), {
+        type: 'module',
+      });
     } catch (error) {
       console.error('Failed to create Web Worker:', error);
     }
@@ -65,8 +64,8 @@ export class ParserWorkerService {
           payload: {
             fileContent: reader.result,
             fileName: file.name,
-            fileSize: file.size
-          }
+            fileSize: file.size,
+          },
         });
       };
       reader.onerror = () => {

@@ -21,7 +21,7 @@ export interface GcodeStats {
   colorUsageRanges: ColorRange[];
 
   filamentEstimates?: FilamentUsage[];
-  filamentUsage?: {
+  filamentUsageStats?: {
     total: number;
     model: number;
     support: number;

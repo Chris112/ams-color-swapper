@@ -4,10 +4,35 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AMS Color Swapper - G-code Optimizer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/src/main.css">
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon-swoosh.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#FF006E" />
+    <meta name="msapplication-TileColor" content="#0A0A0B" />
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="AMS Color Swapper" />
+    <meta
+      property="og:description"
+      content="Smart G-code analyzer and optimizer for multi-color 3D prints"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/favicon-512x512.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/main.css" />
   </head>
   <body class="text-white font-sans min-h-screen">
     <div class="min-h-screen flex flex-col">
@@ -15,16 +40,31 @@
         <div class="max-w-container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <div class="text-center">
             <div class="flex items-center justify-center gap-3 mb-2">
-              <div class="w-12 h-12 bg-gradient-neon rounded-2xl flex items-center justify-center shadow-glow-purple animate-pulse-glow">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-8 h-8 text-white">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-12 0v4a2 2 0 002 2z"></path>
+              <div
+                class="w-12 h-12 bg-gradient-neon rounded-2xl flex items-center justify-center shadow-glow-purple animate-pulse-glow"
+              >
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  class="w-8 h-8 text-white"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-12 0v4a2 2 0 002 2z"
+                  ></path>
                 </svg>
               </div>
               <h1 class="text-h1 gradient-text font-black">AMS Color Swapper</h1>
             </div>
-            <p class="text-lg font-medium text-vibrant-pink mb-2 animate-pulse">Paint your prints in motion</p>
+            <p class="text-lg font-medium text-vibrant-pink mb-2 animate-pulse">
+              Paint your prints in motion
+            </p>
             <p class="text-body text-white/70 max-w-2xl mx-auto">
-              Smart G-code analyzer and optimizer for multi-color 3D prints using Automatic Material Systems
+              Smart G-code analyzer and optimizer for multi-color 3D prints using Automatic Material
+              Systems
             </p>
           </div>
         </div>
@@ -34,315 +74,574 @@
         <div class="max-w-container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <!-- Upload Section -->
           <section id="uploadSection" class="animate-fade-in">
-            <h2 class="text-h2 text-gray-900 dark:text-white mb-6 text-center">Upload G-code File</h2>
+            <h2 class="text-h2 text-gray-900 dark:text-white mb-6 text-center">
+              Upload G-code File
+            </h2>
 
-          <div id="dropZone" class="max-w-2xl mx-auto glass rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-16 h-16 mx-auto mb-4 text-white/40 group-hover:text-vibrant-pink transition-colors animate-float">
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-              ></path>
-            </svg>
-            <p class="text-lg font-medium text-white mb-1">
-              Drop your G-code file here
-            </p>
-            <p class="text-body text-white/60 mb-4">or click to browse</p>
-            <button class="btn-gradient">
-              Select File
-            </button>
-            <p class="text-sm text-white/50 mt-4">
-              Supports .gcode, .gco, .g files up to 200MB
-            </p>
-            <input type="file" id="fileInput" accept=".gcode,.gco,.g" hidden />
-          </div>
-          
-          <!-- Example Files Button - Outside dropZone -->
-          <div class="max-w-2xl mx-auto mt-6 text-center">
-            <button id="examplesBtn" class="btn-glass inline-flex items-center gap-2">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <div
+              id="dropZone"
+              class="max-w-2xl mx-auto glass rounded-3xl p-12 text-center cursor-pointer transition-all duration-300 group"
+            >
+              <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                class="w-16 h-16 mx-auto mb-4 text-white/40 group-hover:text-vibrant-pink transition-colors animate-float"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
               </svg>
-              Try Example Files
-            </button>
-          </div>
-
-          <div id="uploadProgress" class="max-w-2xl mx-auto mt-8" hidden>
-            <div class="progress-bar">
-              <div id="progressBarFill" class="progress-bar-fill" style="width: 0%"></div>
+              <p class="text-lg font-medium text-white mb-1">Drop your G-code file here</p>
+              <p class="text-body text-white/60 mb-4">or click to browse</p>
+              <button class="btn-gradient">Select File</button>
+              <p class="text-sm text-white/50 mt-4">Supports .gcode, .gco, .g files up to 200MB</p>
+              <input type="file" id="fileInput" accept=".gcode,.gco,.g" hidden />
             </div>
-            <p class="text-center text-body text-gray-600 dark:text-gray-400 mt-3">Processing...</p>
-          </div>
-        </section>
 
-        <!-- View Navigation Header (shown when results are available) -->
-        <section id="viewNavigation" class="text-center mb-8" hidden>
-          <h2 id="fileName" class="text-white font-black mb-2" style="font-size: 3.5rem; line-height: 1.1;"></h2>
-          <p class="text-white/60">Analysis Complete</p>
-          
-          <!-- View Toggle Buttons -->
-          <div class="flex justify-center gap-2 mt-6">
-            <button id="analysisViewBtn" class="px-4 py-2 rounded-lg bg-vibrant-blue text-white font-medium text-sm transition-all duration-300 hover:scale-105">
-              Analysis View
-            </button>
-            <button id="factoryViewBtn" class="px-4 py-2 rounded-lg bg-white/10 text-white/70 font-medium text-sm transition-all duration-300 hover:scale-105">
-              Factory Floor
-            </button>
-          </div>
-        </section>
+            <!-- Example Files Button - Outside dropZone -->
+            <div class="max-w-2xl mx-auto mt-6 text-center">
+              <button id="examplesBtn" class="btn-glass inline-flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                Try Example Files
+              </button>
+            </div>
 
-        <!-- Results Section -->
-        <section id="resultsSection" class="animate-slide-up" hidden>
-          
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- File Statistics -->
-            <div class="card-glass animate-scale-in" style="animation-delay: 0.1s">
-              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-blue">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            <div id="uploadProgress" class="max-w-2xl mx-auto mt-8" hidden>
+              <div class="progress-bar">
+                <div id="progressBarFill" class="progress-bar-fill" style="width: 0%"></div>
+              </div>
+              <p class="text-center text-body text-gray-600 dark:text-gray-400 mt-3">
+                Processing...
+              </p>
+            </div>
+          </section>
+
+          <!-- Why AMS Color Swapper Section -->
+          <section
+            id="whySection"
+            class="glass rounded-3xl p-8 mt-12 max-w-4xl mx-auto animate-fade-in"
+          >
+            <h2 class="text-h2 gradient-text text-center mb-6">Why AMS Color Swapper?</h2>
+
+            <div class="grid md:grid-cols-2 gap-6 mb-6">
+              <div class="space-y-4">
+                <h3 class="text-xl font-semibold text-vibrant-pink flex items-center gap-2">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                  The Problem
+                </h3>
+                <p class="text-white/80">
+                  The Bambu Lab AMS (Automatic Material System) is limited to
+                  <span class="text-vibrant-orange font-semibold">4 filament slots</span>, but your
+                  creativity shouldn't be. Many beautiful prints require 5, 6, or even more colors
+                  to truly come alive.
+                </p>
+                <p class="text-white/80">
+                  While slicers like OrcaSlicer have attempted various workarounds, none provide a
+                  reliable, automated solution for mapping multiple colors to the same AMS slot with
+                  proper pause instructions.
+                </p>
+              </div>
+
+              <div class="space-y-4">
+                <h3 class="text-xl font-semibold text-vibrant-cyan flex items-center gap-2">
+                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                    ></path>
+                  </svg>
+                  The Solution
+                </h3>
+                <p class="text-white/80">
+                  AMS Color Swapper analyzes your G-code to intelligently
+                  <span class="text-vibrant-green font-semibold"
+                    >map multiple colors to the same AMS slot</span
+                  >, automatically inserting pause commands at the exact layers where you need to
+                  swap filaments.
+                </p>
+                <p class="text-white/80">
+                  Our smart algorithm minimizes the number of manual swaps needed while ensuring
+                  each color is loaded when required, making prints with 5+ colors achievable on
+                  your 4-slot AMS.
+                </p>
+              </div>
+            </div>
+
+            <div class="glass-heavy rounded-2xl p-6">
+              <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  class="w-5 h-5 text-vibrant-purple"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  ></path>
+                </svg>
+                Perfect For These Scenarios
+              </h3>
+              <div class="grid sm:grid-cols-2 gap-4 text-white/70">
+                <div class="flex items-start gap-3">
+                  <span class="text-vibrant-green mt-1">✓</span>
+                  <div>
+                    <p class="font-medium text-white">Multi-color character models</p>
+                    <p class="text-sm">
+                      Pokémon, anime figures, game characters with 5-8 distinct colors
+                    </p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="text-vibrant-green mt-1">✓</span>
+                  <div>
+                    <p class="font-medium text-white">Detailed logos & signs</p>
+                    <p class="text-sm">Company logos or signs requiring specific brand colors</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="text-vibrant-green mt-1">✓</span>
+                  <div>
+                    <p class="font-medium text-white">Educational models</p>
+                    <p class="text-sm">Anatomical models, maps, or diagrams with color-coding</p>
+                  </div>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="text-vibrant-green mt-1">✓</span>
+                  <div>
+                    <p class="font-medium text-white">Artistic prints</p>
+                    <p class="text-sm">Complex artworks that need more than 4 distinct colors</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 text-center">
+              <p class="text-white/60 text-sm">
+                <span class="font-semibold">Note:</span> This tool works with any Bambu Lab printer
+                with AMS, analyzing G-code files exported from Bambu Studio, OrcaSlicer, or any
+                compatible slicer.
+              </p>
+            </div>
+          </section>
+
+          <!-- View Navigation Header (shown when results are available) -->
+          <section id="viewNavigation" class="text-center mb-8" hidden>
+            <h2
+              id="fileName"
+              class="text-white font-black mb-2"
+              style="font-size: 3.5rem; line-height: 1.1"
+            ></h2>
+            <p class="text-white/60">Analysis Complete</p>
+
+            <!-- View Toggle Buttons -->
+            <div class="flex justify-center gap-2 mt-6">
+              <button
+                id="analysisViewBtn"
+                class="px-4 py-2 rounded-lg bg-vibrant-blue text-white font-medium text-sm transition-all duration-300 hover:scale-105"
+              >
+                Analysis View
+              </button>
+              <button
+                id="factoryViewBtn"
+                class="px-4 py-2 rounded-lg bg-white/10 text-white/70 font-medium text-sm transition-all duration-300 hover:scale-105"
+              >
+                Factory Floor
+              </button>
+            </div>
+          </section>
+
+          <!-- Results Section -->
+          <section id="resultsSection" class="animate-slide-up" hidden>
+            <!-- File Statistics - No card wrapper, sits on background -->
+            <div class="mb-8">
+              <h3 class="text-h3 text-white mb-6 flex items-center gap-2">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  class="w-5 h-5 text-vibrant-blue"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  ></path>
                 </svg>
                 File Statistics
               </h3>
-              <div id="fileStats" class="space-y-3">
+              <div id="fileStats">
                 <!-- Stats will be populated here -->
               </div>
             </div>
 
-            <!-- Color Analysis -->
-            <div class="card-glass animate-scale-in" style="animation-delay: 0.2s">
-              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-purple">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-12 0v4a2 2 0 002 2z"></path>
-                </svg>
-                Color Analysis
-              </h3>
-              <div id="colorStats" class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                <!-- Color swatches will be populated here -->
-              </div>
-              <canvas id="colorTimeline" class="w-full h-32 rounded-xl glass"></canvas>
-            </div>
-
-            <!-- Filament Usage by Color -->
-            <div class="card-glass animate-scale-in" style="animation-delay: 0.3s">
-              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-teal">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                </svg>
-                Filament Usage
-              </h3>
-              <div id="filamentUsage">
-                <!-- Filament usage chart will be populated here -->
-              </div>
-            </div>
-
-            <!-- 3D Hologram Visualization - DISABLED FOR NOW -->
-            <div class="col-span-full card-glass animate-scale-in" style="animation-delay: 0.3s; display: none;">
-              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-cyan">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                </svg>
-                3D Volumetric Hologram
-              </h3>
-              <div id="hologramContainer" class="w-full h-96 rounded-xl glass bg-black/50 overflow-hidden">
-                <!-- Hologram visualization will be created here -->
-              </div>
-            </div>
-
-            <!-- Optimization Results -->
-            <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
-              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-orange">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                </svg>
-                Optimization Summary
-              </h3>
-              <div id="optimizationResults" class="space-y-3">
-                <!-- Optimization stats will be populated here -->
-              </div>
-            </div>
-
-            <!-- Swap Instructions -->
-            <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
-              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-green">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
-                </svg>
-                Manual Swap Instructions
-              </h3>
-              <div id="swapInstructions" class="space-y-2">
-                <!-- Instructions will be populated here -->
-              </div>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex flex-wrap gap-3 mt-8 justify-center">
-            <button id="exportBtn" class="btn-gradient inline-flex items-center gap-2">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                ></path>
-              </svg>
-              Export Instructions
-            </button>
-            <button id="newFileBtn" class="btn-glass inline-flex items-center gap-2">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 4v16m8-8H4"
-                ></path>
-              </svg>
-              Analyze New File
-            </button>
-            <button id="toggleDebugBtn" class="btn-glass inline-flex items-center gap-2">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                ></path>
-              </svg>
-              Debug Info
-            </button>
-            <button id="clearCacheBtn" class="btn-glass inline-flex items-center gap-2">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                ></path>
-              </svg>
-              Clear Cache
-            </button>
-          </div>
-        </section>
-
-        <!-- Factory Floor Section -->
-        <section id="factorySection" class="animate-slide-up" hidden>
-          <!-- Factory Stats Panel -->
-          <div id="factoryStatsPanel" class="mb-8">
-            <!-- Stats will be populated by JavaScript -->
-          </div>
-          
-          <!-- Factory Floor Container -->
-          <div class="card-glass">
-            <div class="flex justify-between items-center mb-4">
-              <h3 class="text-h3 text-white flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-cyan">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                </svg>
-                3D Print Factory Floor
-              </h3>
-              
-              <!-- Factory Controls -->
-              <div class="flex gap-2">
-                <button id="pauseAllBtn" class="btn-glass-sm inline-flex items-center gap-1 text-xs">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6"></path>
+            <div class="grid grid-cols-1 gap-6">
+              <!-- Color Analysis -->
+              <div class="col-span-full card-glass animate-scale-in" style="animation-delay: 0.2s">
+                <h3 class="text-h3 text-white mb-6 flex items-center gap-2">
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    class="w-6 h-6 text-vibrant-purple"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-12 0v4a2 2 0 002 2z"
+                    ></path>
                   </svg>
-                  Pause All
+                  Color Analysis
+                </h3>
+                <div id="colorStats" class="w-full">
+                  <!-- Full color analysis section will be populated here -->
+                </div>
+              </div>
+
+              <!-- Filament Usage section removed - now integrated into Color Details section above -->
+
+              <!-- 3D Hologram Visualization - DISABLED FOR NOW -->
+              <div
+                class="col-span-full card-glass animate-scale-in"
+                style="animation-delay: 0.3s; display: none"
+              >
+                <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    class="w-5 h-5 text-vibrant-cyan"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                    ></path>
+                  </svg>
+                  3D Volumetric Hologram
+                </h3>
+                <div
+                  id="hologramContainer"
+                  class="w-full h-96 rounded-xl glass bg-black/50 overflow-hidden"
+                >
+                  <!-- Hologram visualization will be created here -->
+                </div>
+              </div>
+
+              <!-- Optimization Results -->
+              <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
+                <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    class="w-5 h-5 text-vibrant-orange"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    ></path>
+                  </svg>
+                  Optimization Summary
+                </h3>
+                <div id="optimizationResults" class="space-y-3">
+                  <!-- Optimization stats will be populated here -->
+                </div>
+              </div>
+
+              <!-- Swap Instructions -->
+              <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
+                <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    class="w-5 h-5 text-vibrant-green"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                    ></path>
+                  </svg>
+                  Manual Swap Instructions
+                </h3>
+                <div id="swapInstructions" class="space-y-2">
+                  <!-- Instructions will be populated here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-3 mt-8 justify-center">
+              <button id="exportBtn" class="btn-gradient inline-flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  ></path>
+                </svg>
+                Export Instructions
+              </button>
+              <button id="newFileBtn" class="btn-glass inline-flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 4v16m8-8H4"
+                  ></path>
+                </svg>
+                Analyze New File
+              </button>
+              <button id="toggleDebugBtn" class="btn-glass inline-flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  ></path>
+                </svg>
+                Debug Info
+              </button>
+              <button id="clearCacheBtn" class="btn-glass inline-flex items-center gap-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+                Clear Cache
+              </button>
+            </div>
+          </section>
+
+          <!-- Factory Floor Section -->
+          <section id="factorySection" class="animate-slide-up" hidden>
+            <!-- Factory Stats Panel -->
+            <div id="factoryStatsPanel" class="mb-8">
+              <!-- Stats will be populated by JavaScript -->
+            </div>
+
+            <!-- Factory Floor Container -->
+            <div class="card-glass">
+              <div class="flex justify-between items-center mb-4">
+                <h3 class="text-h3 text-white flex items-center gap-2">
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    class="w-5 h-5 text-vibrant-cyan"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    ></path>
+                  </svg>
+                  3D Print Factory Floor
+                </h3>
+
+                <!-- Factory Controls -->
+                <div class="flex gap-2">
+                  <button
+                    id="pauseAllBtn"
+                    class="btn-glass-sm inline-flex items-center gap-1 text-xs"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 9v6m4-6v6"
+                      ></path>
+                    </svg>
+                    Pause All
+                  </button>
+                  <button
+                    id="clearFactoryBtn"
+                    class="btn-glass-sm inline-flex items-center gap-1 text-xs"
+                  >
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      ></path>
+                    </svg>
+                    Clear All
+                  </button>
+                </div>
+              </div>
+
+              <!-- 3D Factory Floor Viewport -->
+              <div
+                id="factoryFloorContainer"
+                class="w-full h-96 rounded-xl glass bg-black/50 overflow-hidden relative"
+              >
+                <!-- Three.js scene will be created here -->
+                <div class="absolute inset-0 flex items-center justify-center text-white/50">
+                  <div class="text-center">
+                    <svg
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      class="w-16 h-16 mx-auto mb-4 animate-pulse"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                      ></path>
+                    </svg>
+                    <p class="text-lg font-medium">Factory Floor Loading...</p>
+                    <p class="text-sm mt-1">Upload G-code files to populate your virtual factory</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Factory Controls Panel -->
+              <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Build Speed Control -->
+                <div class="glass rounded-lg p-3">
+                  <label class="block text-sm font-medium text-white mb-2">Build Speed</label>
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs text-white/60">0.5x</span>
+                    <input
+                      id="buildSpeedSlider"
+                      type="range"
+                      min="0.5"
+                      max="5"
+                      step="0.5"
+                      value="2"
+                      class="flex-1 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <span class="text-xs text-white/60">5x</span>
+                  </div>
+                  <div class="text-center mt-1">
+                    <span id="buildSpeedValue" class="text-sm text-vibrant-cyan font-medium"
+                      >2.0x</span
+                    >
+                  </div>
+                </div>
+
+                <!-- Print Info Panel -->
+                <div id="printInfoPanel" class="glass rounded-lg p-3" style="display: none">
+                  <h4 class="text-sm font-medium text-white mb-2">Selected Print</h4>
+                  <!-- Print details will be populated here -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Factory Instructions -->
+            <div class="mt-6 text-center text-white/60">
+              <p class="text-sm">
+                Click and drag to orbit • Scroll to zoom • Click prints for details • Upload more
+                files to expand your factory
+              </p>
+            </div>
+          </section>
+
+          <!-- Debug Section -->
+          <section id="debugSection" class="mt-8 animate-slide-up" hidden>
+            <div class="card-glass">
+              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
+                <svg
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  class="w-5 h-5 text-vibrant-blue"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
+                  ></path>
+                </svg>
+                Debug Information
+              </h3>
+
+              <div class="flex gap-2 mb-4 border-b border-white/10">
+                <button
+                  data-tab="logs"
+                  class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-pink transition-all duration-300"
+                >
+                  Parser Logs
                 </button>
-                <button id="clearFactoryBtn" class="btn-glass-sm inline-flex items-center gap-1 text-xs">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
-                  Clear All
+                <button
+                  data-tab="performance"
+                  class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-purple transition-all duration-300"
+                >
+                  Performance
+                </button>
+                <button
+                  data-tab="raw"
+                  class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-blue transition-all duration-300"
+                >
+                  Raw Data
                 </button>
               </div>
-            </div>
-            
-            <!-- 3D Factory Floor Viewport -->
-            <div id="factoryFloorContainer" class="w-full h-96 rounded-xl glass bg-black/50 overflow-hidden relative">
-              <!-- Three.js scene will be created here -->
-              <div class="absolute inset-0 flex items-center justify-center text-white/50">
-                <div class="text-center">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-16 h-16 mx-auto mb-4 animate-pulse">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                  </svg>
-                  <p class="text-lg font-medium">Factory Floor Loading...</p>
-                  <p class="text-sm mt-1">Upload G-code files to populate your virtual factory</p>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Factory Controls Panel -->
-            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- Build Speed Control -->
-              <div class="glass rounded-lg p-3">
-                <label class="block text-sm font-medium text-white mb-2">Build Speed</label>
-                <div class="flex items-center gap-3">
-                  <span class="text-xs text-white/60">0.5x</span>
-                  <input id="buildSpeedSlider" type="range" min="0.5" max="5" step="0.5" value="2" 
-                         class="flex-1 h-2 bg-white/20 rounded-lg appearance-none cursor-pointer slider">
-                  <span class="text-xs text-white/60">5x</span>
-                </div>
-                <div class="text-center mt-1">
-                  <span id="buildSpeedValue" class="text-sm text-vibrant-cyan font-medium">2.0x</span>
-                </div>
-              </div>
-              
-              <!-- Print Info Panel -->
-              <div id="printInfoPanel" class="glass rounded-lg p-3" style="display: none;">
-                <h4 class="text-sm font-medium text-white mb-2">Selected Print</h4>
-                <!-- Print details will be populated here -->
-              </div>
-            </div>
-          </div>
-          
-          <!-- Factory Instructions -->
-          <div class="mt-6 text-center text-white/60">
-            <p class="text-sm">
-              Click and drag to orbit • Scroll to zoom • Click prints for details • Upload more files to expand your factory
-            </p>
-          </div>
-        </section>
 
-        <!-- Debug Section -->
-        <section id="debugSection" class="mt-8 animate-slide-up" hidden>
-          <div class="card-glass">
-            <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-blue">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-              </svg>
-              Debug Information
-            </h3>
-
-            <div class="flex gap-2 mb-4 border-b border-white/10">
-              <button data-tab="logs" class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-pink transition-all duration-300">Parser Logs</button>
-              <button data-tab="performance" class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-purple transition-all duration-300">Performance</button>
-              <button data-tab="raw" class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-blue transition-all duration-300">Raw Data</button>
-            </div>
-
-            <div id="debugContent">
-              <div id="logsTab" class="glass rounded-xl p-4 overflow-x-auto">
-                <pre id="parserLogs" class="text-code font-mono text-white/80"></pre>
-              </div>
-              <div id="performanceTab" class="bg-gray-900 rounded-sm p-4" hidden>
-                <div id="performanceStats" class="space-y-2 text-code font-mono text-gray-300">
-                  <!-- Performance metrics will be populated here -->
+              <div id="debugContent">
+                <div id="logsTab" class="glass rounded-xl p-4 overflow-x-auto">
+                  <pre id="parserLogs" class="text-code font-mono text-white/80"></pre>
+                </div>
+                <div id="performanceTab" class="bg-gray-900 rounded-sm p-4" hidden>
+                  <div id="performanceStats" class="space-y-2 text-code font-mono text-gray-300">
+                    <!-- Performance metrics will be populated here -->
+                  </div>
+                </div>
+                <div id="rawTab" class="bg-gray-900 rounded-sm p-4 overflow-x-auto" hidden>
+                  <pre id="rawData" class="text-code font-mono text-gray-300"></pre>
                 </div>
               </div>
-              <div id="rawTab" class="bg-gray-900 rounded-sm p-4 overflow-x-auto" hidden>
-                <pre id="rawData" class="text-code font-mono text-gray-300"></pre>
-              </div>
             </div>
-          </div>
-        </section>
+          </section>
         </div>
       </main>
 
       <footer class="glass-heavy border-t border-white/10 mt-auto">
         <div class="max-w-container mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <p class="text-center text-body text-white/60">
-            <span class="gradient-text font-semibold">AMS Color Swapper</span> &bull; Paint your prints in motion &bull; Print smarter, not harder
+            <span class="gradient-text font-semibold">AMS Color Swapper</span> &bull; Paint your
+            prints in motion &bull; Print smarter, not harder
           </p>
         </div>
       </footer>
@@ -350,7 +649,7 @@
 
     <!-- Example Panel Container -->
     <div id="examplePanelContainer"></div>
-    
+
     <script type="module" src="/src/app.ts"></script>
   </body>
 </html>

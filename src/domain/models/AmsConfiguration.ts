@@ -38,7 +38,7 @@ export class AmsConfiguration {
    */
   assignColors(colors: Color[]): void {
     // Clear existing assignments
-    this.slots.forEach(slot => slot.clear());
+    this.slots.forEach((slot) => slot.clear());
 
     if (colors.length <= this.MAX_SLOTS) {
       // Simple case: assign each color to its own slot
@@ -64,7 +64,7 @@ export class AmsConfiguration {
   getManualSwaps(): ManualSwap[] {
     const swaps: ManualSwap[] = [];
 
-    this.slots.forEach(slot => {
+    this.slots.forEach((slot) => {
       if (!slot.requiresSwaps) return;
 
       const colors = slot.colors;
@@ -87,9 +87,10 @@ export class AmsConfiguration {
           pauseStartLayer: pauseStartLayer,
           pauseEndLayer: pauseEndLayer,
           zHeight: 0, // Would be calculated from layer height
-          reason: pauseEndLayer >= pauseStartLayer 
-            ? `Pause between layers ${pauseStartLayer}-${pauseEndLayer} to swap colors`
-            : `Colors are adjacent - pause at layer ${toColor.firstLayer}`
+          reason:
+            pauseEndLayer >= pauseStartLayer
+              ? `Pause between layers ${pauseStartLayer}-${pauseEndLayer} to swap colors`
+              : `Colors are adjacent - pause at layer ${toColor.firstLayer}`,
         });
       }
     });
@@ -110,8 +111,8 @@ export class AmsConfiguration {
    */
   getTotalColors(): number {
     const uniqueColors = new Set<string>();
-    this.slots.forEach(slot => {
-      slot.colorIds.forEach(id => uniqueColors.add(id));
+    this.slots.forEach((slot) => {
+      slot.colorIds.forEach((id) => uniqueColors.add(id));
     });
     return uniqueColors.size;
   }
@@ -139,27 +140,28 @@ export class AmsConfiguration {
    */
   private assignColorsOptimized(colors: Color[]): void {
     // Choose optimization strategy
-    const result = this.optimizationStrategy === 'groups' 
-      ? ColorOverlapAnalyzer.optimizeSlotAssignments(colors, this.MAX_SLOTS)
-      : ColorOverlapAnalyzer.optimizeByIntervals(colors, this.MAX_SLOTS);
-    
+    const result =
+      this.optimizationStrategy === 'groups'
+        ? ColorOverlapAnalyzer.optimizeSlotAssignments(colors, this.MAX_SLOTS)
+        : ColorOverlapAnalyzer.optimizeByIntervals(colors, this.MAX_SLOTS);
+
     // Clear all slots first
     this.slots.clear();
-    
+
     // Apply the optimized assignments
     result.assignments.forEach((slotColors, slotNumber) => {
       // Determine if slot should be permanent (only one color) or shared
       const isPermanent = slotColors.length === 1;
       const slot = new AmsSlot(slotNumber, isPermanent);
-      
+
       // Assign all colors to the slot (allow overlaps for shared slots)
-      slotColors.forEach(color => {
+      slotColors.forEach((color) => {
         slot.assignColor(color, !isPermanent);
       });
-      
+
       this.slots.set(slotNumber, slot);
     });
-    
+
     // Ensure we have all 4 slots initialized (even if empty)
     for (let i = 1; i <= this.MAX_SLOTS; i++) {
       if (!this.slots.has(i)) {
@@ -186,26 +188,26 @@ export class AmsConfiguration {
 
     // Assign ALL remaining colors to slot 4
     const remainingColors = sortedColors.slice(3);
-    
+
     // First, try to group non-overlapping colors
     const groups = this.groupNonOverlappingColors(remainingColors);
-    
+
     // Assign the largest non-overlapping group
     if (groups.length > 0) {
-      const largestGroup = groups.reduce((a, b) => a.length > b.length ? a : b);
-      largestGroup.forEach(color => slot4.assignColor(color, true));
-      
+      const largestGroup = groups.reduce((a, b) => (a.length > b.length ? a : b));
+      largestGroup.forEach((color) => slot4.assignColor(color, true));
+
       // Now assign any remaining colors that weren't in the largest group
       // These will require manual swaps but at least they'll be assigned
-      const assignedColorIds = new Set(largestGroup.map(c => c.id));
-      remainingColors.forEach(color => {
+      const assignedColorIds = new Set(largestGroup.map((c) => c.id));
+      remainingColors.forEach((color) => {
         if (!assignedColorIds.has(color.id)) {
           slot4.assignColor(color, true);
         }
       });
     } else {
       // If no groups found, just assign all remaining colors
-      remainingColors.forEach(color => slot4.assignColor(color, true));
+      remainingColors.forEach((color) => slot4.assignColor(color, true));
     }
   }
 
@@ -216,7 +218,7 @@ export class AmsConfiguration {
       // Try to add to existing group
       let added = false;
       for (const group of groups) {
-        if (group.every(c => !c.overlapsWith(color))) {
+        if (group.every((c) => !c.overlapsWith(color))) {
           group.push(color);
           added = true;
           break;

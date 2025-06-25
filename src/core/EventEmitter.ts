@@ -43,7 +43,7 @@ export class EventEmitter<TEventMap = AppEventMap> {
   emit<K extends keyof TEventMap>(event: K, data?: TEventMap[K]): void {
     const handlers = this.events.get(event as string);
     if (handlers) {
-      handlers.forEach(handler => handler(data));
+      handlers.forEach((handler) => handler(data));
     }
   }
 

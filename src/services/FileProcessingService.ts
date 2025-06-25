@@ -21,11 +21,7 @@ export class FileProcessingService {
     file: File,
     options: FileProcessingOptions = {}
   ): Promise<Result<{ stats: GcodeStats; fromCache: boolean }>> {
-    const { 
-      useWebWorker = true, 
-      useCache = true, 
-      onProgress = () => {} 
-    } = options;
+    const { useWebWorker = true, useCache = true, onProgress = () => {} } = options;
 
     try {
       // Generate cache key
@@ -39,16 +35,16 @@ export class FileProcessingService {
       if (useCache) {
         onProgress(5, 'Checking cache...');
         const cacheResult = await this.cacheRepository.get(cacheKey);
-        
+
         if (cacheResult.ok && cacheResult.value) {
           this.logger.info(`Cache hit for ${file.name}`);
           onProgress(100, 'Loaded from cache');
-          return Result.ok({ 
-            stats: cacheResult.value.stats, 
-            fromCache: true 
+          return Result.ok({
+            stats: cacheResult.value.stats,
+            fromCache: true,
           });
         }
-        
+
         this.logger.info(`Cache miss for ${file.name}`);
       }
 
@@ -84,7 +80,6 @@ export class FileProcessingService {
 
       onProgress(100, 'Complete!');
       return Result.ok({ stats, fromCache: false });
-
     } catch (error) {
       return Result.err(
         new FileError(
@@ -102,7 +97,7 @@ export class FileProcessingService {
   ): Promise<Result<GcodeStats>> {
     // Create a parser with progress callback
     const parser = new GcodeParser(this.logger, onProgress);
-    
+
     try {
       const stats = await parser.parse(file);
       return Result.ok(stats);

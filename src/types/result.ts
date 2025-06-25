@@ -2,9 +2,7 @@
  * Result type for handling operations that can fail
  * Inspired by Rust's Result<T, E> type
  */
-export type Result<T, E = Error> = 
-  | { ok: true; value: T }
-  | { ok: false; error: E };
+export type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
 /**
  * Helper functions for working with Result types
@@ -61,5 +59,5 @@ export const Result = {
     } catch (error) {
       return Result.err(error instanceof Error ? error : new Error(String(error)));
     }
-  }
+  },
 };

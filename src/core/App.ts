@@ -20,37 +20,33 @@ import { OptimizationService } from '../services/OptimizationService';
 import { ExportService } from '../services/ExportService';
 
 // Repositories
-import { 
-  CacheRepository, 
-  FileRepository,
-  ICacheRepository 
-} from '../repositories';
+import { CacheRepository, FileRepository, ICacheRepository } from '../repositories';
 
 // Commands
-import { 
+import {
   CommandExecutor,
   AnalyzeFileCommand,
   ExportResultsCommand,
   ClearCacheCommand,
-  ExportFormat
+  ExportFormat,
 } from '../commands';
 
 export class App {
   private components: Component[] = [];
   private logger: Logger;
-  
+
   // Services
   private fileProcessingService: FileProcessingService;
   private optimizationService: OptimizationService;
   private exportService: ExportService;
-  
+
   // Repositories
   private cacheRepository: ICacheRepository;
   private fileRepository: FileRepository;
-  
+
   // Command executor
   private commandExecutor: CommandExecutor;
-  
+
   // Factory Floor
   private factoryFloorScene: FactoryFloorScene | null = null;
   private factoryFloorService: FactoryFloorService | null = null;
@@ -59,32 +55,29 @@ export class App {
 
   constructor() {
     this.logger = new Logger();
-    
+
     // Initialize repositories
     this.cacheRepository = new CacheRepository();
     this.fileRepository = new FileRepository();
-    
+
     // Initialize services
     this.fileProcessingService = new FileProcessingService(
       this.fileRepository,
       this.cacheRepository,
       this.logger
     );
-    
+
     this.optimizationService = new OptimizationService();
-    
-    this.exportService = new ExportService(
-      this.fileRepository,
-      this.optimizationService
-    );
-    
+
+    this.exportService = new ExportService(this.fileRepository, this.optimizationService);
+
     // Initialize command executor
     this.commandExecutor = new CommandExecutor(this.logger);
-    
+
     // Initialize UI components
     this.initializeComponents();
     this.attachEventListeners();
-    
+
     // Initialize cache
     this.initializeCache();
   }
@@ -95,18 +88,20 @@ export class App {
       this.logger.error('Failed to initialize cache', result.error);
       return;
     }
-    
+
     // Clean up cache entries with old algorithm versions
     try {
       // Initialize gcodeCache if not already done
       await gcodeCache.initialize();
-      
+
       // Clean up old algorithm versions
       const deletedCount = await gcodeCache.cleanupOldAlgorithmVersions();
       if (deletedCount > 0) {
-        this.logger.info(`Cleaned up ${deletedCount} cache entries with outdated algorithm versions`);
+        this.logger.info(
+          `Cleaned up ${deletedCount} cache entries with outdated algorithm versions`
+        );
       }
-      
+
       // Also clean up expired entries
       const expiredCount = await gcodeCache.cleanupExpired();
       if (expiredCount > 0) {
@@ -118,17 +113,13 @@ export class App {
   }
 
   private initializeComponents(): void {
-    this.components = [
-      new FileUploader(),
-      new ResultsView(),
-      new DebugPanel(),
-    ];
-    
+    this.components = [new FileUploader(), new ResultsView(), new DebugPanel()];
+
     // Initialize example panel
     const examplePanelContainer = document.getElementById('examplePanelContainer');
     if (examplePanelContainer) {
       const examplePanel = new ExamplePanel(examplePanelContainer);
-      
+
       // Set up example panel button
       const examplesBtn = document.getElementById('examplesBtn');
       if (examplesBtn) {
@@ -139,7 +130,7 @@ export class App {
         });
       }
     }
-    
+
     // Initialize factory floor UI separately when needed
     this.factoryFloorUI = new FactoryFloorUI();
     // Initialize factory floor UI immediately so button listeners work
@@ -217,7 +208,7 @@ export class App {
         useCache: true,
         onProgress: (progress, message) => {
           appState.setLoading(true, message, progress);
-        }
+        },
       }
     );
 
@@ -234,8 +225,8 @@ export class App {
     const logs = this.logger.getLogs();
 
     // Add slight delay for UI feedback
-    await new Promise(resolve => setTimeout(resolve, 200));
-    
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
     // Update state with results
     appState.setAnalysisResults(stats, optimization, logs);
 
@@ -276,7 +267,7 @@ export class App {
     );
 
     const result = await this.commandExecutor.execute(command);
-    
+
     if (!result.ok) {
       this.logger.error('Failed to export results', result.error);
       appState.setError('Failed to export results');
@@ -285,19 +276,17 @@ export class App {
 
   private async handleClearCache(): Promise<void> {
     // Create and execute clear cache command
-    const command = new ClearCacheCommand(
-      this.cacheRepository,
-      this.logger
-    );
+    const command = new ClearCacheCommand(this.cacheRepository, this.logger);
 
     const result = await this.commandExecutor.execute(command);
-    
+
     if (result.ok) {
       // Show success feedback in UI
       const btn = document.getElementById('clearCacheBtn');
       if (btn) {
         const originalText = btn.innerHTML;
-        btn.innerHTML = '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Cleared!';
+        btn.innerHTML =
+          '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Cleared!';
         btn.classList.add('text-vibrant-teal');
         setTimeout(() => {
           btn.innerHTML = originalText;
@@ -312,13 +301,13 @@ export class App {
   private handleReset(): void {
     appState.reset();
     this.logger.clearLogs();
-    
+
     // Hide the view navigation section
     const viewNavigation = document.getElementById('viewNavigation');
     if (viewNavigation) {
       viewNavigation.setAttribute('hidden', '');
     }
-    
+
     // Switch back to analysis view if in factory view
     if (this.currentView === 'factory') {
       this.switchView('analysis');
@@ -327,18 +316,18 @@ export class App {
 
   private switchView(view: 'analysis' | 'factory'): void {
     this.currentView = view;
-    
+
     const analysisSection = document.getElementById('resultsSection');
     const factorySection = document.getElementById('factorySection');
     const viewNavigation = document.getElementById('viewNavigation');
-    
+
     // Always show the navigation header when switching views (if results exist)
     if (viewNavigation && appState.getState().stats) {
       viewNavigation.style.display = 'block';
       viewNavigation.classList.remove('hidden');
       viewNavigation.removeAttribute('hidden');
     }
-    
+
     if (view === 'factory') {
       // Show factory section FIRST so container has dimensions
       if (analysisSection) {
@@ -351,7 +340,7 @@ export class App {
         factorySection.classList.remove('hidden');
         factorySection.removeAttribute('hidden');
       }
-      
+
       // Initialize factory floor AFTER showing the section
       if (!this.factoryFloorScene) {
         // Wait a frame for the layout to update
@@ -372,7 +361,7 @@ export class App {
         factorySection.setAttribute('hidden', '');
       }
     }
-    
+
     // Update toggle buttons
     this.updateViewToggleButtons();
   }
@@ -381,42 +370,41 @@ export class App {
     // Initializing factory floor...
     const container = document.getElementById('factoryFloorContainer');
     // Container found
-    
+
     if (!container) {
       // Factory floor container not found
       return;
     }
-    
+
     // Clear any loading messages
     const loadingDivs = container.querySelectorAll('.absolute, div');
-    loadingDivs.forEach(div => {
+    loadingDivs.forEach((div) => {
       if (div !== container && div.parentNode === container) {
         // Removing loading div
         div.remove();
       }
     });
-    
+
     try {
       // Creating FactoryFloorScene...
       this.factoryFloorScene = new FactoryFloorScene(container);
-      
+
       // Creating FactoryFloorService...
       this.factoryFloorService = new FactoryFloorService(this.factoryFloorScene, {
         autoStartBuilding: true,
         maxConcurrentBuilds: 3,
         buildSpeed: 2,
         persistData: true, // Re-enabled with IndexedDB
-        enableAnimations: true
+        enableAnimations: true,
       });
-      
+
       // Set up factory floor event listeners
       this.setupFactoryFloorEvents();
-      
+
       // Add current file to factory floor if available
       this.addCurrentFileToFactory();
-      
+
       // Factory floor initialized successfully
-      
     } catch (error) {
       // Failed to initialize factory floor
     }
@@ -424,19 +412,19 @@ export class App {
 
   private setupFactoryFloorEvents(): void {
     if (!this.factoryFloorService) return;
-    
+
     this.factoryFloorService.on('printSelected', (_data: { printId: string | null }) => {
       this.updateFactoryFloorUI();
     });
-    
+
     this.factoryFloorService.on('factoryStateChanged', (data: { state: FactoryState }) => {
       this.updateFactoryStatsUI(data.state);
     });
-    
+
     this.factoryFloorService.on('buildingStarted', (_data: { printId: string }) => {
       // Started building print
     });
-    
+
     this.factoryFloorService.on('buildingCompleted', (_data: { printId: string }) => {
       // Completed building print
     });
@@ -444,22 +432,18 @@ export class App {
 
   private async addCurrentFileToFactory(): Promise<void> {
     if (!this.factoryFloorService) return;
-    
+
     const state = appState.getState();
     if (state.currentFile && state.stats) {
       try {
         // Adding current file to factory floor
-        
+
         // Read the file content
         const fileContent = await this.readFileAsText(state.currentFile);
-        
+
         // Add to factory floor
-        await this.factoryFloorService.addPrint(
-          state.currentFile.name,
-          fileContent,
-          state.stats
-        );
-        
+        await this.factoryFloorService.addPrint(state.currentFile.name, fileContent, state.stats);
+
         // Successfully added current file to factory floor
       } catch (error) {
         // Failed to add current file to factory floor
@@ -485,7 +469,7 @@ export class App {
   private updateViewToggleButtons(): void {
     const analysisBtn = document.getElementById('analysisViewBtn');
     const factoryBtn = document.getElementById('factoryViewBtn');
-    
+
     if (analysisBtn && factoryBtn) {
       if (this.currentView === 'analysis') {
         analysisBtn.classList.add('bg-vibrant-blue', 'text-white');
@@ -503,10 +487,10 @@ export class App {
 
   private updateFactoryFloorUI(): void {
     if (!this.factoryFloorService) return;
-    
+
     const selectedPrint = this.factoryFloorService.getSelectedPrint();
     const infoPanel = document.getElementById('printInfoPanel');
-    
+
     if (selectedPrint && infoPanel) {
       infoPanel.innerHTML = `
         <h4 class="text-lg font-semibold text-white mb-2">${selectedPrint.filename}</h4>
@@ -554,17 +538,17 @@ export class App {
     if (this.factoryFloorService) {
       this.factoryFloorService.dispose();
     }
-    
+
     if (this.factoryFloorUI) {
       this.factoryFloorUI.destroy();
     }
-    
+
     // Clean up all components
-    this.components.forEach(component => component.destroy());
-    
+    this.components.forEach((component) => component.destroy());
+
     // Clean up Web Worker
     parserWorkerService.destroy();
-    
+
     // Remove all event listeners
     eventBus.removeAllListeners();
   }

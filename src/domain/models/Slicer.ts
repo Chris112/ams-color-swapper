@@ -8,9 +8,9 @@ export interface Slicer {
 }
 
 /**
- * Filament usage statistics from slicer analysis
+ * Overall filament usage statistics from slicer analysis
  */
-export interface FilamentUsage {
+export interface FilamentUsageStats {
   total: number;
   model: number;
   support: number;

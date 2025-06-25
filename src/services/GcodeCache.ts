@@ -1,21 +1,21 @@
 import { GcodeStats, OptimizationResult, DebugLog } from '../types';
 
 interface CacheEntry {
-  key: string;              // SHA-256 hash of file content
+  key: string; // SHA-256 hash of file content
   fileName: string;
   fileSize: number;
   stats: GcodeStats;
   optimization: OptimizationResult;
   logs: DebugLog[];
   timestamp: number;
-  version: string;          // Cache format version for future compatibility
+  version: string; // Cache format version for future compatibility
 }
 
 interface CacheMetadata {
   totalEntries: number;
-  totalSize: number;        // Approximate size in bytes
-  oldestEntry: number;      // Timestamp
-  newestEntry: number;      // Timestamp
+  totalSize: number; // Approximate size in bytes
+  oldestEntry: number; // Timestamp
+  newestEntry: number; // Timestamp
 }
 
 export class GcodeCache {
@@ -24,7 +24,7 @@ export class GcodeCache {
   private static readonly STORE_NAME = 'parsed-results';
   private static readonly CACHE_VERSION = '1.0.0';
   private static readonly EXPIRY_DAYS = 90; // 3 months - generous since data is small
-  
+
   private db: IDBDatabase | null = null;
 
   async initialize(): Promise<void> {
@@ -32,7 +32,7 @@ export class GcodeCache {
       const request = indexedDB.open(GcodeCache.DB_NAME, GcodeCache.DB_VERSION);
 
       request.onerror = () => reject(new Error('Failed to open IndexedDB'));
-      
+
       request.onsuccess = () => {
         this.db = request.result;
         resolve();
@@ -40,7 +40,7 @@ export class GcodeCache {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         if (!db.objectStoreNames.contains(GcodeCache.STORE_NAME)) {
           const store = db.createObjectStore(GcodeCache.STORE_NAME, { keyPath: 'key' });
           store.createIndex('timestamp', 'timestamp', { unique: false });
@@ -60,14 +60,14 @@ export class GcodeCache {
 
       request.onsuccess = () => {
         const entry = request.result as CacheEntry | undefined;
-        
+
         if (!entry) {
           resolve(null);
           return;
         }
 
         // Check if entry is expired
-        const expiryTime = entry.timestamp + (GcodeCache.EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+        const expiryTime = entry.timestamp + GcodeCache.EXPIRY_DAYS * 24 * 60 * 60 * 1000;
         if (Date.now() > expiryTime) {
           // Remove expired entry
           this.delete(key).catch(console.error);
@@ -102,7 +102,7 @@ export class GcodeCache {
     // Convert Maps to plain objects for storage
     const statsToStore = {
       ...stats,
-      layerColorMap: Object.fromEntries(stats.layerColorMap || new Map())
+      layerColorMap: Object.fromEntries(stats.layerColorMap || new Map()),
     };
 
     const entry: CacheEntry = {
@@ -113,7 +113,7 @@ export class GcodeCache {
       optimization,
       logs,
       timestamp: Date.now(),
-      version: GcodeCache.CACHE_VERSION
+      version: GcodeCache.CACHE_VERSION,
     };
 
     return new Promise((resolve, reject) => {
@@ -162,13 +162,13 @@ export class GcodeCache {
 
       request.onsuccess = () => {
         const entries = request.result as CacheEntry[];
-        
+
         if (entries.length === 0) {
           resolve({
             totalEntries: 0,
             totalSize: 0,
             oldestEntry: 0,
-            newestEntry: 0
+            newestEntry: 0,
           });
           return;
         }
@@ -178,13 +178,13 @@ export class GcodeCache {
           return sum + JSON.stringify(entry).length;
         }, 0);
 
-        const timestamps = entries.map(e => e.timestamp);
-        
+        const timestamps = entries.map((e) => e.timestamp);
+
         resolve({
           totalEntries: entries.length,
           totalSize,
           oldestEntry: Math.min(...timestamps),
-          newestEntry: Math.max(...timestamps)
+          newestEntry: Math.max(...timestamps),
         });
       };
 
@@ -195,7 +195,7 @@ export class GcodeCache {
   async cleanupExpired(): Promise<number> {
     if (!this.db) await this.initialize();
 
-    const expiryThreshold = Date.now() - (GcodeCache.EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+    const expiryThreshold = Date.now() - GcodeCache.EXPIRY_DAYS * 24 * 60 * 60 * 1000;
     let deletedCount = 0;
 
     return new Promise((resolve, reject) => {
@@ -222,7 +222,7 @@ export class GcodeCache {
 
   async cleanupOldAlgorithmVersions(): Promise<number> {
     if (!this.db) await this.initialize();
-    
+
     // Get current algorithm version to compare against
     const currentVersion = await this.getCurrentAlgorithmVersion();
     let deletedCount = 0;

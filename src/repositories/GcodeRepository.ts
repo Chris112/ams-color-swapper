@@ -56,7 +56,7 @@ export class GcodeRepository implements IGcodeRepository {
     // Check file extension
     const validExtensions = ['.gcode', '.gco', '.g', '.nc'];
     const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-    
+
     if (!validExtensions.includes(fileExtension)) {
       return Result.err(
         new ValidationError(
@@ -69,25 +69,14 @@ export class GcodeRepository implements IGcodeRepository {
     // Check file size (max 500MB)
     const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
-      return Result.err(
-        new ValidationError(
-          `File too large. Maximum size is 500MB`,
-          'fileSize'
-        )
-      );
+      return Result.err(new ValidationError(`File too large. Maximum size is 500MB`, 'fileSize'));
     }
 
     // Check if file is not empty
     if (file.size === 0) {
-      return Result.err(
-        new ValidationError(
-          `File is empty`,
-          'fileSize'
-        )
-      );
+      return Result.err(new ValidationError(`File is empty`, 'fileSize'));
     }
 
     return Result.ok(undefined);
   }
-
 }

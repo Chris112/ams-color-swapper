@@ -19,7 +19,7 @@ describe('CacheRepository', () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
-    
+
     // Create mock object store
     mockObjectStore = {
       get: vi.fn(),
@@ -76,7 +76,7 @@ describe('CacheRepository', () => {
     it('should create object store on upgrade', async () => {
       // Clear previous mocks
       vi.clearAllMocks();
-      
+
       // Setup a fresh mock database
       const upgradeDb = {
         objectStoreNames: {
@@ -84,7 +84,7 @@ describe('CacheRepository', () => {
         },
         createObjectStore: vi.fn(() => mockObjectStore),
       };
-      
+
       let capturedUpgradeHandler: any = null;
       const upgradeRequest = {
         set onupgradeneeded(handler: any) {
@@ -94,33 +94,32 @@ describe('CacheRepository', () => {
         onerror: null as any,
         result: upgradeDb,
       };
-      
+
       mockIndexedDB.open.mockReturnValue(upgradeRequest);
-      
+
       // Create a new repository instance and call initialize
       const newRepository = new CacheRepository();
       const initPromise = newRepository.initialize();
-      
+
       // Wait for the handler to be set
-      await new Promise(resolve => setTimeout(resolve, 0));
-      
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       // Now trigger the upgrade event
       if (capturedUpgradeHandler) {
         const event = { target: { result: upgradeDb } };
         capturedUpgradeHandler(event);
       }
-      
+
       // Trigger success to complete initialization
       if (upgradeRequest.onsuccess) {
         upgradeRequest.onsuccess();
       }
-      
+
       await initPromise;
-      
-      expect(upgradeDb.createObjectStore).toHaveBeenCalledWith(
-        'parsed-results',
-        { keyPath: 'key' }
-      );
+
+      expect(upgradeDb.createObjectStore).toHaveBeenCalledWith('parsed-results', {
+        keyPath: 'key',
+      });
     });
   });
 
@@ -133,7 +132,12 @@ describe('CacheRepository', () => {
         key: 'test-hash',
         fileName: 'test.gcode',
         fileSize: 1000,
-        stats: { layerColorMap: [['0', 'T0'], ['1', 'T1']] },
+        stats: {
+          layerColorMap: [
+            ['0', 'T0'],
+            ['1', 'T1'],
+          ],
+        },
         optimization: {},
         logs: [],
         timestamp: Date.now(),
@@ -158,7 +162,7 @@ describe('CacheRepository', () => {
       }, 0);
 
       const result = await promise;
-      
+
       expect(result.ok).toBe(true);
       if (result.ok && result.value) {
         expect(result.value.fileName).toBe('test.gcode');
@@ -202,7 +206,7 @@ describe('CacheRepository', () => {
         stats: { layerColorMap: [] },
         optimization: {},
         logs: [],
-        timestamp: Date.now() - (100 * 24 * 60 * 60 * 1000), // 100 days ago
+        timestamp: Date.now() - 100 * 24 * 60 * 60 * 1000, // 100 days ago
         version: '1.0.0',
       };
 
@@ -360,7 +364,7 @@ describe('CacheRepository', () => {
       }, 0);
 
       const result = await promise;
-      
+
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.totalEntries).toBe(2);

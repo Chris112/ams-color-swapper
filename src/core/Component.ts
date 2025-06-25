@@ -14,7 +14,7 @@ export abstract class Component {
     }
     this.element = el as HTMLElement;
     this.state = appState.getState();
-    
+
     // Subscribe to state changes
     this.unsubscribeState = appState.subscribe(this.onStateChange.bind(this));
   }
@@ -30,7 +30,7 @@ export abstract class Component {
   protected onStateChange(newState: AppStateData): void {
     const oldState = this.state;
     this.state = newState;
-    
+
     // Only re-render if initialized and relevant state changed
     if (this.initialized && this.shouldUpdate(oldState, newState)) {
       this.render();
@@ -46,7 +46,10 @@ export abstract class Component {
     eventBus.emit(event, data);
   }
 
-  protected on<K extends AppEventKey>(event: K, handler: (data: AppEventMap[K]) => void): () => void {
+  protected on<K extends AppEventKey>(
+    event: K,
+    handler: (data: AppEventMap[K]) => void
+  ): () => void {
     return eventBus.on(event, handler);
   }
 
@@ -75,7 +78,8 @@ export abstract class Component {
   protected toggle(visible?: boolean): void {
     if (visible === undefined) {
       // Toggle both class and attribute
-      const isHidden = this.element.classList.contains('hidden') || this.element.hasAttribute('hidden');
+      const isHidden =
+        this.element.classList.contains('hidden') || this.element.hasAttribute('hidden');
       if (isHidden) {
         this.show();
       } else {

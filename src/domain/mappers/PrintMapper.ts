@@ -9,23 +9,23 @@ export class PrintMapper {
    * Convert GcodeStats to Print domain model
    */
   static toDomain(stats: GcodeStats): Print {
-    const colors = stats.colors.map(c => 
+    const colors = stats.colors.map((c) =>
       Color.fromData({
         id: c.id,
         name: c.name,
         hexColor: c.hexColor,
         firstLayer: c.firstLayer,
-        lastLayer: c.lastLayer
+        lastLayer: c.lastLayer,
       })
     );
 
-    const toolChanges = stats.toolChanges.map(tc =>
+    const toolChanges = stats.toolChanges.map((tc) =>
       ToolChange.fromData({
         fromTool: tc.fromTool,
         toTool: tc.toTool,
         layer: tc.layer,
         lineNumber: tc.lineNumber,
-        zHeight: tc.zHeight
+        zHeight: tc.zHeight,
       })
     );
 
@@ -36,13 +36,15 @@ export class PrintMapper {
       stats.totalHeight,
       colors,
       toolChanges,
-      stats.slicerInfo ? {
-        software: stats.slicerInfo.software,
-        version: stats.slicerInfo.version,
-        profile: stats.slicerInfo.profile
-      } : undefined,
+      stats.slicerInfo
+        ? {
+            software: stats.slicerInfo.software,
+            version: stats.slicerInfo.version,
+            profile: stats.slicerInfo.profile,
+          }
+        : undefined,
       stats.estimatedPrintTime,
-      stats.filamentUsage
+      stats.filamentUsageStats
     );
   }
 
@@ -51,11 +53,11 @@ export class PrintMapper {
    */
   static toInfrastructure(print: Print): GcodeStats {
     const layerColorMap = new Map<number, string>();
-    const colorUsageRanges = print.colors.map(color => ({
+    const colorUsageRanges = print.colors.map((color) => ({
       colorId: color.id,
       startLayer: color.firstLayer,
       endLayer: color.lastLayer,
-      continuous: true
+      continuous: true,
     }));
 
     // Build layer color map
@@ -73,32 +75,34 @@ export class PrintMapper {
       totalHeight: print.totalHeight,
       estimatedPrintTime: print.estimatedTime,
       printTime: print.formattedPrintTime,
-      slicerInfo: print.slicer ? {
-        software: print.slicer.software,
-        version: print.slicer.version || '',
-        profile: print.slicer.profile
-      } : undefined,
-      colors: print.colors.map(color => ({
+      slicerInfo: print.slicer
+        ? {
+            software: print.slicer.software,
+            version: print.slicer.version || '',
+            profile: print.slicer.profile,
+          }
+        : undefined,
+      colors: print.colors.map((color) => ({
         id: color.id,
         name: color.name,
         hexColor: color.hexValue,
         firstLayer: color.firstLayer,
         lastLayer: color.lastLayer,
         layerCount: color.layerCount,
-        usagePercentage: (color.layerCount / print.totalLayers) * 100
+        usagePercentage: (color.layerCount / print.totalLayers) * 100,
       })),
-      toolChanges: print.toolChanges.map(tc => ({
+      toolChanges: print.toolChanges.map((tc) => ({
         fromTool: tc.fromTool,
         toTool: tc.toTool,
         layer: tc.layer,
         lineNumber: tc.lineNumber,
-        zHeight: tc.zHeight
+        zHeight: tc.zHeight,
       })),
       layerColorMap,
       colorUsageRanges,
-      filamentUsage: print.filamentUsage,
+      filamentUsageStats: print.filamentUsageStats,
       parserWarnings: [],
-      parseTime: 0
+      parseTime: 0,
     };
   }
 }

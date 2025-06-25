@@ -6,23 +6,18 @@ export class HologramEffects {
   private scanlinesMesh: THREE.Mesh | null = null;
   private gridHelper: THREE.GridHelper | null = null;
   private ambientParticles: THREE.Points | null = null;
-  
+
   constructor(scene: THREE.Scene) {
     this.scene = scene;
   }
-  
+
   public createScanlines(dimensions: THREE.Vector3): void {
-    const geometry = new THREE.PlaneGeometry(
-      dimensions.x * 2,
-      dimensions.y * 2,
-      1,
-      50
-    );
-    
+    const geometry = new THREE.PlaneGeometry(dimensions.x * 2, dimensions.y * 2, 1, 50);
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
         time: { value: 0 },
-        opacity: { value: 0.1 }
+        opacity: { value: 0.1 },
       },
       vertexShader: `
         uniform float time;
@@ -48,41 +43,41 @@ export class HologramEffects {
       `,
       transparent: true,
       side: THREE.DoubleSide,
-      depthWrite: false
+      depthWrite: false,
     });
-    
+
     this.scanlinesMesh = new THREE.Mesh(geometry, material);
     this.scanlinesMesh.rotation.y = Math.PI / 2;
     this.scene.add(this.scanlinesMesh);
   }
-  
+
   public createAmbientParticles(dimensions: THREE.Vector3, count: number = 1000): void {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
     const sizes = new Float32Array(count);
-    
+
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
       positions[i3] = (Math.random() - 0.5) * dimensions.x * 2;
       positions[i3 + 1] = Math.random() * dimensions.y;
       positions[i3 + 2] = (Math.random() - 0.5) * dimensions.z * 2;
-      
+
       // Cyan-ish color for holographic feel
       colors[i3] = 0.0;
       colors[i3 + 1] = 0.5 + Math.random() * 0.5;
       colors[i3 + 2] = 0.8 + Math.random() * 0.2;
-      
+
       sizes[i] = Math.random() * 2 + 0.5;
     }
-    
+
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
-    
+
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        time: { value: 0 }
+        time: { value: 0 },
       },
       vertexShader: `
         attribute float size;
@@ -111,13 +106,13 @@ export class HologramEffects {
       `,
       transparent: true,
       vertexColors: true,
-      depthWrite: false
+      depthWrite: false,
     });
-    
+
     this.ambientParticles = new THREE.Points(geometry, material);
     this.scene.add(this.ambientParticles);
   }
-  
+
   public createGrid(dimensions: THREE.Vector3): void {
     this.gridHelper = new THREE.GridHelper(
       Math.max(dimensions.x, dimensions.z),
@@ -129,73 +124,73 @@ export class HologramEffects {
     this.gridHelper.material.transparent = true;
     this.scene.add(this.gridHelper);
   }
-  
+
   public createPrintHeadParticles(position: THREE.Vector3): THREE.Points {
     const geometry = new THREE.BufferGeometry();
     const particleCount = 50;
     const positions = new Float32Array(particleCount * 3);
     const velocities = new Float32Array(particleCount * 3);
-    
+
     for (let i = 0; i < particleCount; i++) {
       const i3 = i * 3;
       positions[i3] = position.x;
       positions[i3 + 1] = position.y;
       positions[i3 + 2] = position.z;
-      
+
       // Random velocities for burst effect
       velocities[i3] = (Math.random() - 0.5) * 0.2;
       velocities[i3 + 1] = Math.random() * 0.2;
       velocities[i3 + 2] = (Math.random() - 0.5) * 0.2;
     }
-    
+
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     geometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3));
-    
+
     const material = new THREE.PointsMaterial({
       color: 0x00ff00,
       size: 3,
       transparent: true,
       opacity: 0.8,
-      blending: THREE.AdditiveBlending
+      blending: THREE.AdditiveBlending,
     });
-    
+
     const particles = new THREE.Points(geometry, material);
     this.scene.add(particles);
-    
+
     return particles;
   }
-  
+
   public update(time: number): void {
     // Update scanlines
     if (this.scanlinesMesh) {
       (this.scanlinesMesh.material as THREE.ShaderMaterial).uniforms.time.value = time;
     }
-    
+
     // Update ambient particles
     if (this.ambientParticles) {
       (this.ambientParticles.material as THREE.ShaderMaterial).uniforms.time.value = time;
     }
   }
-  
+
   public dispose(): void {
     if (this.scanlinesMesh) {
       this.scene.remove(this.scanlinesMesh);
       this.scanlinesMesh.geometry.dispose();
       (this.scanlinesMesh.material as THREE.Material).dispose();
     }
-    
+
     if (this.ambientParticles) {
       this.scene.remove(this.ambientParticles);
       this.ambientParticles.geometry.dispose();
       (this.ambientParticles.material as THREE.Material).dispose();
     }
-    
+
     if (this.gridHelper) {
       this.scene.remove(this.gridHelper);
       this.gridHelper.geometry.dispose();
       (this.gridHelper.material as THREE.Material).dispose();
     }
-    
+
     if (this.particleSystem) {
       this.scene.remove(this.particleSystem);
       this.particleSystem.geometry.dispose();
