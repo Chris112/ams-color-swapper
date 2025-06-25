@@ -4,6 +4,7 @@ import { FileUploader } from '../ui/components/FileUploader';
 import { ResultsView } from '../ui/components/ResultsView';
 import { DebugPanel } from '../ui/components/DebugPanel';
 import { FactoryFloorUI } from '../ui/components/FactoryFloorUI';
+import { ExamplePanel } from '../ui/components/ExamplePanel';
 import { Logger } from '../utils/logger';
 import { Component } from './Component';
 import { parserWorkerService } from '../services/ParserWorkerService';
@@ -104,6 +105,22 @@ export class App {
       new ResultsView(),
       new DebugPanel(),
     ];
+    
+    // Initialize example panel
+    const examplePanelContainer = document.getElementById('examplePanelContainer');
+    if (examplePanelContainer) {
+      const examplePanel = new ExamplePanel(examplePanelContainer);
+      
+      // Set up example panel button
+      const examplesBtn = document.getElementById('examplesBtn');
+      if (examplesBtn) {
+        examplesBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          examplePanel.toggle();
+        });
+      }
+    }
     
     // Initialize factory floor UI separately when needed
     this.factoryFloorUI = new FactoryFloorUI();
@@ -277,6 +294,17 @@ export class App {
   private handleReset(): void {
     appState.reset();
     this.logger.clearLogs();
+    
+    // Hide the view navigation section
+    const viewNavigation = document.getElementById('viewNavigation');
+    if (viewNavigation) {
+      viewNavigation.setAttribute('hidden', '');
+    }
+    
+    // Switch back to analysis view if in factory view
+    if (this.currentView === 'factory') {
+      this.switchView('analysis');
+    }
   }
 
   private switchView(view: 'analysis' | 'factory'): void {
@@ -332,12 +360,12 @@ export class App {
   }
 
   private initializeFactoryFloor(): void {
-    console.log('Initializing factory floor...');
+    // Initializing factory floor...
     const container = document.getElementById('factoryFloorContainer');
-    console.log('Container found:', container);
+    // Container found
     
     if (!container) {
-      console.error('Factory floor container not found');
+      // Factory floor container not found
       return;
     }
     
@@ -345,16 +373,16 @@ export class App {
     const loadingDivs = container.querySelectorAll('.absolute, div');
     loadingDivs.forEach(div => {
       if (div !== container && div.parentNode === container) {
-        console.log('Removing loading div:', div);
+        // Removing loading div
         div.remove();
       }
     });
     
     try {
-      console.log('Creating FactoryFloorScene...');
+      // Creating FactoryFloorScene...
       this.factoryFloorScene = new FactoryFloorScene(container);
       
-      console.log('Creating FactoryFloorService...');
+      // Creating FactoryFloorService...
       this.factoryFloorService = new FactoryFloorService(this.factoryFloorScene, {
         autoStartBuilding: true,
         maxConcurrentBuilds: 3,
@@ -369,10 +397,10 @@ export class App {
       // Add current file to factory floor if available
       this.addCurrentFileToFactory();
       
-      console.log('Factory floor initialized successfully');
+      // Factory floor initialized successfully
       
     } catch (error) {
-      console.error('Failed to initialize factory floor:', error);
+      // Failed to initialize factory floor
     }
   }
 
@@ -388,11 +416,11 @@ export class App {
     });
     
     this.factoryFloorService.on('buildingStarted', (printId) => {
-      console.log(`Started building print: ${printId}`);
+      // Started building print
     });
     
     this.factoryFloorService.on('buildingCompleted', (printId) => {
-      console.log(`Completed building print: ${printId}`);
+      // Completed building print
     });
   }
 
@@ -402,7 +430,7 @@ export class App {
     const state = appState.getState();
     if (state.currentFile && state.stats) {
       try {
-        console.log('Adding current file to factory floor:', state.currentFile.name);
+        // Adding current file to factory floor
         
         // Read the file content
         const fileContent = await this.readFileAsText(state.currentFile);
@@ -414,9 +442,9 @@ export class App {
           state.stats
         );
         
-        console.log('Successfully added current file to factory floor');
+        // Successfully added current file to factory floor
       } catch (error) {
-        console.error('Failed to add current file to factory floor:', error);
+        // Failed to add current file to factory floor
       }
     }
   }

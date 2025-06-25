@@ -38,13 +38,7 @@ export class ResultsView extends Component {
   protected render(): void {
     const { view, stats, optimization } = this.state;
     
-    console.log('ResultsView render:', { 
-      view, 
-      hasStats: !!stats, 
-      hasOptimization: !!optimization,
-      elementHidden: this.element.classList.contains('hidden'),
-      elementHiddenAttr: this.element.hasAttribute('hidden')
-    });
+    // ResultsView render
     
     // Show/hide based on view
     this.toggle(view === 'results');
@@ -56,7 +50,7 @@ export class ResultsView extends Component {
     }
     
     if (view === 'results' && stats && optimization) {
-      console.log('Updating results view components');
+      // Updating results view components
       this.updateFileName();
       this.updateFileStats();
       this.updateColorStats();
@@ -216,6 +210,9 @@ export class ResultsView extends Component {
   }
 
   private updateVolumetricHologram(): void {
+    // DISABLED - Volumetric hologram feature is temporarily disabled
+    return;
+    
     if (!this.state.stats) return;
     
     const container = document.getElementById('hologramContainer');
@@ -240,10 +237,10 @@ export class ResultsView extends Component {
           },
           {
             onLayerChange: (layer: number) => {
-              console.log('Hologram layer changed:', layer);
+              // Hologram layer changed
             },
             onVoxelClick: (voxel: any) => {
-              console.log('Voxel clicked:', voxel);
+              // Voxel clicked
             }
           }
         );

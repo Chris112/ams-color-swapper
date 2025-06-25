@@ -1,0 +1,30 @@
+[
+  {
+    "name": "4 Color Slowpoke",
+    "filename": "4_color_Slowpoke.gcode",
+    "description": "Multi-color Pokémon print with 4 different filaments",
+    "colors": 4,
+    "size": "Medium"
+  },
+  {
+    "name": "5 Color Squirtle", 
+    "filename": "5 colour Squirtle.gcode",
+    "description": "Detailed Squirtle model using 5 colors",
+    "colors": 5,
+    "size": "Medium"
+  },
+  {
+    "name": "6 Color Slowbro",
+    "filename": "6_color_Slowbro.gcode", 
+    "description": "Complex Slowbro print with 6 different colors",
+    "colors": 6,
+    "size": "Large"
+  },
+  {
+    "name": "6 Color Slowking",
+    "filename": "6_color_Slowking.gcode",
+    "description": "Advanced Slowking model with maximum color complexity",
+    "colors": 6,
+    "size": "Large"
+  }
+]

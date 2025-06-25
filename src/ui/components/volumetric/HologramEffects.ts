@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { VolumetricData } from './types';
 
 export class HologramEffects {
   private scene: THREE.Scene;

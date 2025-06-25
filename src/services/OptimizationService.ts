@@ -15,7 +15,9 @@ export class OptimizationService {
     amsConfig.assignColors(print.colors);
     
     // Convert back to infrastructure type
-    return AmsConfigurationMapper.toOptimizationResult(amsConfig, print.colors);
+    const result = AmsConfigurationMapper.toOptimizationResult(amsConfig, print.colors);
+    
+    return result;
   }
 
   /**

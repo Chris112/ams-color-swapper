@@ -57,6 +57,16 @@
             </p>
             <input type="file" id="fileInput" accept=".gcode,.gco,.g" hidden />
           </div>
+          
+          <!-- Example Files Button - Outside dropZone -->
+          <div class="max-w-2xl mx-auto mt-6 text-center">
+            <button id="examplesBtn" class="btn-glass inline-flex items-center gap-2">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Try Example Files
+            </button>
+          </div>
 
           <div id="uploadProgress" class="max-w-2xl mx-auto mt-8" hidden>
             <div class="progress-bar">
@@ -113,8 +123,8 @@
               <canvas id="colorTimeline" class="w-full h-32 rounded-xl glass"></canvas>
             </div>
 
-            <!-- 3D Hologram Visualization -->
-            <div class="col-span-full card-glass animate-scale-in" style="animation-delay: 0.3s">
+            <!-- 3D Hologram Visualization - DISABLED FOR NOW -->
+            <div class="col-span-full card-glass animate-scale-in" style="animation-delay: 0.3s; display: none;">
               <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 text-vibrant-cyan">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
@@ -325,6 +335,9 @@
       </footer>
     </div>
 
+    <!-- Example Panel Container -->
+    <div id="examplePanelContainer"></div>
+    
     <script type="module" src="/src/app.ts"></script>
   </body>
 </html>

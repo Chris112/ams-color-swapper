@@ -72,12 +72,7 @@ export class GcodeParser {
       }];
     }
 
-    console.log('Parser complete stats:', {
-      fileName: completeStats.fileName,
-      totalLayers: completeStats.totalLayers,
-      colorsCount: completeStats.colors.length,
-      toolChangesCount: completeStats.toolChanges.length
-    });
+    // Parser complete stats
 
     return completeStats;
   }

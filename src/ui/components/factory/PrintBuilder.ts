@@ -196,12 +196,7 @@ export class PrintBuilder {
     
     // Debug log only if progress is NaN or for first few calls
     if (isNaN(progress) || this.currentLayer < 3) {
-      console.log('PrintBuilder progress:', {
-        currentLayer: this.currentLayer,
-        totalLayers: this.geometry.totalLayers,
-        progress,
-        isNaN: isNaN(progress)
-      });
+      // PrintBuilder progress
     }
     
     return progress;
@@ -336,7 +331,7 @@ export class PrintBuilder {
     const maxDimension = Math.max(size.x, size.z);
     this.currentLayerIndicator.scale.set(maxDimension * 1.1, maxDimension * 1.1, 1);
     
-    console.log(`Layer indicator: layer=${layer}, actualHeight=${actualLayerHeight.toFixed(3)}, boundingBox Y: ${boundingBox.min.y.toFixed(3)} to ${boundingBox.max.y.toFixed(3)}`);
+    // Layer indicator updated
   }
   
   // Event handling methods

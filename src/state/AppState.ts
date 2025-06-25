@@ -61,7 +61,7 @@ export class AppState {
   }
 
   setAnalysisResults(stats: GcodeStats, optimization: OptimizationResult, logs: LogEntry[]): void {
-    console.log('AppState: Setting analysis results, switching to results view');
+    // AppState: Setting analysis results, switching to results view
     this.setState({
       stats,
       optimization,

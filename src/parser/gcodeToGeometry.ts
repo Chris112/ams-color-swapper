@@ -81,7 +81,7 @@ export class GcodeToGeometryConverter {
             const newLayer = parseInt(layerMatch[1]);
             if (!isNaN(newLayer) && newLayer >= 0) {
               this.currentLayer = newLayer;
-              console.log(`Detected layer: ${this.currentLayer}`);
+              // Detected layer
             }
           }
         }
@@ -101,7 +101,7 @@ export class GcodeToGeometryConverter {
           const calculatedLayer = layerFromZ - 1;
           if (calculatedLayer >= 0) {
             this.currentLayer = calculatedLayer;
-            console.log(`Z-based layer detection: Z=${newPosition.z.toFixed(3)} -> Layer ${this.currentLayer}`);
+            // Z-based layer detection
           }
         }
         
@@ -267,26 +267,16 @@ export class GcodeToGeometryConverter {
     // Fallback: use stats if our detection failed and redistribute geometry
     if (totalLayers === 1 && stats.totalLayers && stats.totalLayers > 1) {
       totalLayers = stats.totalLayers;
-      console.log(`Using stats totalLayers: ${totalLayers} instead of detected: 1`);
+      // Using stats totalLayers instead of detected
       
       // Redistribute single layer geometry across multiple layers based on Z height
       if (layerNumbers.length === 1 && layerNumbers[0] === 0) {
-        console.log('Redistributing geometry across layers based on Z height...');
+        // Redistributing geometry across layers based on Z height...
         finalLayers = this.redistributeGeometryByZ(finalLayers, totalLayers);
       }
     }
     
-    console.log('GcodeToGeometry: Generated geometry with', {
-      totalLayers,
-      layerNumbers: layerNumbers.slice(0, 10), // First 10 layers for debugging
-      allLayerNumbers: layerNumbers, // All detected layers
-      layersCount: finalLayers.length,
-      pathsCount: this.paths.length,
-      extrudingPathsCount: this.paths.filter(p => p.extruding).length,
-      travelPathsCount: this.paths.filter(p => !p.extruding).length,
-      maxY: this.paths.reduce((max, path) => Math.max(max, ...path.points.map(p => p.y)), 0), // Y is now height
-      coordSystem: 'G-code Z→Three.js Y (height), G-code Y→Three.js Z (depth)'
-    });
+    // GcodeToGeometry: Generated geometry
     
     return {
       layers: finalLayers,
@@ -419,7 +409,7 @@ export class GcodeToGeometryConverter {
     const zRange = maxZ - minZ;
     const layerHeight = zRange / targetLayerCount;
     
-    console.log(`Redistributing geometry: Z range ${minZ.toFixed(3)} to ${maxZ.toFixed(3)}, ${targetLayerCount} layers`);
+    // Redistributing geometry across layers
     
     const redistributed: GeometryLayer[] = [];
     

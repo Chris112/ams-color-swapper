@@ -72,7 +72,7 @@ export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats)
   `;
 
   const slotsHtml = opt.slotAssignments.map(slot => {
-    const slotColors = slot.colors.map(colorId => {
+    const slotColors = slot.colors.length > 0 ? slot.colors.map(colorId => {
       const color = stats.colors.find(c => c.id === colorId);
       return color ? `
         <span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
@@ -80,7 +80,12 @@ export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats)
           <span class="text-white/80">${color.name || color.id}</span>
         </span>
       ` : '';
-    }).join('');
+    }).join('') : `
+      <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/50">
+        <span class="w-4 h-4 rounded-full bg-white/20"></span>
+        <span>Empty</span>
+      </span>
+    `;
 
     return `
       <div class="glass rounded-2xl p-5 hover:scale-[1.02] transition-transform">

@@ -1,4 +1,4 @@
-import { OptimizationResult, SlotAssignment } from '../../types';
+import { OptimizationResult, SlotAssignment, ColorPair } from '../../types';
 import { AmsConfiguration, Color } from '../models';
 
 /**
@@ -10,10 +10,10 @@ export class AmsConfigurationMapper {
    */
   static toOptimizationResult(
     config: AmsConfiguration,
-    colors: Color[]
+    _colors: Color[]
   ): OptimizationResult {
+    // Include ALL slots, even empty ones, to ensure proper display in UI
     const slotAssignments: SlotAssignment[] = config.getAllSlots()
-      .filter(slot => !slot.isEmpty)
       .map(slot => ({
         slot: slot.slotNumber,
         colors: slot.colorIds,
@@ -23,10 +23,20 @@ export class AmsConfigurationMapper {
     const manualSwaps = config.getManualSwaps();
     
     // Find colors that can share slots
-    const canShareSlots: string[] = [];
+    const canShareSlots: ColorPair[] = [];
     config.getAllSlots().forEach(slot => {
-      if (slot.requiresSwaps) {
-        canShareSlots.push(...slot.colorIds);
+      if (slot.requiresSwaps && slot.colorIds.length > 1) {
+        // For each pair of colors in a shared slot
+        for (let i = 0; i < slot.colorIds.length - 1; i++) {
+          for (let j = i + 1; j < slot.colorIds.length; j++) {
+            canShareSlots.push({
+              color1: slot.colorIds[i],
+              color2: slot.colorIds[j],
+              canShare: true,
+              reason: `Colors share slot ${slot.slotNumber} with manual swaps`
+            });
+          }
+        }
       }
     });
 

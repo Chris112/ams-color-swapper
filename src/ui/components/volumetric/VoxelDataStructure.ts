@@ -59,20 +59,13 @@ export class VoxelDataStructure {
     // Generate voxels based on layer-color map
     const layerColorMap = this.stats.layerColorMap || new Map();
     
-    console.log('VoxelDataStructure debug:', {
-      hasLayerColorMap: !!this.stats.layerColorMap,
-      layerColorMapSize: layerColorMap.size,
-      totalLayers: this.stats.totalLayers,
-      colorsLength: this.stats.colors?.length,
-      colorUsageRanges: this.stats.colorUsageRanges?.length,
-      statsKeys: Object.keys(this.stats)
-    });
+    // VoxelDataStructure debug information
     
     // Try colorUsageRanges first, then layerColorMap, then fallback to demo
     const colorRanges = this.stats.colorUsageRanges || [];
     
     if (colorRanges.length > 0) {
-      console.log('Using colorUsageRanges for voxel generation');
+      // Using colorUsageRanges for voxel generation
       // Use color usage ranges to generate voxels
       colorRanges.forEach(range => {
         const colorIndex = this.getColorIndexForId(range.colorId);
@@ -82,14 +75,14 @@ export class VoxelDataStructure {
         }
       });
     } else if (layerColorMap.size > 0) {
-      console.log('Using layerColorMap for voxel generation');
+      // Using layerColorMap for voxel generation
       layerColorMap.forEach((toolId, layer) => {
         const colorIndex = this.getColorIndexForTool(toolId);
         const y = layer * layerHeight;
         this.generateLayerVoxels(layer, y, colorIndex, centerX, centerZ);
       });
     } else {
-      console.log('Using demo data for voxel generation');
+      // Using demo data for voxel generation
       // Generate demo data if no real data available
       for (let layer = 0; layer < layers; layer++) {
         const colorIndex = layer % Math.max(1, this.colors.length);
