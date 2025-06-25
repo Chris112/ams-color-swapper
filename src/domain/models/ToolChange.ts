@@ -51,13 +51,7 @@ export class ToolChange {
     lineNumber: number;
     zHeight?: number;
   }): ToolChange {
-    return new ToolChange(
-      data.fromTool,
-      data.toTool,
-      data.layer,
-      data.lineNumber,
-      data.zHeight
-    );
+    return new ToolChange(data.fromTool, data.toTool, data.layer, data.lineNumber, data.zHeight);
   }
 
   private validate(): void {

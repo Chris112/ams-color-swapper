@@ -5,7 +5,7 @@ import { ExportService } from '../services/ExportService';
 export enum ExportFormat {
   JSON = 'json',
   TEXT = 'text',
-  CSV = 'csv'
+  CSV = 'csv',
 }
 
 /**
@@ -23,13 +23,13 @@ export class ExportResultsCommand implements ICommand<void> {
     switch (this.format) {
       case ExportFormat.JSON:
         return this.exportService.exportAsJson(this.stats, this.optimization);
-      
+
       case ExportFormat.TEXT:
         return this.exportService.exportAsText(this.stats, this.optimization);
-      
+
       case ExportFormat.CSV:
         return this.exportService.exportAsCsv(this.stats, this.optimization);
-      
+
       default:
         return Result.err(new Error(`Unsupported export format: ${this.format}`));
     }

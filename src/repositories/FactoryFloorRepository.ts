@@ -36,7 +36,9 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
       return Result.ok(undefined);
     } catch (error) {
       return Result.err(
-        new Error(`Failed to initialize factory floor database: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        new Error(
+          `Failed to initialize factory floor database: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
       );
     }
   }
@@ -62,9 +64,9 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
         const storageData = {
           ...printData,
           // Don't store the full gcode content to save space
-          gcodeContent: '', 
+          gcodeContent: '',
           // Store a flag that this needs to be reloaded
-          needsReload: true
+          needsReload: true,
         };
 
         await new Promise<void>((resolve, reject) => {
@@ -77,7 +79,9 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
       return Result.ok(undefined);
     } catch (error) {
       return Result.err(
-        new Error(`Failed to save factory floor data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        new Error(
+          `Failed to save factory floor data: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
       );
     }
   }
@@ -98,10 +102,10 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
       });
 
       const printsMap = new Map<string, PrintData>();
-      
+
       // Only load prints that don't need full gcode reload
       // (In a real implementation, you might want to reload from original files)
-      prints.forEach(print => {
+      prints.forEach((print) => {
         if (!print.needsReload) {
           printsMap.set(print.id, print);
         }
@@ -110,7 +114,9 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
       return Result.ok(printsMap);
     } catch (error) {
       return Result.err(
-        new Error(`Failed to load factory floor data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        new Error(
+          `Failed to load factory floor data: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
       );
     }
   }
@@ -133,7 +139,9 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
       return Result.ok(undefined);
     } catch (error) {
       return Result.err(
-        new Error(`Failed to clear factory floor data: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        new Error(
+          `Failed to clear factory floor data: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
       );
     }
   }
@@ -156,7 +164,9 @@ export class FactoryFloorRepository implements IFactoryFloorRepository {
       return Result.ok(undefined);
     } catch (error) {
       return Result.err(
-        new Error(`Failed to delete print: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        new Error(
+          `Failed to delete print: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
       );
     }
   }

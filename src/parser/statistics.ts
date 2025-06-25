@@ -1,5 +1,6 @@
 import { GcodeStats, ToolChange } from '../types';
 import { extractColorInfo, extractColorRanges } from './colorExtractor';
+import { getColorName } from '../utils/colorNames';
 
 export async function calculateStatistics(
   partialStats: GcodeStats,
@@ -39,6 +40,18 @@ export async function calculateStatistics(
       const index = parseInt(color.id.substring(1));
       if (index < definedColorCount) {
         color.hexColor = partialStats.slicerInfo!.colorDefinitions![index];
+        // Update the name based on the hex color
+        if (color.hexColor) {
+          const colorName = getColorName(color.hexColor);
+          // Only use the color name if it's meaningful (not generic like "Reddish")
+          if (
+            !colorName.includes('-ish') &&
+            !colorName.includes('Near') &&
+            colorName !== color.hexColor
+          ) {
+            color.name = colorName;
+          }
+        }
       }
     });
   }

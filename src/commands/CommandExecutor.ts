@@ -16,10 +16,10 @@ export class CommandExecutor {
    */
   async execute<T>(command: ICommand<T>): Promise<Result<T>> {
     this.logger.info(`Executing command: ${command.getDescription()}`);
-    
+
     try {
       const result = await command.execute();
-      
+
       if (result.ok) {
         // Add to history if successful
         this.addToHistory(command);
@@ -27,7 +27,7 @@ export class CommandExecutor {
       } else {
         this.logger.error(`Command failed: ${command.getDescription()}`, result.error);
       }
-      
+
       return result;
     } catch (error) {
       this.logger.error(`Command threw error: ${command.getDescription()}`, error);
@@ -44,21 +44,21 @@ export class CommandExecutor {
     }
 
     const command = this.history[this.currentIndex];
-    
+
     if (!command.undo) {
       return Result.err(new Error(`Command does not support undo: ${command.getDescription()}`));
     }
 
     this.logger.info(`Undoing command: ${command.getDescription()}`);
-    
+
     try {
       const result = await command.undo();
-      
+
       if (result.ok) {
         this.currentIndex--;
         this.logger.info(`Command undone successfully: ${command.getDescription()}`);
       }
-      
+
       return result;
     } catch (error) {
       this.logger.error(`Undo failed: ${command.getDescription()}`, error);
@@ -85,11 +85,11 @@ export class CommandExecutor {
   private addToHistory(command: ICommand<any>): void {
     // Remove any commands after current index
     this.history = this.history.slice(0, this.currentIndex + 1);
-    
+
     // Add new command
     this.history.push(command);
     this.currentIndex++;
-    
+
     // Limit history size
     const maxHistorySize = 50;
     if (this.history.length > maxHistorySize) {

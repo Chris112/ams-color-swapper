@@ -3,8 +3,11 @@
  */
 export abstract class AppError extends Error {
   abstract readonly code: string;
-  
-  constructor(message: string, public readonly cause?: unknown) {
+
+  constructor(
+    message: string,
+    public readonly cause?: unknown
+  ) {
     super(message);
     this.name = this.constructor.name;
     Object.setPrototypeOf(this, new.target.prototype);
@@ -16,8 +19,12 @@ export abstract class AppError extends Error {
  */
 export class ParseError extends AppError {
   readonly code = 'PARSE_ERROR';
-  
-  constructor(message: string, public readonly line?: number, cause?: unknown) {
+
+  constructor(
+    message: string,
+    public readonly line?: number,
+    cause?: unknown
+  ) {
     super(message, cause);
   }
 }
@@ -27,8 +34,12 @@ export class ParseError extends AppError {
  */
 export class ValidationError extends AppError {
   readonly code = 'VALIDATION_ERROR';
-  
-  constructor(message: string, public readonly field?: string, cause?: unknown) {
+
+  constructor(
+    message: string,
+    public readonly field?: string,
+    cause?: unknown
+  ) {
     super(message, cause);
   }
 }
@@ -38,8 +49,12 @@ export class ValidationError extends AppError {
  */
 export class CacheError extends AppError {
   readonly code = 'CACHE_ERROR';
-  
-  constructor(message: string, public readonly operation?: string, cause?: unknown) {
+
+  constructor(
+    message: string,
+    public readonly operation?: string,
+    cause?: unknown
+  ) {
     super(message, cause);
   }
 }
@@ -49,8 +64,12 @@ export class CacheError extends AppError {
  */
 export class FileError extends AppError {
   readonly code = 'FILE_ERROR';
-  
-  constructor(message: string, public readonly fileName?: string, cause?: unknown) {
+
+  constructor(
+    message: string,
+    public readonly fileName?: string,
+    cause?: unknown
+  ) {
     super(message, cause);
   }
 }
@@ -60,7 +79,7 @@ export class FileError extends AppError {
  */
 export class WorkerError extends AppError {
   readonly code = 'WORKER_ERROR';
-  
+
   constructor(message: string, cause?: unknown) {
     super(message, cause);
   }
@@ -103,10 +122,10 @@ export function getUserMessage(error: unknown): string {
         return error.message;
     }
   }
-  
+
   if (error instanceof Error) {
     return error.message;
   }
-  
+
   return 'An unexpected error occurred';
 }

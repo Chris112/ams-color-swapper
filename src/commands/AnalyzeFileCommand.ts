@@ -34,7 +34,7 @@ export class AnalyzeFileCommand implements ICommand<AnalyzeFileResult> {
       const processingResult = await this.fileProcessingService.processFile(this.file, {
         useWebWorker: this.options.useWebWorker ?? true,
         useCache: this.options.useCache ?? true,
-        onProgress: this.options.onProgress
+        onProgress: this.options.onProgress,
       });
 
       if (!processingResult.ok) {
@@ -52,7 +52,7 @@ export class AnalyzeFileCommand implements ICommand<AnalyzeFileResult> {
             return Result.ok({
               stats,
               optimization: cacheResult.value.optimization,
-              fromCache: true
+              fromCache: true,
             });
           }
         }
@@ -62,7 +62,7 @@ export class AnalyzeFileCommand implements ICommand<AnalyzeFileResult> {
       if (this.options.onProgress) {
         this.options.onProgress(95, 'Optimizing...');
       }
-      
+
       const optimization = this.optimizationService.generateOptimization(stats);
 
       // Cache the results if not from cache
@@ -88,9 +88,8 @@ export class AnalyzeFileCommand implements ICommand<AnalyzeFileResult> {
       return Result.ok({
         stats,
         optimization,
-        fromCache
+        fromCache,
       });
-
     } catch (error) {
       return Result.err(error instanceof Error ? error : new Error(String(error)));
     }

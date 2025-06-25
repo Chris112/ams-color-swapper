@@ -15,11 +15,11 @@ export class ClearCacheCommand implements ICommand<void> {
   async execute(): Promise<Result<void>> {
     try {
       const result = await this.cacheRepository.clear();
-      
+
       if (result.ok) {
         this.logger.info('Cache cleared successfully');
       }
-      
+
       return result;
     } catch (error) {
       return Result.err(error instanceof Error ? error : new Error(String(error)));

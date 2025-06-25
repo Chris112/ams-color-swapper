@@ -9,30 +9,35 @@ The refactoring focused on improving code organization, type safety, maintainabi
 ## Key Improvements
 
 ### 1. **Type Safety** ✅
+
 - Replaced all `any` types with proper TypeScript interfaces
 - Created `Result<T,E>` type for better error handling
 - Added comprehensive type definitions for all data structures
 - Implemented type-safe event mapping with `AppEventMap`
 
 ### 2. **Error Handling** ✅
+
 - Created custom error hierarchy with `AppError` base class
 - Specific error types: `ParseError`, `ValidationError`, `CacheError`, `FileError`, `WorkerError`
 - User-friendly error messages with `getUserMessage()` helper
 - Consistent error propagation using `Result<T,E>` pattern
 
 ### 3. **Repository Pattern** ✅
+
 - **IGcodeRepository**: Handles G-code parsing operations
 - **ICacheRepository**: Manages IndexedDB cache operations
 - **IFileRepository**: Abstracts file system operations
 - Clean separation between data access and business logic
 
 ### 4. **Service Layer** ✅
+
 - **FileProcessingService**: Orchestrates file parsing with caching
 - **OptimizationService**: Generates AMS slot optimization
 - **ExportService**: Handles multiple export formats (JSON, CSV, Text)
 - Each service has a single responsibility
 
 ### 5. **Domain Models** ✅
+
 - **Color**: Rich domain model for color management
 - **Print**: Represents a complete 3D print job
 - **ToolChange**: Models filament changes
@@ -41,6 +46,7 @@ The refactoring focused on improving code organization, type safety, maintainabi
 - Clear separation from infrastructure concerns
 
 ### 6. **Command Pattern** ✅
+
 - **AnalyzeFileCommand**: Encapsulates file analysis workflow
 - **ExportResultsCommand**: Handles different export formats
 - **ClearCacheCommand**: Manages cache clearing
@@ -48,6 +54,7 @@ The refactoring focused on improving code organization, type safety, maintainabi
 - Enables better testing and debugging
 
 ### 7. **Event-Driven Architecture**
+
 - Type-safe event bus with `AppEventMap`
 - Clear event flow between components
 - Decoupled component communication

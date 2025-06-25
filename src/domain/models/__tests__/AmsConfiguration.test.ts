@@ -4,14 +4,13 @@ import { Color } from '../Color';
 
 describe('AmsConfiguration', () => {
   // Helper function to create test colors
-  const createColor = (id: string, firstLayer: number, lastLayer: number, _layerCount?: number): Color => {
-    return new Color(
-      id,
-      `Color ${id}`,
-      '#000000',
-      firstLayer,
-      lastLayer
-    );
+  const createColor = (
+    id: string,
+    firstLayer: number,
+    lastLayer: number,
+    _layerCount?: number
+  ): Color => {
+    return new Color(id, `Color ${id}`, '#000000', firstLayer, lastLayer);
   };
 
   describe('Legacy Algorithm', () => {
@@ -24,24 +23,24 @@ describe('AmsConfiguration', () => {
         createColor('T3', 50, 100, 50),
         createColor('T4', 70, 120, 50),
         createColor('T5', 90, 140, 50),
-        createColor('T6', 110, 160, 50)
+        createColor('T6', 110, 160, 50),
       ];
-      
+
       config.assignColors(colors);
       const slots = config.getAllSlots();
-      
+
       // Slots 1-3 should have the most used colors (T0, T1, T2)
       expect(slots[0].colorIds).toContain('T0');
       expect(slots[1].colorIds).toContain('T1');
       expect(slots[2].colorIds).toContain('T2');
-      
+
       // Slot 4 should have remaining colors
       expect(slots[3].colorIds.length).toBeGreaterThan(0);
-      
+
       // All colors should be assigned
       const allAssignedColors = new Set<string>();
-      slots.forEach(slot => {
-        slot.colorIds.forEach(id => allAssignedColors.add(id));
+      slots.forEach((slot) => {
+        slot.colorIds.forEach((id) => allAssignedColors.add(id));
       });
       expect(allAssignedColors.size).toBe(7);
     });
@@ -55,23 +54,23 @@ describe('AmsConfiguration', () => {
         createColor('T1', 31, 60),
         createColor('T2', 61, 90),
         createColor('T3', 91, 120),
-        createColor('T4', 0, 120),  // Overlaps all
+        createColor('T4', 0, 120), // Overlaps all
         createColor('T5', 121, 150),
-        createColor('T6', 151, 180)
+        createColor('T6', 151, 180),
       ];
-      
+
       config.assignColors(colors);
       const slots = config.getAllSlots();
-      
+
       // All colors should be assigned
       const allAssignedColors = new Set<string>();
-      slots.forEach(slot => {
-        slot.colorIds.forEach(id => allAssignedColors.add(id));
+      slots.forEach((slot) => {
+        slot.colorIds.forEach((id) => allAssignedColors.add(id));
       });
       expect(allAssignedColors.size).toBe(7);
-      
+
       // Should use multiple slots effectively
-      const nonEmptySlots = slots.filter(s => s.colorIds.length > 0);
+      const nonEmptySlots = slots.filter((s) => s.colorIds.length > 0);
       expect(nonEmptySlots.length).toBeGreaterThan(1);
     });
   });
@@ -85,19 +84,19 @@ describe('AmsConfiguration', () => {
         createColor('T2', 51, 75),
         createColor('T3', 76, 100),
         createColor('T4', 101, 125),
-        createColor('T5', 126, 150)
+        createColor('T5', 126, 150),
       ];
-      
+
       config.assignColors(colors);
       const slots = config.getAllSlots();
-      
+
       // All colors should be assigned
       const allAssignedColors = new Set<string>();
-      slots.forEach(slot => {
-        slot.colorIds.forEach(id => allAssignedColors.add(id));
+      slots.forEach((slot) => {
+        slot.colorIds.forEach((id) => allAssignedColors.add(id));
       });
       expect(allAssignedColors.size).toBe(6);
-      
+
       // Should efficiently pack colors
       const totalSwaps = config.getManualSwaps().length;
       expect(totalSwaps).toBeLessThan(6); // Should be optimized
@@ -111,12 +110,12 @@ describe('AmsConfiguration', () => {
         createColor('T0', 0, 50),
         createColor('T1', 51, 100),
         createColor('T2', 101, 150),
-        createColor('T3', 151, 200)
+        createColor('T3', 151, 200),
       ];
-      
+
       config.assignColors(colors);
       const swaps = config.getManualSwaps();
-      
+
       // These colors don't overlap, so they can share one slot with 3 swaps
       if (swaps.length === 3) {
         expect(swaps[0].atLayer).toBe(51);
@@ -128,33 +127,33 @@ describe('AmsConfiguration', () => {
     it('should calculate pause layer ranges correctly', () => {
       const config = new AmsConfiguration('intervals');
       const colors = [
-        createColor('T0', 0, 30),      // Ends at layer 30
-        createColor('T1', 60, 100),    // Starts at layer 60 (gap between 31-59)
-        createColor('T2', 110, 150),   // Starts at layer 110 (gap between 101-109)
-        createColor('T3', 151, 200)    // Starts at layer 151 (adjacent to T2)
+        createColor('T0', 0, 30), // Ends at layer 30
+        createColor('T1', 60, 100), // Starts at layer 60 (gap between 31-59)
+        createColor('T2', 110, 150), // Starts at layer 110 (gap between 101-109)
+        createColor('T3', 151, 200), // Starts at layer 151 (adjacent to T2)
       ];
-      
+
       config.assignColors(colors);
       const swaps = config.getManualSwaps();
-      
+
       // Find swap from T0 to T1
-      const swap1 = swaps.find(s => s.fromColor === 'T0' && s.toColor === 'T1');
+      const swap1 = swaps.find((s) => s.fromColor === 'T0' && s.toColor === 'T1');
       if (swap1) {
         expect(swap1.pauseStartLayer).toBe(31);
         expect(swap1.pauseEndLayer).toBe(59);
         expect(swap1.reason).toContain('Pause between layers 31-59');
       }
-      
+
       // Find swap from T1 to T2
-      const swap2 = swaps.find(s => s.fromColor === 'T1' && s.toColor === 'T2');
+      const swap2 = swaps.find((s) => s.fromColor === 'T1' && s.toColor === 'T2');
       if (swap2) {
         expect(swap2.pauseStartLayer).toBe(101);
         expect(swap2.pauseEndLayer).toBe(109);
         expect(swap2.reason).toContain('Pause between layers 101-109');
       }
-      
+
       // Find swap from T2 to T3 (adjacent colors)
-      const swap3 = swaps.find(s => s.fromColor === 'T2' && s.toColor === 'T3');
+      const swap3 = swaps.find((s) => s.fromColor === 'T2' && s.toColor === 'T3');
       if (swap3) {
         expect(swap3.pauseStartLayer).toBe(151);
         expect(swap3.pauseEndLayer).toBe(150);
@@ -169,12 +168,12 @@ describe('AmsConfiguration', () => {
         createColor('T1', 51, 100),
         createColor('T2', 101, 150),
         createColor('T3', 151, 200),
-        createColor('T4', 0, 200)
+        createColor('T4', 0, 200),
       ];
-      
+
       config.assignColors(colors);
       const timeSaved = config.getTimeSaved();
-      
+
       // Time saved = number of swaps * 120 seconds
       const swaps = config.getManualSwaps();
       expect(timeSaved).toBe(swaps.length * 120);
@@ -185,10 +184,10 @@ describe('AmsConfiguration', () => {
     it('should handle single color', () => {
       const config = new AmsConfiguration();
       const colors = [createColor('T0', 0, 100)];
-      
+
       config.assignColors(colors);
       const slots = config.getAllSlots();
-      
+
       expect(slots[0].colorIds).toContain('T0');
       expect(config.getManualSwaps().length).toBe(0);
     });
@@ -199,39 +198,39 @@ describe('AmsConfiguration', () => {
         createColor('T0', 0, 100),
         createColor('T1', 0, 100),
         createColor('T2', 0, 100),
-        createColor('T3', 0, 100)
+        createColor('T3', 0, 100),
       ];
-      
+
       config.assignColors(colors);
       const slots = config.getAllSlots();
-      
+
       // Each color should get its own slot
       slots.forEach((slot, index) => {
         expect(slot.colorIds.length).toBe(1);
         expect(slot.colorIds[0]).toBe(`T${index}`);
       });
-      
+
       expect(config.getManualSwaps().length).toBe(0);
     });
 
     it('should handle 10+ colors', () => {
       const config = new AmsConfiguration('intervals');
       const colors: Color[] = [];
-      
+
       // Create 10 colors with various overlaps
       for (let i = 0; i < 10; i++) {
         colors.push(createColor(`T${i}`, i * 10, i * 10 + 50));
       }
-      
+
       config.assignColors(colors);
-      
+
       // All colors should be assigned
       const allAssignedColors = new Set<string>();
-      config.getAllSlots().forEach(slot => {
-        slot.colorIds.forEach(id => allAssignedColors.add(id));
+      config.getAllSlots().forEach((slot) => {
+        slot.colorIds.forEach((id) => allAssignedColors.add(id));
       });
       expect(allAssignedColors.size).toBe(10);
-      
+
       // Should have manual swaps
       expect(config.getManualSwaps().length).toBeGreaterThan(0);
     });
@@ -244,9 +243,9 @@ describe('AmsConfiguration', () => {
         createColor('T0', 0, 50),
         createColor('T1', 51, 100),
         createColor('T2', 101, 150),
-        createColor('T3', 151, 200)
+        createColor('T3', 151, 200),
       ];
-      
+
       config.assignColors(colors);
       expect(config.isValid()).toBe(true);
     });
@@ -258,14 +257,14 @@ describe('AmsConfiguration', () => {
         createColor('T1', 0, 100, 80),
         createColor('T2', 0, 100, 60),
         createColor('T3', 0, 100, 40),
-        createColor('T4', 0, 100, 20)
+        createColor('T4', 0, 100, 20),
       ];
-      
+
       config.assignColors(colors);
       // With legacy algorithm, overlapping colors might be assigned to same slot
       // The validation should detect this
       const isValid = config.isValid();
-      
+
       // If invalid, there should be overlapping colors in slot 4
       if (!isValid) {
         const slot4 = config.getSlot(4);

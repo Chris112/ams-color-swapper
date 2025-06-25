@@ -12,25 +12,25 @@ export class FileUploader extends Component {
 
   constructor() {
     super('#uploadSection');
-    
+
     // Ensure DOM elements exist
     const dropZone = this.element.querySelector('#dropZone');
     const fileInput = this.element.querySelector('#fileInput') as HTMLInputElement;
     const progressBar = this.element.querySelector('#uploadProgress');
     const progressFill = this.element.querySelector('#progressBarFill');
     const progressText = progressBar?.querySelector('p');
-    
+
     if (!dropZone || !fileInput || !progressBar || !progressFill || !progressText) {
       console.error('FileUploader: Required DOM elements not found');
       return;
     }
-    
+
     this.dropZone = dropZone as HTMLElement;
     this.fileInput = fileInput;
     this.progressBar = progressBar as HTMLElement;
     this.progressFill = progressFill as HTMLElement;
     this.progressText = progressText as HTMLElement;
-    
+
     this.attachEventListeners();
     this.addMicroInteractions();
     this.initialize();
@@ -38,12 +38,24 @@ export class FileUploader extends Component {
 
   protected render(): void {
     const { view, isLoading, loadingProgress, loadingMessage } = this.state;
-    
+
     // FileUploader render
-    
+
     // Show/hide based on view
     this.toggle(view === 'upload');
-    
+
+    // Also hide/show the Why section
+    const whySection = document.getElementById('whySection');
+    if (whySection) {
+      if (view === 'upload') {
+        whySection.classList.remove('hidden');
+        whySection.removeAttribute('hidden');
+      } else {
+        whySection.classList.add('hidden');
+        whySection.setAttribute('hidden', '');
+      }
+    }
+
     // Update progress bar
     if (isLoading && this.progressBar && this.progressFill && this.progressText) {
       this.progressBar.classList.remove('hidden');
@@ -67,11 +79,11 @@ export class FileUploader extends Component {
 
   private attachEventListeners(): void {
     if (!this.dropZone || !this.fileInput) return;
-    
+
     // File input
     this.dropZone.addEventListener('click', () => this.fileInput?.click());
     this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
-    
+
     // Drag and drop
     this.dropZone.addEventListener('dragover', this.handleDragOver.bind(this));
     this.dropZone.addEventListener('dragleave', this.handleDragLeave.bind(this));
@@ -118,22 +130,22 @@ export class FileUploader extends Component {
         this.dropZone!.classList.add('border-active');
         isMouseInside = true;
       }
-      
+
       const rect = this.dropZone!.getBoundingClientRect();
       const x = ((e.clientX - rect.left) / rect.width) * 100;
       const y = ((e.clientY - rect.top) / rect.height) * 100;
-      
+
       // Set gradient position
       this.dropZone!.style.setProperty('--mouse-x', `${x}%`);
       this.dropZone!.style.setProperty('--mouse-y', `${y}%`);
-      
+
       // Add 3D tilt effect
       const xPercent = (x / 100 - 0.5) * 2; // -1 to 1
       const yPercent = (y / 100 - 0.5) * 2; // -1 to 1
       const maxTilt = 10;
       const xDeg = xPercent * maxTilt;
       const yDeg = yPercent * maxTilt;
-      
+
       this.dropZone!.style.transform = `perspective(1000px) rotateY(${xDeg}deg) rotateX(${-yDeg}deg) scale(1.02)`;
     });
   }
@@ -170,12 +182,12 @@ export class FileUploader extends Component {
     if (this.dropZone) {
       this.dropZone.classList.remove('drag-over');
     }
-    
+
     if (!event.dataTransfer) return;
-    
+
     const files = Array.from(event.dataTransfer.files);
-    const gcodeFile = files.find(f => this.isValidGcodeFile(f));
-    
+    const gcodeFile = files.find((f) => this.isValidGcodeFile(f));
+
     if (gcodeFile) {
       // Add success animation
       this.dropZone.style.animation = 'pulse-glow 0.6s ease-out';
@@ -208,12 +220,12 @@ export class FileUploader extends Component {
       alert('Please select a valid G-code file');
       return;
     }
-    
+
     if (file.size > 200 * 1024 * 1024) {
       alert('File size exceeds 200MB limit');
       return;
     }
-    
+
     appState.setState({ currentFile: file });
     this.emit(AppEvents.FILE_SELECTED, file);
   }

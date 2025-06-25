@@ -56,34 +56,40 @@ export class ExportService {
       'Color ID,Color Name,Hex Color,First Layer,Last Layer,Layer Count,Usage %,Slot Assignment',
     ];
 
-    stats.colors.forEach(color => {
-      const slot = optimization.slotAssignments.find(s => s.colors.includes(color.id));
-      const slotInfo = slot ? `Slot ${slot.slot}${slot.isPermanent ? ' (Permanent)' : ' (Shared)'}` : 'N/A';
-      
-      lines.push([
-        color.id,
-        color.name || 'Unknown',
-        color.hexColor || '',
-        color.firstLayer.toString(),
-        color.lastLayer.toString(),
-        color.layerCount.toString(),
-        color.usagePercentage.toFixed(2),
-        slotInfo,
-      ].join(','));
+    stats.colors.forEach((color) => {
+      const slot = optimization.slotAssignments.find((s) => s.colors.includes(color.id));
+      const slotInfo = slot
+        ? `Slot ${slot.slot}${slot.isPermanent ? ' (Permanent)' : ' (Shared)'}`
+        : 'N/A';
+
+      lines.push(
+        [
+          color.id,
+          color.name || 'Unknown',
+          color.hexColor || '',
+          color.firstLayer.toString(),
+          color.lastLayer.toString(),
+          color.layerCount.toString(),
+          color.usagePercentage.toFixed(2),
+          slotInfo,
+        ].join(',')
+      );
     });
 
     if (optimization.manualSwaps.length > 0) {
       lines.push('', 'Manual Swaps Required:');
       lines.push('Layer,Z Height,Slot,From Color,To Color');
-      
-      optimization.manualSwaps.forEach(swap => {
-        lines.push([
-          swap.atLayer.toString(),
-          swap.zHeight.toFixed(2),
-          swap.slot.toString(),
-          swap.fromColor,
-          swap.toColor,
-        ].join(','));
+
+      optimization.manualSwaps.forEach((swap) => {
+        lines.push(
+          [
+            swap.atLayer.toString(),
+            swap.zHeight.toFixed(2),
+            swap.slot.toString(),
+            swap.fromColor,
+            swap.toColor,
+          ].join(',')
+        );
       });
     }
 

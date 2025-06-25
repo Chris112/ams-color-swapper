@@ -8,23 +8,19 @@ export class AmsConfigurationMapper {
   /**
    * Convert AmsConfiguration to OptimizationResult
    */
-  static toOptimizationResult(
-    config: AmsConfiguration,
-    _colors: Color[]
-  ): OptimizationResult {
+  static toOptimizationResult(config: AmsConfiguration, _colors: Color[]): OptimizationResult {
     // Include ALL slots, even empty ones, to ensure proper display in UI
-    const slotAssignments: SlotAssignment[] = config.getAllSlots()
-      .map(slot => ({
-        slot: slot.slotNumber,
-        colors: slot.colorIds,
-        isPermanent: slot.isPermanent
-      }));
+    const slotAssignments: SlotAssignment[] = config.getAllSlots().map((slot) => ({
+      slot: slot.slotNumber,
+      colors: slot.colorIds,
+      isPermanent: slot.isPermanent,
+    }));
 
     const manualSwaps = config.getManualSwaps();
-    
+
     // Find colors that can share slots
     const canShareSlots: ColorPair[] = [];
-    config.getAllSlots().forEach(slot => {
+    config.getAllSlots().forEach((slot) => {
       if (slot.requiresSwaps && slot.colorIds.length > 1) {
         // For each pair of colors in a shared slot
         for (let i = 0; i < slot.colorIds.length - 1; i++) {
@@ -33,7 +29,7 @@ export class AmsConfigurationMapper {
               color1: slot.colorIds[i],
               color2: slot.colorIds[j],
               canShare: true,
-              reason: `Colors share slot ${slot.slotNumber} with manual swaps`
+              reason: `Colors share slot ${slot.slotNumber} with manual swaps`,
             });
           }
         }
@@ -46,7 +42,7 @@ export class AmsConfigurationMapper {
       slotAssignments,
       manualSwaps,
       estimatedTimeSaved: config.getTimeSaved(),
-      canShareSlots
+      canShareSlots,
     };
   }
 

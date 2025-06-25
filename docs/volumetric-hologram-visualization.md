@@ -9,9 +9,11 @@ The AMS Color Swapper includes a sophisticated 3D volumetric hologram visualizat
 ### Core Components
 
 #### 1. VolumetricHologram Component (`src/ui/components/VolumetricHologram.ts`)
+
 The main visualization component that orchestrates the entire 3D rendering pipeline.
 
 **Key Features:**
+
 - Three.js-based 3D rendering
 - Real-time G-code geometry parsing
 - Multi-color filament visualization
@@ -20,15 +22,18 @@ The main visualization component that orchestrates the entire 3D rendering pipel
 - Layer-by-layer animation support
 
 **Dependencies:**
+
 - Three.js for 3D rendering
 - Custom G-code geometry converter
 - Interaction controllers for user input
 - Material system for realistic filament rendering
 
 #### 2. G-code to Geometry Converter (`src/parser/gcodeToGeometry.ts`)
+
 Converts raw G-code commands into Three.js geometry objects.
 
 **Key Features:**
+
 - Parses G-code movement commands (G0/G1)
 - Separates extrusion moves from travel moves
 - Tool change detection (T0, T1, T2, etc.)
@@ -37,6 +42,7 @@ Converts raw G-code commands into Three.js geometry objects.
 - Scaling and positioning optimization
 
 **Output:**
+
 - `PrintGeometry` object containing:
   - Geometry layers organized by tool/color
   - Bounding box information
@@ -47,11 +53,13 @@ Converts raw G-code commands into Three.js geometry objects.
 #### 3. Supporting Systems
 
 **VoxelDataStructure** (`src/ui/components/volumetric/VoxelDataStructure.ts`)
+
 - Converts G-code data into volumetric voxel representation
 - Handles density calculations and color mapping
 - Provides data for UI controls and layer information
 
 **InteractionController** (`src/ui/components/volumetric/InteractionController.ts`)
+
 - Orbit controls for camera manipulation
 - Layer scrubbing functionality
 - View mode switching (X-ray, exploded views)
@@ -66,6 +74,7 @@ Converts raw G-code commands into Three.js geometry objects.
    - Stored in `GcodeStats.rawContent`
 
 2. **Line-by-Line Parsing**
+
    ```typescript
    // Example G-code commands processed:
    G1 X10.5 Y20.3 Z0.2 E1.5  // Extrusion move
@@ -79,10 +88,11 @@ Converts raw G-code commands into Three.js geometry objects.
    - **Tool Changes**: T commands (T0, T1, T2, T3)
 
 4. **Coordinate System Mapping**
+
    ```typescript
    // G-code → Three.js coordinate mapping:
    // G-code X (left/right) → Three.js X
-   // G-code Y (front/back) → Three.js Z  
+   // G-code Y (front/back) → Three.js Z
    // G-code Z (up/down) → Three.js Y
    ```
 
@@ -101,6 +111,7 @@ The system supports visualization of multi-color prints by:
 4. **Material Assignment**: Applies distinct colors and materials
 
 **Color Sources:**
+
 - Primary: Colors detected from slicer comments
 - Fallback: Default color palette for tools
 - User: Custom color overrides (future enhancement)
@@ -110,16 +121,19 @@ The system supports visualization of multi-color prints by:
 The system implements sophisticated filtering to remove non-printing movements:
 
 **Object-Level Filtering:**
+
 - Analyzes entire geometry objects for travel move characteristics
 - Considers average segment length, maximum distances, Z variation
 - Removes objects that are primarily travel moves
 
 **Segment-Level Filtering:**
+
 - Filters individual line segments within mixed-content objects
 - Removes segments with excessive length or Z jumps
 - Preserves actual printing paths
 
 **Filter Criteria:**
+
 ```typescript
 // Examples of filtered movements:
 - Segments longer than 50mm (rapid travel)
@@ -163,16 +177,19 @@ The system implements sophisticated filtering to remove non-printing movements:
 ## Integration Points
 
 ### With Parser System
+
 - Receives `GcodeStats` object with parsed print information
 - Accesses `rawContent` for detailed geometry generation
 - Uses color analysis and tool change data
 
 ### With Caching System
+
 - Geometry can be cached alongside parsed statistics
 - Improves load times for repeated visualization
 - Handles cache invalidation on file changes
 
 ### With Export System
+
 - Rendered views can be exported as images
 - 3D models can potentially be exported (future enhancement)
 - Print statistics integrated with visualization
@@ -180,18 +197,20 @@ The system implements sophisticated filtering to remove non-printing movements:
 ## Configuration Options
 
 ### Rendering Settings
+
 ```typescript
 interface HologramConfig {
-  resolution: THREE.Vector3;        // Voxel resolution for effects
-  voxelSize: number;               // Size of individual voxels
-  particleCount: number;           // Ambient particle count
-  enableEffects: boolean;          // Holographic visual effects
-  showScanlines: boolean;          // Retro scanline effects
-  showParticles: boolean;          // Ambient particles
+  resolution: THREE.Vector3; // Voxel resolution for effects
+  voxelSize: number; // Size of individual voxels
+  particleCount: number; // Ambient particle count
+  enableEffects: boolean; // Holographic visual effects
+  showScanlines: boolean; // Retro scanline effects
+  showParticles: boolean; // Ambient particles
 }
 ```
 
 ### Material Properties
+
 - Line width and opacity for filament paths
 - Emissive colors for realistic glow effects
 - Transparency for X-ray and exploded views
@@ -199,6 +218,7 @@ interface HologramConfig {
 ## Future Enhancements
 
 ### Planned Features
+
 1. **Print Time Visualization**: Show time-based progression
 2. **Temperature Mapping**: Color-code by printing temperature
 3. **Support Material**: Distinguish support from model material
@@ -206,6 +226,7 @@ interface HologramConfig {
 5. **Quality Analysis**: Highlight potential print quality issues
 
 ### Technical Improvements
+
 1. **WebWorker Integration**: Move geometry processing to background
 2. **Streaming Processing**: Handle very large files incrementally
 3. **LOD System**: Adaptive level of detail based on view distance
@@ -231,7 +252,9 @@ interface HologramConfig {
    - Review color mapping logic
 
 ### Debug Information
+
 The system provides extensive console logging for troubleshooting:
+
 - G-code parsing progress
 - Geometry generation statistics
 - Filter operation results
@@ -242,6 +265,7 @@ The system provides extensive console logging for troubleshooting:
 ### Main Classes
 
 **VolumetricHologram**
+
 ```typescript
 constructor(
   selector: string,
@@ -252,9 +276,10 @@ constructor(
 ```
 
 **GcodeToGeometryConverter**
+
 ```typescript
 convertGcodeToGeometry(
-  gcodeContent: string, 
+  gcodeContent: string,
   stats: GcodeStats
 ): PrintGeometry
 
@@ -264,6 +289,7 @@ static createPreviewMesh(geometry: PrintGeometry): THREE.Group
 ### Key Interfaces
 
 **PrintGeometry**
+
 ```typescript
 interface PrintGeometry {
   layers: GeometryLayer[];
@@ -275,6 +301,7 @@ interface PrintGeometry {
 ```
 
 **GeometryLayer**
+
 ```typescript
 interface GeometryLayer {
   geometry: THREE.BufferGeometry;

@@ -1,498 +1,498 @@
 {
-    "brand": {
-      "name": "AMS Color Swapper",
-      "tagline": "Paint your prints in motion",
-      "description": "Next-generation G-code color optimizer with stunning visual analytics for multi-material 3D printing",
-      "parent_company": "Independent Open Source",
-      "website": "https://github.com/yourusername/ams-color-swapper",
-      "category": "3D Printing Tools / Creative Technology"
+  "brand": {
+    "name": "AMS Color Swapper",
+    "tagline": "Paint your prints in motion",
+    "description": "Next-generation G-code color optimizer with stunning visual analytics for multi-material 3D printing",
+    "parent_company": "Independent Open Source",
+    "website": "https://github.com/yourusername/ams-color-swapper",
+    "category": "3D Printing Tools / Creative Technology"
+  },
+  "visual_identity": {
+    "logo": {
+      "primary": "Dynamic gradient swirl with flowing filament strands",
+      "symbol_only": "Animated color helix symbol",
+      "format_preferences": ["SVG with CSS animations", "Lottie", "PNG fallback"],
+      "usage_guidelines": "Logo morphs between colors on hover, represents fluid color transitions",
+      "animation": "Continuous gradient rotation at 20s per cycle"
     },
-    "visual_identity": {
-      "logo": {
-        "primary": "Dynamic gradient swirl with flowing filament strands",
-        "symbol_only": "Animated color helix symbol",
-        "format_preferences": ["SVG with CSS animations", "Lottie", "PNG fallback"],
-        "usage_guidelines": "Logo morphs between colors on hover, represents fluid color transitions",
-        "animation": "Continuous gradient rotation at 20s per cycle"
-      },
-      "color_palette": {
-        "gradients": {
-          "primary_gradient": {
-            "name": "Neon Flow",
-            "colors": ["#FF006E", "#8338EC", "#3B82F6"],
-            "angle": "135deg",
-            "animation": "hue-rotate 10s infinite"
-          },
-          "secondary_gradient": {
-            "name": "Cyber Sunset",
-            "colors": ["#F97316", "#EC4899", "#8B5CF6"],
-            "angle": "90deg"
-          },
-          "accent_gradient": {
-            "name": "Ocean Dream",
-            "colors": ["#06B6D4", "#3B82F6", "#8B5CF6"],
-            "angle": "45deg"
-          },
-          "rainbow_gradient": {
-            "name": "Spectrum Flow",
-            "colors": ["#FF006E", "#FF8C00", "#FFD600", "#00DC82", "#0096FF", "#8338EC"],
-            "angle": "180deg",
-            "animation": "gradient-shift 5s ease-in-out infinite"
-          },
-          "dark_gradient": {
-            "name": "Midnight Aurora",
-            "colors": ["#0F172A", "#1E293B", "#312E81"],
-            "angle": "to bottom"
-          }
+    "color_palette": {
+      "gradients": {
+        "primary_gradient": {
+          "name": "Neon Flow",
+          "colors": ["#FF006E", "#8338EC", "#3B82F6"],
+          "angle": "135deg",
+          "animation": "hue-rotate 10s infinite"
         },
-        "vibrant": {
-          "hot_pink": "#FF006E",
-          "electric_purple": "#8338EC",
-          "cyber_blue": "#0096FF",
-          "neon_green": "#00DC82",
-          "flame_orange": "#FF8C00",
-          "plasma_yellow": "#FFD600"
+        "secondary_gradient": {
+          "name": "Cyber Sunset",
+          "colors": ["#F97316", "#EC4899", "#8B5CF6"],
+          "angle": "90deg"
         },
-        "glass": {
-          "glass_white": "rgba(255, 255, 255, 0.1)",
-          "glass_black": "rgba(0, 0, 0, 0.05)",
-          "glass_blur": "rgba(255, 255, 255, 0.05)"
+        "accent_gradient": {
+          "name": "Ocean Dream",
+          "colors": ["#06B6D4", "#3B82F6", "#8B5CF6"],
+          "angle": "45deg"
         },
-        "dark_mode": {
-          "background": "#0A0A0B",
-          "surface": "#141416",
-          "elevated": "#1C1C1F",
-          "border": "rgba(255, 255, 255, 0.08)",
-          "text_primary": "#FFFFFF",
-          "text_secondary": "rgba(255, 255, 255, 0.7)",
-          "text_muted": "rgba(255, 255, 255, 0.5)"
+        "rainbow_gradient": {
+          "name": "Spectrum Flow",
+          "colors": ["#FF006E", "#FF8C00", "#FFD600", "#00DC82", "#0096FF", "#8338EC"],
+          "angle": "180deg",
+          "animation": "gradient-shift 5s ease-in-out infinite"
         },
-        "effects": {
-          "glow_pink": "0 0 40px rgba(255, 0, 110, 0.5)",
-          "glow_blue": "0 0 40px rgba(59, 130, 246, 0.5)",
-          "glow_purple": "0 0 40px rgba(139, 92, 246, 0.5)",
-          "inner_glow": "inset 0 0 20px rgba(255, 255, 255, 0.1)"
-        }
-      }
-    },
-    "typography": {
-      "primary_font": {
-        "family": "Inter, -apple-system, BlinkMacSystemFont",
-        "type": "Variable Sans-serif",
-        "usage": "Headlines, body text, UI elements",
-        "weights": {
-          "thin": 100,
-          "regular": 400,
-          "medium": 500,
-          "semibold": 600,
-          "bold": 700,
-          "black": 900
+        "dark_gradient": {
+          "name": "Midnight Aurora",
+          "colors": ["#0F172A", "#1E293B", "#312E81"],
+          "angle": "to bottom"
         }
       },
-      "display_font": {
-        "family": "Cal Sans, Inter",
-        "type": "Display Sans-serif",
-        "usage": "Hero sections, large headings"
+      "vibrant": {
+        "hot_pink": "#FF006E",
+        "electric_purple": "#8338EC",
+        "cyber_blue": "#0096FF",
+        "neon_green": "#00DC82",
+        "flame_orange": "#FF8C00",
+        "plasma_yellow": "#FFD600"
       },
-      "monospace_font": {
-        "family": "JetBrains Mono, Monaco, Consolas",
-        "type": "Monospace",
-        "usage": "Code, technical data, layer numbers"
+      "glass": {
+        "glass_white": "rgba(255, 255, 255, 0.1)",
+        "glass_black": "rgba(0, 0, 0, 0.05)",
+        "glass_blur": "rgba(255, 255, 255, 0.05)"
       },
-      "hierarchy": {
-        "hero": {
-          "size": "clamp(48px, 8vw, 80px)",
-          "weight": "900",
-          "line_height": "0.9",
-          "letter_spacing": "-0.04em",
-          "gradient_text": true
-        },
-        "h1": {
-          "size": "clamp(36px, 5vw, 48px)",
-          "weight": "800",
-          "line_height": "1.1",
-          "letter_spacing": "-0.03em"
-        },
-        "h2": {
-          "size": "clamp(24px, 3vw, 32px)",
-          "weight": "700",
-          "line_height": "1.2",
-          "letter_spacing": "-0.02em"
-        },
-        "h3": {
-          "size": "clamp(18px, 2.5vw, 24px)",
-          "weight": "600",
-          "line_height": "1.3"
-        },
-        "body": {
-          "size": "16px",
-          "weight": "400",
-          "line_height": "1.6",
-          "color": "rgba(255, 255, 255, 0.8)"
-        },
-        "code": {
-          "size": "14px",
-          "weight": "500",
-          "family": "monospace",
-          "background": "rgba(255, 255, 255, 0.05)",
-          "padding": "2px 6px",
-          "border_radius": "4px"
-        }
+      "dark_mode": {
+        "background": "#0A0A0B",
+        "surface": "#141416",
+        "elevated": "#1C1C1F",
+        "border": "rgba(255, 255, 255, 0.08)",
+        "text_primary": "#FFFFFF",
+        "text_secondary": "rgba(255, 255, 255, 0.7)",
+        "text_muted": "rgba(255, 255, 255, 0.5)"
+      },
+      "effects": {
+        "glow_pink": "0 0 40px rgba(255, 0, 110, 0.5)",
+        "glow_blue": "0 0 40px rgba(59, 130, 246, 0.5)",
+        "glow_purple": "0 0 40px rgba(139, 92, 246, 0.5)",
+        "inner_glow": "inset 0 0 20px rgba(255, 255, 255, 0.1)"
+      }
+    }
+  },
+  "typography": {
+    "primary_font": {
+      "family": "Inter, -apple-system, BlinkMacSystemFont",
+      "type": "Variable Sans-serif",
+      "usage": "Headlines, body text, UI elements",
+      "weights": {
+        "thin": 100,
+        "regular": 400,
+        "medium": 500,
+        "semibold": 600,
+        "bold": 700,
+        "black": 900
       }
     },
-    "layout_principles": {
-      "grid_system": "CSS Grid with fluid responsive design",
-      "spacing": {
-        "base_unit": "8px",
-        "scale": [0, 8, 16, 24, 32, 48, 64, 96, 128],
-        "container_max_width": "1440px",
-        "section_padding": "clamp(48px, 10vw, 128px)"
-      },
-      "breakpoints": {
-        "mobile": "320px - 639px",
-        "tablet": "640px - 1023px",
-        "desktop": "1024px - 1439px",
-        "wide": "1440px+",
-        "ultra": "1920px+"
-      },
-      "depth_layers": {
-        "background": "z-index: -1",
-        "content": "z-index: 1",
-        "floating_elements": "z-index: 10",
-        "modals": "z-index: 100",
-        "notifications": "z-index: 1000"
-      }
+    "display_font": {
+      "family": "Cal Sans, Inter",
+      "type": "Display Sans-serif",
+      "usage": "Hero sections, large headings"
     },
-    "visual_effects": {
-      "glassmorphism": {
+    "monospace_font": {
+      "family": "JetBrains Mono, Monaco, Consolas",
+      "type": "Monospace",
+      "usage": "Code, technical data, layer numbers"
+    },
+    "hierarchy": {
+      "hero": {
+        "size": "clamp(48px, 8vw, 80px)",
+        "weight": "900",
+        "line_height": "0.9",
+        "letter_spacing": "-0.04em",
+        "gradient_text": true
+      },
+      "h1": {
+        "size": "clamp(36px, 5vw, 48px)",
+        "weight": "800",
+        "line_height": "1.1",
+        "letter_spacing": "-0.03em"
+      },
+      "h2": {
+        "size": "clamp(24px, 3vw, 32px)",
+        "weight": "700",
+        "line_height": "1.2",
+        "letter_spacing": "-0.02em"
+      },
+      "h3": {
+        "size": "clamp(18px, 2.5vw, 24px)",
+        "weight": "600",
+        "line_height": "1.3"
+      },
+      "body": {
+        "size": "16px",
+        "weight": "400",
+        "line_height": "1.6",
+        "color": "rgba(255, 255, 255, 0.8)"
+      },
+      "code": {
+        "size": "14px",
+        "weight": "500",
+        "family": "monospace",
         "background": "rgba(255, 255, 255, 0.05)",
-        "backdrop_filter": "blur(10px) saturate(200%)",
-        "border": "1px solid rgba(255, 255, 255, 0.1)",
-        "shadow": "0 8px 32px rgba(0, 0, 0, 0.1)"
+        "padding": "2px 6px",
+        "border_radius": "4px"
+      }
+    }
+  },
+  "layout_principles": {
+    "grid_system": "CSS Grid with fluid responsive design",
+    "spacing": {
+      "base_unit": "8px",
+      "scale": [0, 8, 16, 24, 32, 48, 64, 96, 128],
+      "container_max_width": "1440px",
+      "section_padding": "clamp(48px, 10vw, 128px)"
+    },
+    "breakpoints": {
+      "mobile": "320px - 639px",
+      "tablet": "640px - 1023px",
+      "desktop": "1024px - 1439px",
+      "wide": "1440px+",
+      "ultra": "1920px+"
+    },
+    "depth_layers": {
+      "background": "z-index: -1",
+      "content": "z-index: 1",
+      "floating_elements": "z-index: 10",
+      "modals": "z-index: 100",
+      "notifications": "z-index: 1000"
+    }
+  },
+  "visual_effects": {
+    "glassmorphism": {
+      "background": "rgba(255, 255, 255, 0.05)",
+      "backdrop_filter": "blur(10px) saturate(200%)",
+      "border": "1px solid rgba(255, 255, 255, 0.1)",
+      "shadow": "0 8px 32px rgba(0, 0, 0, 0.1)"
+    },
+    "neumorphism": {
+      "light": {
+        "background": "linear-gradient(145deg, #f0f0f3, #cacace)",
+        "shadow": "20px 20px 60px #bebebe, -20px -20px 60px #ffffff"
       },
-      "neumorphism": {
-        "light": {
-          "background": "linear-gradient(145deg, #f0f0f3, #cacace)",
-          "shadow": "20px 20px 60px #bebebe, -20px -20px 60px #ffffff"
-        },
-        "dark": {
-          "background": "linear-gradient(145deg, #1e1e21, #16161a)",
-          "shadow": "20px 20px 60px #0a0a0b, -20px -20px 60px #2a2a2d"
-        }
-      },
-      "blur_effects": {
-        "subtle": "blur(4px)",
-        "medium": "blur(8px)",
-        "strong": "blur(16px)",
-        "motion": "blur(2px)"
-      },
-      "gradient_animations": {
-        "hue_rotate": "@keyframes hue-rotate { 100% { filter: hue-rotate(360deg); } }",
-        "gradient_shift": "@keyframes gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }",
-        "pulse_glow": "@keyframes pulse-glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }",
-        "float": "@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }"
+      "dark": {
+        "background": "linear-gradient(145deg, #1e1e21, #16161a)",
+        "shadow": "20px 20px 60px #0a0a0b, -20px -20px 60px #2a2a2d"
       }
     },
-    "ui_components": {
-      "buttons": {
-        "gradient_primary": {
-          "background": "linear-gradient(135deg, #FF006E, #8338EC)",
-          "color": "#FFFFFF",
-          "padding": "12px 32px",
-          "border_radius": "12px",
-          "font_weight": "600",
-          "shadow": "0 4px 20px rgba(131, 56, 236, 0.4)",
-          "hover": {
-            "transform": "translateY(-2px)",
-            "shadow": "0 8px 30px rgba(131, 56, 236, 0.6)",
-            "background_size": "200% 200%",
-            "animation": "gradient-shift 3s ease infinite"
-          }
-        },
-        "glass_secondary": {
-          "background": "rgba(255, 255, 255, 0.1)",
-          "backdrop_filter": "blur(10px)",
-          "border": "1px solid rgba(255, 255, 255, 0.2)",
-          "color": "#FFFFFF",
-          "padding": "12px 32px",
-          "border_radius": "12px",
-          "hover": {
-            "background": "rgba(255, 255, 255, 0.15)",
-            "border_color": "rgba(255, 255, 255, 0.3)"
-          }
-        },
-        "glow_accent": {
-          "background": "transparent",
-          "border": "2px solid #00DC82",
-          "color": "#00DC82",
-          "padding": "12px 32px",
-          "border_radius": "12px",
-          "position": "relative",
-          "overflow": "hidden",
-          "hover": {
-            "color": "#0A0A0B",
-            "before_content": {
-              "position": "absolute",
-              "inset": "0",
-              "background": "#00DC82",
-              "transform": "scaleX(1)",
-              "transition": "transform 0.3s ease"
-            }
-          }
-        },
-        "floating_action": {
-          "background": "linear-gradient(135deg, #0096FF, #06B6D4)",
-          "border_radius": "50%",
-          "width": "56px",
-          "height": "56px",
-          "shadow": "0 8px 24px rgba(0, 150, 255, 0.4)",
-          "animation": "float 3s ease-in-out infinite"
+    "blur_effects": {
+      "subtle": "blur(4px)",
+      "medium": "blur(8px)",
+      "strong": "blur(16px)",
+      "motion": "blur(2px)"
+    },
+    "gradient_animations": {
+      "hue_rotate": "@keyframes hue-rotate { 100% { filter: hue-rotate(360deg); } }",
+      "gradient_shift": "@keyframes gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }",
+      "pulse_glow": "@keyframes pulse-glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }",
+      "float": "@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }"
+    }
+  },
+  "ui_components": {
+    "buttons": {
+      "gradient_primary": {
+        "background": "linear-gradient(135deg, #FF006E, #8338EC)",
+        "color": "#FFFFFF",
+        "padding": "12px 32px",
+        "border_radius": "12px",
+        "font_weight": "600",
+        "shadow": "0 4px 20px rgba(131, 56, 236, 0.4)",
+        "hover": {
+          "transform": "translateY(-2px)",
+          "shadow": "0 8px 30px rgba(131, 56, 236, 0.6)",
+          "background_size": "200% 200%",
+          "animation": "gradient-shift 3s ease infinite"
         }
       },
-      "cards": {
-        "glass_card": {
-          "background": "rgba(255, 255, 255, 0.05)",
-          "backdrop_filter": "blur(20px) saturate(200%)",
-          "border": "1px solid rgba(255, 255, 255, 0.1)",
-          "border_radius": "24px",
-          "padding": "32px",
-          "shadow": "0 8px 32px rgba(0, 0, 0, 0.1)",
-          "hover": {
-            "transform": "translateY(-4px)",
-            "shadow": "0 12px 48px rgba(0, 0, 0, 0.15)",
-            "border_color": "rgba(255, 255, 255, 0.2)"
-          }
-        },
-        "gradient_card": {
-          "background": "linear-gradient(135deg, rgba(255, 0, 110, 0.1), rgba(131, 56, 236, 0.1))",
-          "border": "1px solid rgba(255, 255, 255, 0.1)",
-          "border_radius": "24px",
-          "padding": "32px",
-          "position": "relative",
-          "overflow": "hidden",
-          "before": {
-            "content": "''",
+      "glass_secondary": {
+        "background": "rgba(255, 255, 255, 0.1)",
+        "backdrop_filter": "blur(10px)",
+        "border": "1px solid rgba(255, 255, 255, 0.2)",
+        "color": "#FFFFFF",
+        "padding": "12px 32px",
+        "border_radius": "12px",
+        "hover": {
+          "background": "rgba(255, 255, 255, 0.15)",
+          "border_color": "rgba(255, 255, 255, 0.3)"
+        }
+      },
+      "glow_accent": {
+        "background": "transparent",
+        "border": "2px solid #00DC82",
+        "color": "#00DC82",
+        "padding": "12px 32px",
+        "border_radius": "12px",
+        "position": "relative",
+        "overflow": "hidden",
+        "hover": {
+          "color": "#0A0A0B",
+          "before_content": {
             "position": "absolute",
             "inset": "0",
-            "background": "linear-gradient(135deg, #FF006E, #8338EC)",
-            "opacity": "0",
-            "transition": "opacity 0.3s ease"
-          }
-        },
-        "data_card": {
-          "background": "rgba(20, 20, 22, 0.8)",
-          "border": "1px solid rgba(255, 255, 255, 0.05)",
-          "border_radius": "16px",
-          "padding": "24px",
-          "backdrop_filter": "blur(10px)",
-          "inner_elements": {
-            "value": {
-              "font_size": "clamp(32px, 4vw, 48px)",
-              "font_weight": "800",
-              "gradient_text": true,
-              "animation": "counter 1s ease-out"
-            },
-            "label": {
-              "font_size": "14px",
-              "color": "rgba(255, 255, 255, 0.6)",
-              "text_transform": "uppercase",
-              "letter_spacing": "0.1em"
-            }
+            "background": "#00DC82",
+            "transform": "scaleX(1)",
+            "transition": "transform 0.3s ease"
           }
         }
       },
-      "inputs": {
-        "glass_input": {
-          "background": "rgba(255, 255, 255, 0.05)",
-          "border": "1px solid rgba(255, 255, 255, 0.1)",
-          "border_radius": "12px",
-          "padding": "16px 20px",
-          "color": "#FFFFFF",
-          "placeholder_color": "rgba(255, 255, 255, 0.5)",
-          "backdrop_filter": "blur(10px)",
-          "focus": {
-            "border_color": "#0096FF",
-            "box_shadow": "0 0 0 3px rgba(0, 150, 255, 0.2)"
-          }
-        }
-      },
-      "upload_zone": {
-        "background": "rgba(255, 255, 255, 0.02)",
-        "border": "2px dashed rgba(255, 255, 255, 0.2)",
+      "floating_action": {
+        "background": "linear-gradient(135deg, #0096FF, #06B6D4)",
+        "border_radius": "50%",
+        "width": "56px",
+        "height": "56px",
+        "shadow": "0 8px 24px rgba(0, 150, 255, 0.4)",
+        "animation": "float 3s ease-in-out infinite"
+      }
+    },
+    "cards": {
+      "glass_card": {
+        "background": "rgba(255, 255, 255, 0.05)",
+        "backdrop_filter": "blur(20px) saturate(200%)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)",
         "border_radius": "24px",
-        "backdrop_filter": "blur(10px)",
-        "min_height": "400px",
+        "padding": "32px",
+        "shadow": "0 8px 32px rgba(0, 0, 0, 0.1)",
         "hover": {
-          "background": "rgba(255, 0, 110, 0.05)",
-          "border_color": "#FF006E",
-          "animation": "pulse-border 2s ease-in-out infinite"
-        },
-        "active": {
-          "background": "rgba(0, 220, 130, 0.05)",
-          "border_color": "#00DC82",
-          "border_style": "solid"
-        },
-        "icon": {
-          "size": "64px",
-          "color": "rgba(255, 255, 255, 0.4)",
-          "animation": "float 3s ease-in-out infinite"
+          "transform": "translateY(-4px)",
+          "shadow": "0 12px 48px rgba(0, 0, 0, 0.15)",
+          "border_color": "rgba(255, 255, 255, 0.2)"
         }
       },
-      "color_swatches": {
-        "size": "48px",
+      "gradient_card": {
+        "background": "linear-gradient(135deg, rgba(255, 0, 110, 0.1), rgba(131, 56, 236, 0.1))",
+        "border": "1px solid rgba(255, 255, 255, 0.1)",
+        "border_radius": "24px",
+        "padding": "32px",
+        "position": "relative",
+        "overflow": "hidden",
+        "before": {
+          "content": "''",
+          "position": "absolute",
+          "inset": "0",
+          "background": "linear-gradient(135deg, #FF006E, #8338EC)",
+          "opacity": "0",
+          "transition": "opacity 0.3s ease"
+        }
+      },
+      "data_card": {
+        "background": "rgba(20, 20, 22, 0.8)",
+        "border": "1px solid rgba(255, 255, 255, 0.05)",
         "border_radius": "16px",
-        "shadow": "0 4px 12px rgba(0, 0, 0, 0.2)",
-        "border": "3px solid rgba(255, 255, 255, 0.9)",
-        "hover": {
-          "transform": "scale(1.1) rotate(5deg)",
-          "shadow": "0 8px 24px rgba(0, 0, 0, 0.3)"
-        },
-        "selected": {
-          "ring": "0 0 0 4px rgba(255, 255, 255, 0.3)",
-          "animation": "pulse-ring 2s ease-in-out infinite"
-        }
-      },
-      "progress_bar": {
-        "track": {
-          "background": "rgba(255, 255, 255, 0.05)",
-          "height": "8px",
-          "border_radius": "4px",
-          "overflow": "hidden"
-        },
-        "fill": {
-          "background": "linear-gradient(90deg, #FF006E, #8338EC, #0096FF)",
-          "animation": "gradient-shift 3s ease infinite",
-          "height": "100%",
-          "border_radius": "4px",
-          "shadow": "0 0 20px currentColor"
-        },
-        "shimmer": {
-          "background": "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)",
-          "animation": "shimmer 1.5s ease-in-out infinite"
+        "padding": "24px",
+        "backdrop_filter": "blur(10px)",
+        "inner_elements": {
+          "value": {
+            "font_size": "clamp(32px, 4vw, 48px)",
+            "font_weight": "800",
+            "gradient_text": true,
+            "animation": "counter 1s ease-out"
+          },
+          "label": {
+            "font_size": "14px",
+            "color": "rgba(255, 255, 255, 0.6)",
+            "text_transform": "uppercase",
+            "letter_spacing": "0.1em"
+          }
         }
       }
     },
-    "animation_principles": {
-      "micro_interactions": {
-        "button_click": "scale(0.98) then spring back",
-        "card_hover": "translateY(-4px) with shadow expansion",
-        "switch_toggle": "smooth slide with color transition",
-        "tooltip_appear": "fade in with slight upward movement"
-      },
-      "page_transitions": {
-        "section_reveal": "fade in with stagger effect",
-        "card_entrance": "slide up with opacity fade",
-        "data_update": "number counter animation with glow pulse"
-      },
-      "continuous_animations": {
-        "gradient_flow": "continuous hue rotation or position shift",
-        "floating_elements": "gentle up/down float cycle",
-        "glow_pulse": "breathing glow effect on key elements",
-        "particle_system": "subtle floating particles in background"
-      },
-      "performance": {
-        "prefer_css": "CSS animations over JavaScript when possible",
-        "gpu_acceleration": "transform and opacity for smooth 60fps",
-        "reduced_motion": "respect prefers-reduced-motion setting"
-      }
-    },
-    "modern_effects": {
-      "color_preview": {
-        "live_gradient": "Real-time gradient preview as colors change",
-        "color_wheel": "Interactive 3D color wheel with drag support",
-        "swatch_grid": "Animated grid that reorganizes on selection"
-      },
-      "visual_feedback": {
-        "success": {
-          "background": "radial-gradient(circle, rgba(0, 220, 130, 0.2), transparent)",
-          "animation": "success-pulse 0.6s ease-out",
-          "icon": "animated checkmark draw"
-        },
-        "error": {
-          "background": "radial-gradient(circle, rgba(255, 0, 110, 0.2), transparent)",
-          "animation": "shake 0.5s ease-in-out",
-          "icon": "animated X draw"
-        },
-        "loading": {
-          "skeleton": "animated gradient placeholder",
-          "spinner": "rotating gradient ring",
-          "progress": "multi-color segmented ring"
+    "inputs": {
+      "glass_input": {
+        "background": "rgba(255, 255, 255, 0.05)",
+        "border": "1px solid rgba(255, 255, 255, 0.1)",
+        "border_radius": "12px",
+        "padding": "16px 20px",
+        "color": "#FFFFFF",
+        "placeholder_color": "rgba(255, 255, 255, 0.5)",
+        "backdrop_filter": "blur(10px)",
+        "focus": {
+          "border_color": "#0096FF",
+          "box_shadow": "0 0 0 3px rgba(0, 150, 255, 0.2)"
         }
-      },
-      "background_effects": {
-        "gradient_mesh": "Animated mesh gradient background",
-        "particle_field": "WebGL particle system responding to mouse",
-        "noise_texture": "Subtle animated noise overlay",
-        "color_orbs": "Floating gradient orbs with blur"
       }
     },
-    "interaction_patterns": {
-      "hover_effects": {
-        "3d_tilt": "Perspective tilt on mouse movement",
-        "magnetic_hover": "Elements slightly follow cursor",
-        "ripple_effect": "Color ripple from cursor position",
-        "glow_trail": "Glowing trail follows cursor"
+    "upload_zone": {
+      "background": "rgba(255, 255, 255, 0.02)",
+      "border": "2px dashed rgba(255, 255, 255, 0.2)",
+      "border_radius": "24px",
+      "backdrop_filter": "blur(10px)",
+      "min_height": "400px",
+      "hover": {
+        "background": "rgba(255, 0, 110, 0.05)",
+        "border_color": "#FF006E",
+        "animation": "pulse-border 2s ease-in-out infinite"
       },
-      "drag_interactions": {
-        "elastic_drag": "Rubber band effect on limits",
-        "ghost_preview": "Semi-transparent preview while dragging",
-        "snap_points": "Magnetic snap to grid positions",
-        "haptic_feedback": "Vibration on mobile devices"
+      "active": {
+        "background": "rgba(0, 220, 130, 0.05)",
+        "border_color": "#00DC82",
+        "border_style": "solid"
       },
-      "scroll_behaviors": {
-        "parallax_layers": "Multi-speed scrolling layers",
-        "reveal_animations": "Elements animate in on scroll",
-        "sticky_elements": "Smart sticky positioning",
-        "scroll_progress": "Gradient progress indicator"
-      },
-      "color_transitions": {
-        "smooth_morphing": "Colors blend smoothly between states",
-        "wave_propagation": "Color changes ripple through UI",
-        "synchronized_changes": "Multiple elements transition together",
-        "preview_hover": "Temporary color preview on hover"
+      "icon": {
+        "size": "64px",
+        "color": "rgba(255, 255, 255, 0.4)",
+        "animation": "float 3s ease-in-out infinite"
       }
     },
-    "responsive_behavior": {
-      "mobile_first": true,
-      "fluid_typography": "clamp() for all text sizes",
-      "container_queries": "Component-based responsive design",
-      "touch_optimized": {
-        "larger_targets": "Minimum 48px touch targets",
-        "swipe_gestures": "Natural swipe navigation",
-        "haptic_feedback": "Touch response vibration",
-        "pull_to_refresh": "Custom pull animation"
+    "color_swatches": {
+      "size": "48px",
+      "border_radius": "16px",
+      "shadow": "0 4px 12px rgba(0, 0, 0, 0.2)",
+      "border": "3px solid rgba(255, 255, 255, 0.9)",
+      "hover": {
+        "transform": "scale(1.1) rotate(5deg)",
+        "shadow": "0 8px 24px rgba(0, 0, 0, 0.3)"
       },
-      "adaptive_layout": {
-        "mobile": "Single column with bottom sheet pattern",
-        "tablet": "Two column with sidebar navigation",
-        "desktop": "Multi-column with floating panels",
-        "ultra_wide": "Centered content with side decorations"
+      "selected": {
+        "ring": "0 0 0 4px rgba(255, 255, 255, 0.3)",
+        "animation": "pulse-ring 2s ease-in-out infinite"
       }
     },
-    "accessibility": {
-      "contrast_ratio": "WCAG AAA where possible (7:1 minimum)",
-      "focus_indicators": "High contrast gradient focus rings",
-      "motion_preferences": "Reduced motion alternatives",
-      "color_blind_modes": "Alternative color schemes available",
-      "screen_reader": "Comprehensive ARIA implementation",
-      "keyboard_navigation": {
-        "shortcuts": "Power user keyboard shortcuts",
-        "focus_trap": "Modal and dropdown focus management",
-        "skip_links": "Skip to main content options"
+    "progress_bar": {
+      "track": {
+        "background": "rgba(255, 255, 255, 0.05)",
+        "height": "8px",
+        "border_radius": "4px",
+        "overflow": "hidden"
+      },
+      "fill": {
+        "background": "linear-gradient(90deg, #FF006E, #8338EC, #0096FF)",
+        "animation": "gradient-shift 3s ease infinite",
+        "height": "100%",
+        "border_radius": "4px",
+        "shadow": "0 0 20px currentColor"
+      },
+      "shimmer": {
+        "background": "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)",
+        "animation": "shimmer 1.5s ease-in-out infinite"
       }
+    }
+  },
+  "animation_principles": {
+    "micro_interactions": {
+      "button_click": "scale(0.98) then spring back",
+      "card_hover": "translateY(-4px) with shadow expansion",
+      "switch_toggle": "smooth slide with color transition",
+      "tooltip_appear": "fade in with slight upward movement"
     },
-    "dark_mode": {
-      "default": true,
-      "auto_switch": "Follow system preferences",
-      "custom_toggle": "Animated sun/moon toggle",
-      "theme_persistence": "LocalStorage preference saving",
-      "smooth_transition": "CSS transition on theme change"
+    "page_transitions": {
+      "section_reveal": "fade in with stagger effect",
+      "card_entrance": "slide up with opacity fade",
+      "data_update": "number counter animation with glow pulse"
+    },
+    "continuous_animations": {
+      "gradient_flow": "continuous hue rotation or position shift",
+      "floating_elements": "gentle up/down float cycle",
+      "glow_pulse": "breathing glow effect on key elements",
+      "particle_system": "subtle floating particles in background"
     },
     "performance": {
-      "lazy_loading": "Intersection Observer for images",
-      "code_splitting": "Route-based chunking",
-      "optimistic_ui": "Instant feedback before server response",
-      "web_workers": "Heavy computations off main thread",
-      "gpu_optimization": "CSS transforms for animations"
+      "prefer_css": "CSS animations over JavaScript when possible",
+      "gpu_acceleration": "transform and opacity for smooth 60fps",
+      "reduced_motion": "respect prefers-reduced-motion setting"
     }
+  },
+  "modern_effects": {
+    "color_preview": {
+      "live_gradient": "Real-time gradient preview as colors change",
+      "color_wheel": "Interactive 3D color wheel with drag support",
+      "swatch_grid": "Animated grid that reorganizes on selection"
+    },
+    "visual_feedback": {
+      "success": {
+        "background": "radial-gradient(circle, rgba(0, 220, 130, 0.2), transparent)",
+        "animation": "success-pulse 0.6s ease-out",
+        "icon": "animated checkmark draw"
+      },
+      "error": {
+        "background": "radial-gradient(circle, rgba(255, 0, 110, 0.2), transparent)",
+        "animation": "shake 0.5s ease-in-out",
+        "icon": "animated X draw"
+      },
+      "loading": {
+        "skeleton": "animated gradient placeholder",
+        "spinner": "rotating gradient ring",
+        "progress": "multi-color segmented ring"
+      }
+    },
+    "background_effects": {
+      "gradient_mesh": "Animated mesh gradient background",
+      "particle_field": "WebGL particle system responding to mouse",
+      "noise_texture": "Subtle animated noise overlay",
+      "color_orbs": "Floating gradient orbs with blur"
+    }
+  },
+  "interaction_patterns": {
+    "hover_effects": {
+      "3d_tilt": "Perspective tilt on mouse movement",
+      "magnetic_hover": "Elements slightly follow cursor",
+      "ripple_effect": "Color ripple from cursor position",
+      "glow_trail": "Glowing trail follows cursor"
+    },
+    "drag_interactions": {
+      "elastic_drag": "Rubber band effect on limits",
+      "ghost_preview": "Semi-transparent preview while dragging",
+      "snap_points": "Magnetic snap to grid positions",
+      "haptic_feedback": "Vibration on mobile devices"
+    },
+    "scroll_behaviors": {
+      "parallax_layers": "Multi-speed scrolling layers",
+      "reveal_animations": "Elements animate in on scroll",
+      "sticky_elements": "Smart sticky positioning",
+      "scroll_progress": "Gradient progress indicator"
+    },
+    "color_transitions": {
+      "smooth_morphing": "Colors blend smoothly between states",
+      "wave_propagation": "Color changes ripple through UI",
+      "synchronized_changes": "Multiple elements transition together",
+      "preview_hover": "Temporary color preview on hover"
+    }
+  },
+  "responsive_behavior": {
+    "mobile_first": true,
+    "fluid_typography": "clamp() for all text sizes",
+    "container_queries": "Component-based responsive design",
+    "touch_optimized": {
+      "larger_targets": "Minimum 48px touch targets",
+      "swipe_gestures": "Natural swipe navigation",
+      "haptic_feedback": "Touch response vibration",
+      "pull_to_refresh": "Custom pull animation"
+    },
+    "adaptive_layout": {
+      "mobile": "Single column with bottom sheet pattern",
+      "tablet": "Two column with sidebar navigation",
+      "desktop": "Multi-column with floating panels",
+      "ultra_wide": "Centered content with side decorations"
+    }
+  },
+  "accessibility": {
+    "contrast_ratio": "WCAG AAA where possible (7:1 minimum)",
+    "focus_indicators": "High contrast gradient focus rings",
+    "motion_preferences": "Reduced motion alternatives",
+    "color_blind_modes": "Alternative color schemes available",
+    "screen_reader": "Comprehensive ARIA implementation",
+    "keyboard_navigation": {
+      "shortcuts": "Power user keyboard shortcuts",
+      "focus_trap": "Modal and dropdown focus management",
+      "skip_links": "Skip to main content options"
+    }
+  },
+  "dark_mode": {
+    "default": true,
+    "auto_switch": "Follow system preferences",
+    "custom_toggle": "Animated sun/moon toggle",
+    "theme_persistence": "LocalStorage preference saving",
+    "smooth_transition": "CSS transition on theme change"
+  },
+  "performance": {
+    "lazy_loading": "Intersection Observer for images",
+    "code_splitting": "Route-based chunking",
+    "optimistic_ui": "Instant feedback before server response",
+    "web_workers": "Heavy computations off main thread",
+    "gpu_optimization": "CSS transforms for animations"
   }
+}

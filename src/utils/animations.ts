@@ -12,13 +12,13 @@ export const animateNumber = (
   const updateNumber = (currentTime: number) => {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
-    
+
     // Easing function (ease-out cubic)
     const easeOut = 1 - Math.pow(1 - progress, 3);
     const current = Math.round(start + range * easeOut);
-    
+
     element.textContent = current + suffix;
-    
+
     if (progress < 1) {
       requestAnimationFrame(updateNumber);
     }
@@ -30,21 +30,21 @@ export const animateNumber = (
 // Add ripple effect to element
 export const addRippleEffect = (element: HTMLElement): void => {
   element.classList.add('ripple');
-  
+
   element.addEventListener('click', (e) => {
     const rect = element.getBoundingClientRect();
     const ripple = document.createElement('span');
     const size = Math.max(rect.width, rect.height);
     const x = e.clientX - rect.left - size / 2;
     const y = e.clientY - rect.top - size / 2;
-    
+
     ripple.style.width = ripple.style.height = size + 'px';
     ripple.style.left = x + 'px';
     ripple.style.top = y + 'px';
     ripple.classList.add('ripple-effect');
-    
+
     element.appendChild(ripple);
-    
+
     setTimeout(() => {
       ripple.remove();
     }, 600);
@@ -58,14 +58,14 @@ export const addMagneticEffect = (element: HTMLElement, strength: number = 0.3):
   const onMouseMove = (e: MouseEvent) => {
     const x = e.clientX - bounds.left - bounds.width / 2;
     const y = e.clientY - bounds.top - bounds.height / 2;
-    
+
     const distance = Math.sqrt(x * x + y * y);
     const maxDistance = Math.max(bounds.width, bounds.height);
-    
+
     if (distance < maxDistance) {
       const translateX = (x / maxDistance) * 20 * strength;
       const translateY = (y / maxDistance) * 20 * strength;
-      
+
       element.style.transform = `translate(${translateX}px, ${translateY}px) scale(1.05)`;
     }
   };
@@ -92,7 +92,7 @@ export const staggerAnimation = (
   delay: number = 50
 ): void => {
   const elements = container.querySelectorAll(selector);
-  
+
   elements.forEach((element, index) => {
     const el = element as HTMLElement;
     el.style.animationDelay = `${index * delay}ms`;
@@ -103,21 +103,21 @@ export const staggerAnimation = (
 // Smooth scroll to element
 export const smoothScrollTo = (element: HTMLElement, offset: number = 0): void => {
   const targetPosition = element.getBoundingClientRect().top + window.pageYOffset - offset;
-  
+
   window.scrollTo({
     top: targetPosition,
-    behavior: 'smooth'
+    behavior: 'smooth',
   });
 };
 
 // Add glow effect on hover
 export const addGlowHover = (element: HTMLElement, color: string = 'pink'): void => {
   const glowClass = `shadow-glow-${color}`;
-  
+
   element.addEventListener('mouseenter', () => {
     element.classList.add(glowClass);
   });
-  
+
   element.addEventListener('mouseleave', () => {
     element.classList.remove(glowClass);
   });
@@ -132,7 +132,7 @@ export const typewriterEffect = (
   return new Promise((resolve) => {
     let index = 0;
     element.textContent = '';
-    
+
     const type = () => {
       if (index < text.length) {
         element.textContent += text.charAt(index);
@@ -142,7 +142,7 @@ export const typewriterEffect = (
         resolve();
       }
     };
-    
+
     type();
   });
 };
@@ -154,7 +154,7 @@ export const addParallaxEffect = (element: HTMLElement, speed: number = 0.5): vo
   const updateParallax = () => {
     const scrolled = window.pageYOffset;
     const yPos = -(scrolled * speed);
-    
+
     element.style.transform = `translateY(${yPos}px)`;
     ticking = false;
   };
@@ -178,7 +178,7 @@ export const colorTransition = (
 ): void => {
   element.style.transition = `background-color ${duration}ms ease`;
   element.style.backgroundColor = fromColor;
-  
+
   requestAnimationFrame(() => {
     element.style.backgroundColor = toColor;
   });
@@ -191,13 +191,13 @@ export const add3DTiltEffect = (element: HTMLElement, maxTilt: number = 15): voi
   const onMouseMove = (e: MouseEvent) => {
     const x = e.clientX - bounds.left;
     const y = e.clientY - bounds.top;
-    
+
     const xPercent = (x / bounds.width - 0.5) * 2;
     const yPercent = (y / bounds.height - 0.5) * 2;
-    
+
     const xDeg = xPercent * maxTilt;
     const yDeg = yPercent * maxTilt;
-    
+
     element.style.transform = `perspective(1000px) rotateY(${xDeg}deg) rotateX(${-yDeg}deg) scale(1.02)`;
   };
 

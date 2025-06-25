@@ -41,9 +41,10 @@ export class OptimizationService {
       this.logger.info(`Manual swaps required: ${result.manualSwaps.length}`);
       result.manualSwaps.forEach((swap, index) => {
         this.logger.debug(`Swap ${index + 1}`, {
-          pauseRange: swap.pauseEndLayer >= swap.pauseStartLayer 
-            ? `${swap.pauseStartLayer}-${swap.pauseEndLayer}` 
-            : `at layer ${swap.atLayer}`,
+          pauseRange:
+            swap.pauseEndLayer >= swap.pauseStartLayer
+              ? `${swap.pauseStartLayer}-${swap.pauseEndLayer}`
+              : `at layer ${swap.atLayer}`,
           fromColor: swap.fromColor,
           toColor: swap.toColor,
           slot: swap.slot,
@@ -91,9 +92,10 @@ export class OptimizationService {
       optimization.manualSwaps.forEach((swap, index) => {
         const fromName = stats.colors.find((c) => c.id === swap.fromColor)?.name || swap.fromColor;
         const toName = stats.colors.find((c) => c.id === swap.toColor)?.name || swap.toColor;
-        const pauseInfo = swap.pauseEndLayer >= swap.pauseStartLayer 
-          ? `Pause between layers ${swap.pauseStartLayer}-${swap.pauseEndLayer}` 
-          : `Pause at layer ${swap.atLayer}`;
+        const pauseInfo =
+          swap.pauseEndLayer >= swap.pauseStartLayer
+            ? `Pause between layers ${swap.pauseStartLayer}-${swap.pauseEndLayer}`
+            : `Pause at layer ${swap.atLayer}`;
         lines.push(
           `  ${index + 1}. ${pauseInfo} (Z=${swap.zHeight}mm):`,
           `     Remove ${fromName} from Slot ${swap.slot}`,

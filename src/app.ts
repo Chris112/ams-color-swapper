@@ -15,7 +15,7 @@ declare global {
 // Initialize the application when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   const app = new App();
-  
+
   // Store app instance for debugging (only in development)
   if (import.meta.env.DEV) {
     window.__app = app;

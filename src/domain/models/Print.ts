@@ -1,6 +1,6 @@
 import { Color } from './Color';
 import { ToolChange } from './ToolChange';
-import { Slicer, FilamentUsage } from './Slicer';
+import { Slicer, FilamentUsageStats } from './Slicer';
 
 /**
  * Domain model representing a 3D print job
@@ -15,7 +15,7 @@ export class Print {
     public readonly toolChanges: ToolChange[],
     public readonly slicer?: Slicer,
     public readonly estimatedTime?: number,
-    public readonly filamentUsage?: FilamentUsage
+    public readonly filamentUsageStats?: FilamentUsageStats
   ) {
     this.validate();
   }
@@ -32,7 +32,7 @@ export class Print {
    * Get color at specific layer
    */
   getColorAtLayer(layer: number): Color | undefined {
-    return this.colors.find(color => color.isUsedInLayer(layer));
+    return this.colors.find((color) => color.isUsedInLayer(layer));
   }
 
   /**
@@ -40,7 +40,7 @@ export class Print {
    */
   getOverlappingColors(): Array<[Color, Color]> {
     const overlaps: Array<[Color, Color]> = [];
-    
+
     for (let i = 0; i < this.colors.length; i++) {
       for (let j = i + 1; j < this.colors.length; j++) {
         if (this.colors[i].overlapsWith(this.colors[j])) {
@@ -48,7 +48,7 @@ export class Print {
         }
       }
     }
-    
+
     return overlaps;
   }
 
@@ -56,9 +56,7 @@ export class Print {
    * Get tool changes within a layer range
    */
   getToolChangesInRange(startLayer: number, endLayer: number): ToolChange[] {
-    return this.toolChanges.filter(
-      tc => tc.layer >= startLayer && tc.layer <= endLayer
-    );
+    return this.toolChanges.filter((tc) => tc.layer >= startLayer && tc.layer <= endLayer);
   }
 
   /**
@@ -73,11 +71,11 @@ export class Print {
    */
   get formattedPrintTime(): string | undefined {
     if (!this.estimatedTime) return undefined;
-    
+
     const hours = Math.floor(this.estimatedTime / 3600);
     const minutes = Math.floor((this.estimatedTime % 3600) / 60);
     const seconds = this.estimatedTime % 60;
-    
+
     if (hours > 0) {
       return `${hours}h ${minutes}m ${seconds}s`;
     } else if (minutes > 0) {

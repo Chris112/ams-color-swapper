@@ -31,9 +31,9 @@ export class GcodeParser {
   async parse(file: File): Promise<GcodeStats> {
     this.startTime = Date.now();
     this.logger.info(`Starting G-code parse for ${file.name}`);
-    
+
     if (this.onProgress) {
-      this.onProgress(10, 'Reading file...');
+      this.onProgress(5, 'Reading file...');
     }
 
     this.stats.fileName = file.name;
@@ -45,24 +45,28 @@ export class GcodeParser {
     this.layerColorMap.set(0, this.currentTool);
     this.updateColorSeen(this.currentTool, 0);
 
-    const reader = new BrowserFileReader(file);
-    
-    // Store raw content for geometry parsing
+    // Estimate total lines for progress tracking (approximately 24 bytes per line)
     if (this.onProgress) {
-      this.onProgress(20, 'Loading file content...');
+      this.onProgress(10, 'Estimating file size...');
     }
-    this.stats.rawContent = await file.text();
+    const estimatedLines = Math.ceil(file.size / 24);
+    this.logger.info(
+      `Estimated lines to process: ${estimatedLines.toLocaleString()} (based on ${file.size.toLocaleString()} bytes)`
+    );
+
+    // Create reader from the original file
+    const reader = new BrowserFileReader(file);
 
     if (this.onProgress) {
-      this.onProgress(30, 'Parsing G-code...');
+      this.onProgress(20, 'Parsing G-code...');
     }
-    await this.processLines(reader);
+    await this.processLines(reader, estimatedLines);
 
     const parseTime = Date.now() - this.startTime;
     this.logger.info(`Parse completed in ${parseTime}ms`);
-    
+
     if (this.onProgress) {
-      this.onProgress(85, 'Analyzing colors...');
+      this.onProgress(85, 'Analyzing colors and calculating statistics...');
     }
 
     const completeStats = await calculateStatistics(
@@ -74,18 +78,33 @@ export class GcodeParser {
       parseTime
     );
 
+    if (this.onProgress) {
+      this.onProgress(95, 'Finalizing analysis...');
+    }
+
+    // Load raw content for geometry parsing if needed
+    if (!this.stats.rawContent) {
+      if (this.onProgress) {
+        this.onProgress(90, 'Loading content for geometry parsing...');
+      }
+      this.stats.rawContent = await file.text();
+      completeStats.rawContent = this.stats.rawContent;
+    }
+
     // Ensure we have at least basic data
     if (!completeStats.colors || completeStats.colors.length === 0) {
       // Add default color if none found
-      completeStats.colors = [{
-        id: 'T0',
-        name: 'Default Color',
-        hexColor: '#888888',
-        firstLayer: 0,
-        lastLayer: completeStats.totalLayers - 1,
-        layerCount: completeStats.totalLayers,
-        usagePercentage: 100
-      }];
+      completeStats.colors = [
+        {
+          id: 'T0',
+          name: 'Default Color',
+          hexColor: '#888888',
+          firstLayer: 0,
+          lastLayer: completeStats.totalLayers - 1,
+          layerCount: completeStats.totalLayers,
+          usagePercentage: 100,
+        },
+      ];
     }
 
     // Log analysis summary
@@ -96,10 +115,12 @@ export class GcodeParser {
       totalHeight: `${completeStats.totalHeight}mm`,
       uniqueColors: completeStats.colors.length,
       toolChanges: completeStats.toolChanges?.length || 0,
-      filamentUsage: completeStats.filamentUsage?.total ? `${completeStats.filamentUsage.total.toFixed(2)}mm` : 'N/A',
-      printTime: completeStats.printTime || 'N/A'
+      filamentUsage: completeStats.filamentUsageStats?.total
+        ? `${completeStats.filamentUsageStats.total.toFixed(2)}mm`
+        : 'N/A',
+      printTime: completeStats.printTime || 'N/A',
     });
-    
+
     // Log color details
     completeStats.colors.forEach((color, index) => {
       this.logger.info(`Color ${index + 1}`, {
@@ -108,32 +129,43 @@ export class GcodeParser {
         hex: color.hexColor,
         usage: `${color.usagePercentage?.toFixed(2)}%`,
         layers: `${color.firstLayer}-${color.lastLayer}`,
-        layerCount: color.layerCount
+        layerCount: color.layerCount,
       });
     });
-    
+
     // Log optimization potential
     if (completeStats.colors.length > 4) {
-      this.logger.info(`Optimization needed: ${completeStats.colors.length} colors detected, but AMS only has 4 slots`);
+      this.logger.info(
+        `Optimization needed: ${completeStats.colors.length} colors detected, but AMS only has 4 slots`
+      );
     }
 
     return completeStats;
   }
 
-  private async processLines(reader: BrowserFileReader): Promise<void> {
-    // Estimate total lines based on file size (rough estimate: 50 bytes per line average)
-    const estimatedLines = Math.max(Math.floor(this.stats.fileSize! / 50), 1000);
-    let progressInterval = Math.max(Math.floor(estimatedLines / 20), 100); // Update every 5%
-    
+  private async processLines(reader: BrowserFileReader, totalLines: number): Promise<void> {
+    // Update progress every 1% or every 1000 lines, whichever is more frequent
+    const progressInterval = Math.max(Math.floor(totalLines / 100), 1000);
+
     for await (const line of reader.readLines()) {
       this.lineNumber++;
       await this.parseLine(line.trim());
-      
-      // Report progress periodically
+
+      // Report progress periodically with accurate percentage
       if (this.onProgress && this.lineNumber % progressInterval === 0) {
-        const progress = Math.min(30 + Math.floor((this.lineNumber / estimatedLines) * 50), 80);
-        this.onProgress(progress, `Processing line ${this.lineNumber.toLocaleString()}...`);
+        const progressPercent = (this.lineNumber / totalLines) * 60; // 60% of total progress for line processing
+        const totalProgress = Math.min(20 + progressPercent, 80);
+        const percentage = Math.round((this.lineNumber / totalLines) * 100);
+        this.onProgress(
+          totalProgress,
+          `Processing lines: ${percentage}% (${this.lineNumber.toLocaleString()}/${totalLines.toLocaleString()})`
+        );
       }
+    }
+
+    // Final update after all lines processed
+    if (this.onProgress) {
+      this.onProgress(80, `Processed all ${totalLines.toLocaleString()} lines`);
     }
   }
 
@@ -265,8 +297,8 @@ export class GcodeParser {
         const weights = usageMatch[1].split(',').map((w) => parseFloat(w.trim()));
         const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
 
-        if (!this.stats.filamentUsage) {
-          this.stats.filamentUsage = {
+        if (!this.stats.filamentUsageStats) {
+          this.stats.filamentUsageStats = {
             total: Math.round(totalWeight * 100) / 100,
             model: 0,
             support: 0,
@@ -274,20 +306,20 @@ export class GcodeParser {
             tower: 0,
           };
         } else {
-          this.stats.filamentUsage.total = Math.round(totalWeight * 100) / 100;
+          this.stats.filamentUsageStats.total = Math.round(totalWeight * 100) / 100;
         }
 
         // Store per-color filament weights
         if (!this.stats.filamentEstimates) {
           this.stats.filamentEstimates = [];
         }
-        
+
         // Map weights to tool IDs (T0, T1, T2, etc.)
         weights.forEach((weight, index) => {
           if (weight > 0) {
             const toolId = `T${index}`;
             // Check if we already have an entry for this tool
-            const existingEntry = this.stats.filamentEstimates!.find(e => e.colorId === toolId);
+            const existingEntry = this.stats.filamentEstimates!.find((e) => e.colorId === toolId);
             if (existingEntry) {
               existingEntry.weight = weight;
             } else {
@@ -300,7 +332,7 @@ export class GcodeParser {
           }
         });
 
-        this.logger.info(`Total filament usage: ${this.stats.filamentUsage.total}g`);
+        this.logger.info(`Total filament usage: ${this.stats.filamentUsageStats.total}g`);
         this.logger.info(`Per-color weights: ${weights.map((w, i) => `T${i}: ${w}g`).join(', ')}`);
       }
     }
@@ -314,8 +346,8 @@ export class GcodeParser {
         const model = parseFloat(detailMatch[2]);
         const support = parseFloat(detailMatch[3]);
 
-        if (!this.stats.filamentUsage) {
-          this.stats.filamentUsage = {
+        if (!this.stats.filamentUsageStats) {
+          this.stats.filamentUsageStats = {
             total: 0,
             model: 0,
             support: 0,
@@ -325,9 +357,9 @@ export class GcodeParser {
         }
 
         // Update filament usage values
-        this.stats.filamentUsage.total = total;
-        this.stats.filamentUsage.model = model;
-        this.stats.filamentUsage.support = support;
+        this.stats.filamentUsageStats.total = total;
+        this.stats.filamentUsageStats.model = model;
+        this.stats.filamentUsageStats.support = support;
       }
     }
 
@@ -335,8 +367,8 @@ export class GcodeParser {
     if (line.includes('flushed material =')) {
       const flushedMatch = line.match(/flushed material = ([\d.]+)/);
       if (flushedMatch) {
-        if (!this.stats.filamentUsage) {
-          this.stats.filamentUsage = {
+        if (!this.stats.filamentUsageStats) {
+          this.stats.filamentUsageStats = {
             total: 0,
             model: 0,
             support: 0,
@@ -344,7 +376,7 @@ export class GcodeParser {
             tower: 0,
           };
         }
-        this.stats.filamentUsage.flushed = parseFloat(flushedMatch[1]);
+        this.stats.filamentUsageStats.flushed = parseFloat(flushedMatch[1]);
       }
     }
 
@@ -352,8 +384,8 @@ export class GcodeParser {
     if (line.includes('wipe tower =')) {
       const towerMatch = line.match(/wipe tower = ([\d.]+)/);
       if (towerMatch) {
-        if (!this.stats.filamentUsage) {
-          this.stats.filamentUsage = {
+        if (!this.stats.filamentUsageStats) {
+          this.stats.filamentUsageStats = {
             total: 0,
             model: 0,
             support: 0,
@@ -361,7 +393,7 @@ export class GcodeParser {
             tower: 0,
           };
         }
-        this.stats.filamentUsage.tower = parseFloat(towerMatch[1]);
+        this.stats.filamentUsageStats.tower = parseFloat(towerMatch[1]);
       }
     }
 

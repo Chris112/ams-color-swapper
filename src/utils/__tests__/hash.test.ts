@@ -17,7 +17,7 @@ describe('hash utilities', () => {
       const mockFileContent = 'test file content';
       const encoder = new TextEncoder();
       const contentBuffer = encoder.encode(mockFileContent);
-      
+
       const mockFile = new File([contentBuffer], 'test.gcode', {
         type: 'text/plain',
       });
@@ -37,11 +37,11 @@ describe('hash utilities', () => {
       for (let i = 0; i < 32; i++) {
         mockHashArray[i] = i;
       }
-      
+
       mockDigest.mockResolvedValue(mockHashBuffer);
 
       const hash = await generateFileHash(mockFile);
-      
+
       expect(mockDigest).toHaveBeenCalledWith('SHA-256', expect.any(Uint8Array));
       expect(hash).toMatch(/^[0-9a-f]{64}$/); // SHA-256 produces 64 hex chars
       expect(hash).toBe('000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f');
@@ -51,7 +51,7 @@ describe('hash utilities', () => {
       // Create a mock large file (128MB)
       const chunkSize = 64 * 1024 * 1024; // 64MB
       const fileSize = chunkSize * 2; // 128MB
-      
+
       // Create mock file with size but simplified content
       const mockFile = {
         size: fileSize,
@@ -64,7 +64,7 @@ describe('hash utilities', () => {
       mockDigest.mockResolvedValue(mockHashBuffer);
 
       await generateFileHash(mockFile);
-      
+
       // Should have called slice twice for a 128MB file with 64MB chunks
       expect(mockFile.slice).toHaveBeenCalledTimes(2);
       expect(mockFile.slice).toHaveBeenCalledWith(0, chunkSize);
@@ -80,7 +80,7 @@ describe('hash utilities', () => {
       });
 
       const hash = generateQuickHash(mockFile);
-      
+
       expect(hash).toBeTruthy();
       expect(typeof hash).toBe('string');
       // Should be base36 encoded
@@ -91,14 +91,14 @@ describe('hash utilities', () => {
       const file1 = new File(['content1'], 'test1.gcode', {
         lastModified: 1234567890,
       });
-      
+
       const file2 = new File(['content2'], 'test2.gcode', {
         lastModified: 1234567891,
       });
 
       const hash1 = generateQuickHash(file1);
       const hash2 = generateQuickHash(file2);
-      
+
       expect(hash1).not.toBe(hash2);
     });
 
@@ -106,14 +106,14 @@ describe('hash utilities', () => {
       const metadata = {
         lastModified: 1234567890,
       };
-      
+
       // Create files with same content to have same size
       const file1 = new File(['same content'], 'test.gcode', metadata);
       const file2 = new File(['same content'], 'test.gcode', metadata);
 
       const hash1 = generateQuickHash(file1);
       const hash2 = generateQuickHash(file2);
-      
+
       // Same name, size, and lastModified should produce same hash
       expect(hash1).toBe(hash2);
     });
@@ -135,7 +135,9 @@ describe('hash utilities', () => {
       const originalSlice = mockFile.slice.bind(mockFile);
       mockFile.slice = vi.fn((start, end) => {
         const blob = originalSlice(start, end);
-        blob.arrayBuffer = vi.fn().mockResolvedValue(new TextEncoder().encode('test content').buffer);
+        blob.arrayBuffer = vi
+          .fn()
+          .mockResolvedValue(new TextEncoder().encode('test content').buffer);
         return blob;
       });
 
@@ -148,7 +150,7 @@ describe('hash utilities', () => {
       mockDigest.mockResolvedValue(mockHashBuffer);
 
       const cacheKey = await generateCacheKey(mockFile);
-      
+
       // Cache key should include both file hash and version
       expect(cacheKey).toContain('-'); // Should have separator
       expect(cacheKey).toMatch(/^[0-9a-f]{64}-2\.0\.0-/); // File hash + version prefix
@@ -163,7 +165,9 @@ describe('hash utilities', () => {
       const originalSlice = mockFile.slice.bind(mockFile);
       mockFile.slice = vi.fn((start, end) => {
         const blob = originalSlice(start, end);
-        blob.arrayBuffer = vi.fn().mockResolvedValue(new TextEncoder().encode('test content').buffer);
+        blob.arrayBuffer = vi
+          .fn()
+          .mockResolvedValue(new TextEncoder().encode('test content').buffer);
         return blob;
       });
 
@@ -177,16 +181,16 @@ describe('hash utilities', () => {
 
       // Generate first cache key
       const cacheKey1 = await generateCacheKey(mockFile);
-      
+
       // Simulate git commit hash change
       vi.stubEnv('VITE_GIT_COMMIT_HASH', 'def456');
-      
+
       // Generate second cache key for same file
       const cacheKey2 = await generateCacheKey(mockFile);
-      
+
       // Cache keys should be different due to different git commit hash
       expect(cacheKey1).not.toBe(cacheKey2);
-      
+
       // But they should have the same file hash part
       const fileHash1 = cacheKey1.split('-')[0];
       const fileHash2 = cacheKey2.split('-')[0];
@@ -196,7 +200,7 @@ describe('hash utilities', () => {
     it('should use timestamp fallback when git commit hash is not available', async () => {
       // Remove git commit hash env var
       vi.stubEnv('VITE_GIT_COMMIT_HASH', undefined);
-      
+
       const mockFile = new File(['test content'], 'test.gcode', {
         type: 'text/plain',
       });
@@ -205,7 +209,9 @@ describe('hash utilities', () => {
       const originalSlice = mockFile.slice.bind(mockFile);
       mockFile.slice = vi.fn((start, end) => {
         const blob = originalSlice(start, end);
-        blob.arrayBuffer = vi.fn().mockResolvedValue(new TextEncoder().encode('test content').buffer);
+        blob.arrayBuffer = vi
+          .fn()
+          .mockResolvedValue(new TextEncoder().encode('test content').buffer);
         return blob;
       });
 
@@ -214,7 +220,7 @@ describe('hash utilities', () => {
       mockDigest.mockResolvedValue(mockHashBuffer);
 
       const cacheKey = await generateCacheKey(mockFile);
-      
+
       // Should still generate a valid cache key
       expect(cacheKey).toContain('-2.0.0-'); // Should have version
       expect(cacheKey.split('-').length).toBeGreaterThanOrEqual(3); // file hash, version, timestamp

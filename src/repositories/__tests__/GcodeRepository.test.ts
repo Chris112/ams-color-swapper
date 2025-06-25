@@ -4,7 +4,7 @@ import { ValidationError, ParseError } from '../../types';
 
 // Polyfill File.text() for test environment
 if (!File.prototype.text) {
-  File.prototype.text = function() {
+  File.prototype.text = function () {
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -20,7 +20,7 @@ vi.mock('../../parser/gcodeParser', () => ({
       // Handle both string content and File objects
       // let content = ''; // Not used in mock
       let fileSize = 1000;
-      
+
       if (typeof input === 'string') {
         // content = input;
         fileSize = input.length;
@@ -29,9 +29,9 @@ vi.mock('../../parser/gcodeParser', () => ({
         fileSize = input.size;
         fileName = input.name;
       }
-      
+
       // Simulate some parsing time
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       return {
         fileName: fileName || 'unknown.gcode',
         fileSize,
@@ -47,7 +47,6 @@ vi.mock('../../parser/gcodeParser', () => ({
     }),
   })),
 }));
-
 
 describe('GcodeRepository', () => {
   let repository: GcodeRepository;
@@ -74,7 +73,7 @@ describe('GcodeRepository', () => {
     it('should reject invalid file extensions', () => {
       const file = new File([''], 'test.txt', { type: 'text/plain' });
       const result = repository.validateFile(file);
-      
+
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ValidationError);
@@ -87,7 +86,7 @@ describe('GcodeRepository', () => {
       const file = new File(['small content'], 'test.gcode', { type: 'text/plain' });
       Object.defineProperty(file, 'size', { value: 501 * 1024 * 1024 });
       const result = repository.validateFile(file);
-      
+
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ValidationError);
@@ -100,7 +99,7 @@ describe('GcodeRepository', () => {
       // Override size to 0
       Object.defineProperty(file, 'size', { value: 0 });
       const result = repository.validateFile(file);
-      
+
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ValidationError);
@@ -113,13 +112,13 @@ describe('GcodeRepository', () => {
     it('should parse small files with regular parser', async () => {
       const content = 'G1 X10 Y10';
       const file = new File([content], 'test.gcode', { type: 'text/plain' });
-      
+
       const result = await repository.parseFile(file);
-      
+
       if (!result.ok) {
         console.error('Parse failed:', result.error);
       }
-      
+
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.fileName).toBe('test.gcode');
@@ -131,9 +130,9 @@ describe('GcodeRepository', () => {
       // Create a test file
       const content = 'G1 X10 Y10\n'.repeat(100);
       const file = new File([content], 'large.gcode', { type: 'text/plain' });
-      
+
       const result = await repository.parseFile(file);
-      
+
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.fileName).toBe('large.gcode');
@@ -142,9 +141,9 @@ describe('GcodeRepository', () => {
 
     it('should return error for invalid files', async () => {
       const file = new File(['content'], 'test.txt', { type: 'text/plain' });
-      
+
       const result = await repository.parseFile(file);
-      
+
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ValidationError);
@@ -155,9 +154,9 @@ describe('GcodeRepository', () => {
   describe('parseContent', () => {
     it('should parse G-code content', async () => {
       const content = 'G1 X10 Y10\nG1 X20 Y20';
-      
+
       const result = await repository.parseContent(content, 'test.gcode');
-      
+
       expect(result.ok).toBe(true);
       if (result.ok) {
         expect(result.value.fileName).toBe('test.gcode');
@@ -171,9 +170,9 @@ describe('GcodeRepository', () => {
         parse: vi.fn().mockRejectedValue(new Error('Parse failed')),
       };
       (repository as any).parser = errorParser;
-      
+
       const result = await repository.parseContent('invalid', 'test.gcode');
-      
+
       expect(result.ok).toBe(false);
       if (!result.ok) {
         expect(result.error).toBeInstanceOf(ParseError);

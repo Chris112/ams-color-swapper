@@ -4,7 +4,7 @@
 export function disableConsoleInProduction(): void {
   if (import.meta.env?.PROD) {
     const noop = () => {};
-    
+
     // List of all console methods to override
     const consoleMethods = [
       'log',
@@ -27,22 +27,22 @@ export function disableConsoleInProduction(): void {
       'profile',
       'profileEnd',
       'table',
-      'clear'
+      'clear',
     ] as const;
-    
+
     // Override each method with a no-op function
-    consoleMethods.forEach(method => {
+    consoleMethods.forEach((method) => {
       if (method in console) {
         (console as any)[method] = noop;
       }
     });
-    
+
     // Also override console itself to prevent console.anyNewMethod
     const consoleProxy = new Proxy(console, {
       get: () => noop,
-      set: () => true
+      set: () => true,
     });
-    
+
     // Replace global console
     (window as any).console = consoleProxy;
   }

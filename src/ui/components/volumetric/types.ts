@@ -20,7 +20,7 @@ export enum ViewMode {
   NORMAL = 'normal',
   XRAY = 'xray',
   EXPLODED = 'exploded',
-  WIREFRAME = 'wireframe'
+  WIREFRAME = 'wireframe',
 }
 
 export interface HologramConfig {
