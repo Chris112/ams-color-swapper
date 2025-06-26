@@ -65,10 +65,13 @@ export interface FilamentUsage {
   cost?: number;
 }
 
+import type { ParserAlgorithm } from '../domain/models/AmsConfiguration';
+
 export interface SystemConfiguration {
   type: 'ams' | 'toolhead';
   unitCount: number;
   totalSlots: number;
+  parserAlgorithm?: ParserAlgorithm;
 }
 
 export interface OptimizationResult {

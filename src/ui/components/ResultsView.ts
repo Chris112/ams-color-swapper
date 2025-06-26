@@ -19,7 +19,7 @@ import { VolumetricHologram } from './VolumetricHologram';
 
 export class ResultsView extends Component {
   private exportBtn!: HTMLElement;
-  private exportGcodeBtn!: HTMLElement;
+  private exportGcodeBtn: HTMLElement | null = null;
   private newFileBtn!: HTMLElement;
   private toggleDebugBtn!: HTMLElement;
   private clearCacheBtn!: HTMLElement;
@@ -29,7 +29,7 @@ export class ResultsView extends Component {
     super('#resultsSection');
 
     const exportBtn = this.element.querySelector('#exportBtn');
-    const exportGcodeBtn = this.element.querySelector('#exportGcodeBtn');
+    const exportGcodeBtn = this.element.querySelector('#exportGcodeBtn') as HTMLElement | null;
     const newFileBtn = this.element.querySelector('#newFileBtn');
     const toggleDebugBtn = this.element.querySelector('#toggleDebugBtn');
     const clearCacheBtn = this.element.querySelector('#clearCacheBtn');
@@ -39,7 +39,7 @@ export class ResultsView extends Component {
     }
 
     this.exportBtn = exportBtn as HTMLElement;
-    this.exportGcodeBtn = exportGcodeBtn as HTMLElement | null;
+    this.exportGcodeBtn = exportGcodeBtn;
     this.newFileBtn = newFileBtn as HTMLElement;
     this.toggleDebugBtn = toggleDebugBtn as HTMLElement;
     this.clearCacheBtn = clearCacheBtn as HTMLElement;

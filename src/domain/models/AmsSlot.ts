@@ -9,7 +9,7 @@ export class AmsSlot {
   constructor(
     public readonly unitNumber: number,
     public readonly slotNumber: number,
-    public readonly isPermanent: boolean = true
+    public isPermanent: boolean = true
   ) {
     this.validate();
   }

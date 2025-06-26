@@ -2,11 +2,13 @@ import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { SystemConfiguration } from '../../types';
 import { addRippleEffect, addGlowHover } from '../../utils/animations';
+import { ParserAlgorithm } from '../../domain/models/AmsConfiguration';
 
 export class ConfigurationModal extends Component {
   private configType: 'ams' | 'toolhead' = 'ams';
   private unitCount: number = 1;
   private optimizationAlgorithm: string = 'greedy';
+  private parserAlgorithm: ParserAlgorithm = 'optimized';
   private isOpen: boolean = false;
   private modalElement: HTMLElement | null = null;
   private applyBtn: HTMLElement | null = null;
@@ -16,6 +18,7 @@ export class ConfigurationModal extends Component {
   private unitInput: HTMLInputElement | null = null;
   private previewContainer: HTMLElement | null = null;
   private algorithmSelect: HTMLSelectElement | null = null;
+  private parserSelect: HTMLSelectElement | null = null;
 
   constructor() {
     // Create a wrapper element that will be our component root
@@ -53,6 +56,11 @@ export class ConfigurationModal extends Component {
     if (this.algorithmSelect) {
       this.optimizationAlgorithm = this.algorithmSelect.value;
     }
+    
+    // Load saved parser algorithm value
+    if (this.parserSelect) {
+      this.parserAlgorithm = this.parserSelect.value as ParserAlgorithm;
+    }
 
     this.isOpen = true;
     this.modalElement.classList.remove('hidden');
@@ -61,7 +69,9 @@ export class ConfigurationModal extends Component {
     // Use double RAF for more reliable animation
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        this.modalElement.classList.add('show');
+        if (this.modalElement) {
+          this.modalElement.classList.add('show');
+        }
       });
     });
   }
@@ -72,7 +82,7 @@ export class ConfigurationModal extends Component {
     this.isOpen = false;
     this.modalElement.classList.remove('show');
     setTimeout(() => {
-      if (!this.isOpen) {
+      if (!this.isOpen && this.modalElement) {
         // Double-check to prevent race conditions
         this.modalElement.classList.add('hidden');
       }
@@ -131,6 +141,25 @@ export class ConfigurationModal extends Component {
                     <p class="mt-2 text-xs text-white/60">
                       Greedy: Fast, finds good solutions. Simulated Annealing: Slower, may find better solutions.
                     </p>
+                  </div>
+                  
+                  <!-- Parser Algorithm -->
+                  <div class="mt-4">
+                    <label for="modalParserAlgorithm" class="block text-sm font-medium text-white/80 mb-2">
+                      Parser Algorithm
+                    </label>
+                    <select
+                      id="modalParserAlgorithm"
+                      class="block w-full px-4 py-2 rounded-lg bg-gray-900 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-vibrant-blue focus:border-vibrant-blue cursor-pointer appearance-none"
+                    >
+                      <option value="lazy" class="bg-gray-900 text-white">Lazy - On-demand parsing (0.6x) for preview/partial analysis</option>
+                      <option value="fsm" class="bg-gray-900 text-white">FSM - State machine approach (0.8x) for complex G-code</option>
+                      <option value="regex" class="bg-gray-900 text-white">Regex - Pattern-based parsing (0.9x)</option>
+                      <option value="worker" class="bg-gray-900 text-white">Web Worker - Background thread (0.9x), prevents UI freezing</option>
+                      <option value="optimized" class="bg-gray-900 text-white">Original - Standard G-code parser (1x baseline)</option>
+                      <option value="streams" class="bg-gray-900 text-white">Streams - Memory efficient (1.2x) for very large files</option>
+                      <option value="buffer" class="bg-gray-900 text-white">Buffer - Fastest parsing (2.7x)</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -244,6 +273,7 @@ export class ConfigurationModal extends Component {
     this.unitInput = this.element.querySelector('#unitCount');
     this.previewContainer = this.element.querySelector('#configPreview');
     this.algorithmSelect = this.element.querySelector('#modalOptimizationAlgorithm');
+    this.parserSelect = this.element.querySelector('#modalParserAlgorithm');
 
     // Validate required elements
     if (
@@ -281,7 +311,7 @@ export class ConfigurationModal extends Component {
     if (this.modalElement) {
       this.modalElement.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        const modalContent = this.modalElement.querySelector('.modal-content');
+        const modalContent = this.modalElement?.querySelector('.modal-content');
 
         // Close if clicking on the modal wrapper or backdrop, but not on the content
         if (target === this.modalElement || target.classList.contains('modal-backdrop')) {
@@ -289,7 +319,7 @@ export class ConfigurationModal extends Component {
         }
 
         // Also close if clicking in the flex container but outside the modal content
-        if (modalContent && !modalContent.contains(target) && this.modalElement.contains(target)) {
+        if (modalContent && !modalContent.contains(target) && this.modalElement?.contains(target)) {
           this.close();
         }
       });
@@ -316,7 +346,7 @@ export class ConfigurationModal extends Component {
     // Unit count changes
     if (this.unitInput) {
       this.unitInput.addEventListener('input', () => {
-        this.unitCount = parseInt(this.unitInput.value) || 1;
+        this.unitCount = parseInt(this.unitInput!.value) || 1;
         this.updateSlotInfo();
         this.updatePreview();
       });
@@ -339,9 +369,18 @@ export class ConfigurationModal extends Component {
     // Algorithm select changes
     if (this.algorithmSelect) {
       this.algorithmSelect.addEventListener('change', () => {
-        this.optimizationAlgorithm = this.algorithmSelect.value;
+        this.optimizationAlgorithm = this.algorithmSelect!.value;
         // Save the selected algorithm to local storage
         localStorage.setItem('optimizationAlgorithm', this.optimizationAlgorithm);
+      });
+    }
+
+    // Parser select changes
+    if (this.parserSelect) {
+      this.parserSelect.addEventListener('change', () => {
+        this.parserAlgorithm = this.parserSelect!.value as ParserAlgorithm;
+        // Save the selected parser to local storage
+        localStorage.setItem('parserAlgorithm', this.parserAlgorithm);
       });
     }
   }
@@ -360,7 +399,6 @@ export class ConfigurationModal extends Component {
     if (!this.unitInput) return;
 
     const label = this.element.querySelector('#unitLabel');
-    const slotInfo = this.element.querySelector('#slotInfo');
 
     if (this.configType === 'ams') {
       if (label) label.textContent = 'Number of AMS Units';
@@ -451,6 +489,7 @@ export class ConfigurationModal extends Component {
       type: this.configType,
       unitCount: this.unitCount,
       totalSlots: this.configType === 'ams' ? this.unitCount * 4 : this.unitCount,
+      parserAlgorithm: this.parserAlgorithm,
     };
 
     // Save configuration
@@ -462,22 +501,24 @@ export class ConfigurationModal extends Component {
     // Show success feedback
     this.showFeedback('Configuration applied successfully!', 'success');
 
-    // Close modal after a short delay
-    setTimeout(() => {
-      this.close();
-    }, 1000);
+    // Close modal immediately
+    this.close();
   }
 
   private resetConfiguration(): void {
     this.configType = 'ams';
     this.unitCount = 1;
     this.optimizationAlgorithm = 'greedy';
+    this.parserAlgorithm = 'optimized';
 
     // Update UI
     const amsRadio = this.element.querySelector('input[value="ams"]') as HTMLInputElement;
     if (amsRadio) amsRadio.checked = true;
     if (this.unitInput) this.unitInput.value = '1';
     if (this.algorithmSelect) this.algorithmSelect.value = 'greedy';
+    if (this.parserSelect) {
+      this.parserSelect.value = 'optimized';
+    }
 
     // Sync with main dropdown
     const mainAlgorithmSelect = document.getElementById(
@@ -492,6 +533,7 @@ export class ConfigurationModal extends Component {
 
     // Clear saved configuration
     localStorage.removeItem('ams-hardware-config');
+    localStorage.removeItem('parserAlgorithm');
 
     // Show feedback
     this.showFeedback('Configuration reset to default', 'info');
@@ -529,6 +571,7 @@ export class ConfigurationModal extends Component {
             type: this.configType,
             unitCount: this.unitCount,
             totalSlots: this.configType === 'ams' ? this.unitCount * 4 : this.unitCount,
+            parserAlgorithm: this.parserAlgorithm as any,
           };
           this.emit(AppEvents.CONFIGURATION_CHANGED, configuration);
         }
@@ -539,6 +582,13 @@ export class ConfigurationModal extends Component {
       if (savedAlgorithm && this.algorithmSelect) {
         this.algorithmSelect.value = savedAlgorithm;
         this.optimizationAlgorithm = savedAlgorithm;
+      }
+
+      // Load parser algorithm
+      const savedParser = localStorage.getItem('parserAlgorithm');
+      if (savedParser && this.parserSelect) {
+        this.parserSelect.value = savedParser;
+        this.parserAlgorithm = savedParser as ParserAlgorithm;
       }
     } catch (error) {
       console.error('Failed to load saved configuration:', error);
@@ -561,11 +611,13 @@ export class ConfigurationModal extends Component {
     }, 3000);
   }
 
+
   public getConfiguration(): SystemConfiguration {
     return {
       type: this.configType,
       unitCount: this.unitCount,
       totalSlots: this.configType === 'ams' ? this.unitCount * 4 : this.unitCount,
+      parserAlgorithm: this.parserAlgorithm,
     };
   }
 }

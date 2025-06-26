@@ -16,6 +16,7 @@ export class GcodeParserOptimized {
   private lineNumber: number = 0;
   private startTime: number = 0;
   private onProgress?: (progress: number, message: string) => void;
+  private maxLayerSeen: number = 0;
 
   constructor(logger?: Logger, onProgress?: (progress: number, message: string) => void) {
     this.logger = logger || new Logger('GcodeParser');
@@ -68,6 +69,10 @@ export class GcodeParserOptimized {
     if (this.onProgress) {
       this.onProgress(85, 'Analyzing colors and calculating statistics...');
     }
+
+    // Update stats with the maximum layer seen
+    this.stats.totalLayers = this.maxLayerSeen + 1; // +1 because layers are 0-indexed
+    this.logger.silly(`Setting totalLayers to ${this.stats.totalLayers} (maxLayerSeen: ${this.maxLayerSeen})`);
 
     const completeStats = await calculateStatistics(
       this.stats as GcodeStats,
@@ -239,9 +244,12 @@ export class GcodeParserOptimized {
 
       if (newLayer !== null && newLayer !== this.currentLayer) {
         this.currentLayer = newLayer;
+        if (newLayer > this.maxLayerSeen) {
+          this.maxLayerSeen = newLayer;
+        }
         this.layerColorMap.set(this.currentLayer, this.currentTool);
         this.updateColorSeen(this.currentTool, this.currentLayer);
-        this.logger.silly(`Layer ${this.currentLayer} - Tool: ${this.currentTool}`);
+        this.logger.silly(`Layer ${this.currentLayer} - Tool: ${this.currentTool}, Max: ${this.maxLayerSeen}`);
         return; // Exit early if we found a layer change
       }
     }
