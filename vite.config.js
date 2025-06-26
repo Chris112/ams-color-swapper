@@ -28,6 +28,11 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['src/workers/parserWorker.ts'],
   },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
   define: {
     'import.meta.env.VITE_GIT_COMMIT_HASH': JSON.stringify(getGitCommitHash()),
   },

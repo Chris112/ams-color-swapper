@@ -7,6 +7,7 @@ export class AmsSlot {
   private _colors: Color[] = [];
 
   constructor(
+    public readonly unitNumber: number,
     public readonly slotNumber: number,
     public readonly isPermanent: boolean = true
   ) {
@@ -102,7 +103,24 @@ export class AmsSlot {
     return swapPoints;
   }
 
+  /**
+   * Get unique identifier for this slot
+   */
+  get slotId(): string {
+    return `${this.unitNumber}-${this.slotNumber}`;
+  }
+
+  /**
+   * Get display name for this slot
+   */
+  get displayName(): string {
+    return `Unit ${this.unitNumber} Slot ${this.slotNumber}`;
+  }
+
   private validate(): void {
+    if (this.unitNumber < 1 || this.unitNumber > 16) {
+      throw new Error('Unit number must be between 1 and 16');
+    }
     if (this.slotNumber < 1 || this.slotNumber > 4) {
       throw new Error('Slot number must be between 1 and 4');
     }

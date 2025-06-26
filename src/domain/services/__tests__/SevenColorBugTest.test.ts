@@ -37,7 +37,14 @@ describe('7-Color Bug Investigation', () => {
     layerCount?: number,
     name?: string
   ): Color => {
-    return new Color(id, name || `Color ${id}`, '#000000', firstLayer, lastLayer);
+    return new Color({
+      id,
+      name: name || `Color ${id}`,
+      hexColor: '#000000',
+      firstLayer,
+      lastLayer,
+      layerCount: layerCount || lastLayer - firstLayer + 1,
+    });
   };
 
   it('should handle 7 colors without losing any in the optimization pipeline', () => {
@@ -67,7 +74,7 @@ describe('7-Color Bug Investigation', () => {
     });
 
     // Test full AmsConfiguration pipeline
-    const amsConfig = new AmsConfiguration('intervals');
+    const amsConfig = new AmsConfiguration('ams', 1, 'intervals');
     amsConfig.assignColors(colors);
 
     // Verify all slots exist
@@ -138,7 +145,7 @@ describe('7-Color Bug Investigation', () => {
     expect(totalAssigned).toBe(7);
 
     // Test through full pipeline
-    const amsConfig = new AmsConfiguration('intervals');
+    const amsConfig = new AmsConfiguration('ams', 1, 'intervals');
     amsConfig.assignColors(colors);
     const result = AmsConfigurationMapper.toOptimizationResult(amsConfig, colors);
 

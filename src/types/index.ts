@@ -65,6 +65,12 @@ export interface FilamentUsage {
   cost?: number;
 }
 
+export interface SystemConfiguration {
+  type: 'ams' | 'toolhead';
+  unitCount: number;
+  totalSlots: number;
+}
+
 export interface OptimizationResult {
   totalColors: number;
   requiredSlots: number;
@@ -72,15 +78,19 @@ export interface OptimizationResult {
   manualSwaps: ManualSwap[];
   estimatedTimeSaved: number;
   canShareSlots: ColorPair[];
+  configuration?: SystemConfiguration;
 }
 
 export interface SlotAssignment {
+  unit: number;
   slot: number;
+  slotId: string;
   colors: string[];
   isPermanent: boolean;
 }
 
 export interface ManualSwap {
+  unit: number;
   slot: number;
   fromColor: string;
   toColor: string;

@@ -19,6 +19,7 @@ import { VolumetricHologram } from './VolumetricHologram';
 
 export class ResultsView extends Component {
   private exportBtn!: HTMLElement;
+  private exportGcodeBtn!: HTMLElement;
   private newFileBtn!: HTMLElement;
   private toggleDebugBtn!: HTMLElement;
   private clearCacheBtn!: HTMLElement;
@@ -28,6 +29,7 @@ export class ResultsView extends Component {
     super('#resultsSection');
 
     const exportBtn = this.element.querySelector('#exportBtn');
+    const exportGcodeBtn = this.element.querySelector('#exportGcodeBtn');
     const newFileBtn = this.element.querySelector('#newFileBtn');
     const toggleDebugBtn = this.element.querySelector('#toggleDebugBtn');
     const clearCacheBtn = this.element.querySelector('#clearCacheBtn');
@@ -37,6 +39,7 @@ export class ResultsView extends Component {
     }
 
     this.exportBtn = exportBtn as HTMLElement;
+    this.exportGcodeBtn = exportGcodeBtn as HTMLElement | null;
     this.newFileBtn = newFileBtn as HTMLElement;
     this.toggleDebugBtn = toggleDebugBtn as HTMLElement;
     this.clearCacheBtn = clearCacheBtn as HTMLElement;
@@ -71,6 +74,15 @@ export class ResultsView extends Component {
       this.updateOptimization();
       this.updateSwapInstructions();
       this.drawColorTimeline();
+
+      // Show/hide export G-code button based on manual swaps
+      if (this.exportGcodeBtn) {
+        if (optimization.manualSwaps.length > 0) {
+          this.exportGcodeBtn.style.display = 'inline-flex';
+        } else {
+          this.exportGcodeBtn.style.display = 'none';
+        }
+      }
     }
   }
 
@@ -85,6 +97,11 @@ export class ResultsView extends Component {
   private attachEventListeners(): void {
     if (this.exportBtn) {
       this.exportBtn.addEventListener('click', () => this.emit(AppEvents.EXPORT_REQUESTED));
+    }
+    if (this.exportGcodeBtn) {
+      this.exportGcodeBtn.addEventListener('click', () =>
+        this.emit(AppEvents.EXPORT_GCODE_REQUESTED)
+      );
     }
     if (this.newFileBtn) {
       this.newFileBtn.addEventListener('click', () => this.emit(AppEvents.RESET_REQUESTED));
@@ -112,7 +129,13 @@ export class ResultsView extends Component {
 
   private addMicroInteractions(): void {
     // Add ripple effect to buttons
-    [this.exportBtn, this.newFileBtn, this.toggleDebugBtn, this.clearCacheBtn].forEach((btn) => {
+    [
+      this.exportBtn,
+      this.exportGcodeBtn,
+      this.newFileBtn,
+      this.toggleDebugBtn,
+      this.clearCacheBtn,
+    ].forEach((btn) => {
       if (btn) {
         addRippleEffect(btn);
         addGlowHover(btn, 'purple');
@@ -439,7 +462,6 @@ export class ResultsView extends Component {
     }, 3000);
   }
 
-
   private updateOptimization(): void {
     const container = document.getElementById('optimizationResults');
     if (container && this.state.optimization) {
@@ -669,13 +691,13 @@ export class ResultsView extends Component {
 
       const segment = document.createElement('div');
       segment.className = 'timeline-segment transition-all duration-200';
-      
+
       // Calculate position and dimensions with minimum width for visibility
       const calculatedLeft = range.startLayer * layerWidth;
       const calculatedWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
       const minWidth = 4; // Minimum 4px width for visibility and clickability
       const actualWidth = Math.max(calculatedWidth, minWidth);
-      
+
       // EXPLICITLY set absolute positioning and coordinates
       segment.style.position = 'absolute';
       segment.style.left = `${calculatedLeft}px`;
@@ -702,7 +724,7 @@ export class ResultsView extends Component {
 
   private attachTimelineInteractions(): void {
     const timelineSegments = document.querySelectorAll('.timeline-segment');
-    
+
     timelineSegments.forEach((segment) => {
       const el = segment as HTMLElement;
 
@@ -718,7 +740,7 @@ export class ResultsView extends Component {
       el.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const colorId = el.dataset.colorId;
         const colorName = el.dataset.colorName;
         const firstLayer = el.dataset.firstLayer;

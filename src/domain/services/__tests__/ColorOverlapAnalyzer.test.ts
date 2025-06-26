@@ -8,9 +8,16 @@ describe('ColorOverlapAnalyzer', () => {
     id: string,
     firstLayer: number,
     lastLayer: number,
-    _layerCount?: number
+    layerCount?: number
   ): Color => {
-    return new Color(id, `Color ${id}`, '#000000', firstLayer, lastLayer);
+    return new Color({
+      id,
+      name: `Color ${id}`,
+      hexColor: '#000000',
+      firstLayer,
+      lastLayer,
+      layerCount: layerCount || lastLayer - firstLayer + 1,
+    });
   };
 
   describe('hasOverlap', () => {

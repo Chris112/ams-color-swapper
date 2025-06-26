@@ -11,7 +11,9 @@ export class AmsConfigurationMapper {
   static toOptimizationResult(config: AmsConfiguration, _colors: Color[]): OptimizationResult {
     // Include ALL slots, even empty ones, to ensure proper display in UI
     const slotAssignments: SlotAssignment[] = config.getAllSlots().map((slot) => ({
+      unit: slot.unitNumber,
       slot: slot.slotNumber,
+      slotId: slot.slotId,
       colors: slot.colorIds,
       isPermanent: slot.isPermanent,
     }));
@@ -29,7 +31,7 @@ export class AmsConfigurationMapper {
               color1: slot.colorIds[i],
               color2: slot.colorIds[j],
               canShare: true,
-              reason: `Colors share slot ${slot.slotNumber} with manual swaps`,
+              reason: `Colors share ${slot.displayName} with manual swaps`,
             });
           }
         }
@@ -43,6 +45,7 @@ export class AmsConfigurationMapper {
       manualSwaps,
       estimatedTimeSaved: config.getTimeSaved(),
       canShareSlots,
+      configuration: config.getConfiguration(),
     };
   }
 

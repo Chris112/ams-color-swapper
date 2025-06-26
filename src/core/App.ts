@@ -5,6 +5,7 @@ import { ResultsView } from '../ui/components/ResultsView';
 import { DebugPanel } from '../ui/components/DebugPanel';
 import { FactoryFloorUI } from '../ui/components/FactoryFloorUI';
 import { ExamplePanel } from '../ui/components/ExamplePanel';
+import { ConfigurationModal } from '../ui/components/ConfigurationModal';
 import { Logger } from '../utils/logger';
 import { Component } from './Component';
 import { parserWorkerService } from '../services/ParserWorkerService';
@@ -16,7 +17,7 @@ import { FactoryFloorService, FactoryState } from '../services/FactoryFloorServi
 
 // Services
 import { FileProcessingService } from '../services/FileProcessingService';
-import { OptimizationService } from '../services/OptimizationService';
+import { OptimizationService, OptimizationAlgorithm } from '../services/OptimizationService';
 import { ExportService } from '../services/ExportService';
 
 // Repositories
@@ -113,7 +114,22 @@ export class App {
   }
 
   private initializeComponents(): void {
+    // Initialize main components (not the configuration modal yet)
     this.components = [new FileUploader(), new ResultsView(), new DebugPanel()];
+
+    // Initialize configuration modal
+    const configModal = new ConfigurationModal();
+    this.components.push(configModal);
+
+    // Set up configuration button
+    const configBtn = document.getElementById('configBtn');
+    if (configBtn) {
+      configBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        configModal.toggle();
+      });
+    }
 
     // Initialize example panel
     const examplePanelContainer = document.getElementById('examplePanelContainer');
@@ -130,6 +146,9 @@ export class App {
         });
       }
     }
+
+    // Note: Optimization algorithm dropdown has been removed from the main page
+    // It's now only available in the printer configuration modal
 
     // Initialize factory floor UI separately when needed
     this.factoryFloorUI = new FactoryFloorUI();
@@ -148,6 +167,11 @@ export class App {
       await this.handleExportRequest();
     });
 
+    // Export G-code with pauses requested event
+    eventBus.on(AppEvents.EXPORT_GCODE_REQUESTED, async () => {
+      await this.handleExportGcodeRequest();
+    });
+
     // Reset requested event
     eventBus.on(AppEvents.RESET_REQUESTED, () => {
       this.handleReset();
@@ -162,6 +186,12 @@ export class App {
     // Clear cache event
     eventBus.on(AppEvents.CLEAR_CACHE, async () => {
       await this.handleClearCache();
+    });
+
+    // Configuration changed event
+    eventBus.on(AppEvents.CONFIGURATION_CHANGED, (config) => {
+      appState.setConfiguration(config);
+      this.logger.info('Configuration updated', config);
     });
 
     // View toggle event
@@ -196,6 +226,17 @@ export class App {
   }
 
   private async handleFileSelected(file: File): Promise<void> {
+    // Get current configuration from app state
+    const currentState = appState.getState();
+
+    // Get selected optimization algorithm from the modal
+    const modalAlgorithmSelect = document.getElementById(
+      'modalOptimizationAlgorithm'
+    ) as HTMLSelectElement;
+    const selectedAlgorithm =
+      (modalAlgorithmSelect?.value as OptimizationAlgorithm) ||
+      OptimizationAlgorithm.Greedy;
+
     // Create and execute analyze command
     const command = new AnalyzeFileCommand(
       file,
@@ -209,6 +250,8 @@ export class App {
         onProgress: (progress, message) => {
           appState.setLoading(true, message, progress);
         },
+        configuration: currentState.configuration,
+        optimizationAlgorithm: selectedAlgorithm, // Pass the selected algorithm
       }
     );
 
@@ -271,6 +314,20 @@ export class App {
     if (!result.ok) {
       this.logger.error('Failed to export results', result.error);
       appState.setError('Failed to export results');
+    }
+  }
+
+  private async handleExportGcodeRequest(): Promise<void> {
+    const state = appState.getState();
+    if (!state.stats || !state.optimization) return;
+
+    const result = this.exportService.exportGcodeWithPauses(state.stats, state.optimization);
+
+    if (!result.ok) {
+      this.logger.error('Failed to export G-code with pauses', result.error);
+      appState.setError(result.error.message);
+    } else {
+      this.logger.info('Successfully exported G-code with pauses');
     }
   }
 

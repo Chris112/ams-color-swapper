@@ -1,0 +1,1 @@
+If a file has been modified by the user while you are completing a task, you should assume the user's change is correct. If you believe the change conflicts with the task at hand or is otherwise problematic, please ask for clarification before proceeding.

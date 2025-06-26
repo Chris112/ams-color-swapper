@@ -1,5 +1,6 @@
 import './main.css';
 import { App } from './core/App';
+import { appState } from './state/AppState';
 import { disableConsoleInProduction } from './utils/consoleOverride';
 
 // Disable all console output in production
@@ -19,5 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // Store app instance for debugging (only in development)
   if (import.meta.env.DEV) {
     window.__app = app;
+
+    // Add global helper for clearing HMR state
+    (window as any).clearDevState = async () => {
+      await appState.clearPersistedState();
+      location.reload();
+    };
+
+    console.log('🛠️ Dev mode: Use clearDevState() to reset HMR state');
   }
 });
