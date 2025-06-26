@@ -10,7 +10,14 @@ export async function calculateStatistics(
   colorLastSeen: Map<string, number>,
   parseTime: number
 ): Promise<GcodeStats> {
-  const totalLayers = Math.max(...Array.from(layerColorMap.keys()), 0) || 1;
+  // Calculate totalLayers from layerColorMap, but use partialStats if it's greater than 1
+  const layerKeys = Array.from(layerColorMap.keys()).filter(key => !isNaN(key) && key !== null && key !== undefined);
+  const maxLayerFromMap = layerKeys.length > 0 ? Math.max(...layerKeys) : 0;
+  const calculatedLayers = maxLayerFromMap + 1;
+  
+  const totalLayers = (partialStats.totalLayers && partialStats.totalLayers > 1 && !isNaN(partialStats.totalLayers)) 
+    ? Math.max(partialStats.totalLayers, calculatedLayers)
+    : calculatedLayers;
 
   let colors = extractColorInfo(colorFirstSeen, colorLastSeen, totalLayers, layerColorMap);
 

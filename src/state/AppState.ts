@@ -35,6 +35,7 @@ export class AppState {
       type: 'ams',
       unitCount: 1,
       totalSlots: 4,
+      parserAlgorithm: 'optimized',
     },
   };
 

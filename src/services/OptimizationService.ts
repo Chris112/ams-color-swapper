@@ -1,9 +1,8 @@
-import { GcodeStats, OptimizationResult, SystemConfiguration } from '../types';
-import { PrintMapper, AmsConfigurationMapper } from '../domain/mappers';
+import { AmsConfigurationMapper, PrintMapper } from '../domain/mappers';
 import { AmsConfiguration } from '../domain/models';
-import { Logger } from '../utils/logger';
 import { SimulatedAnnealingOptimizer } from '../domain/services/SimulatedAnnealingOptimizer';
-import { ColorOverlapAnalyzer } from '../domain/services/ColorOverlapAnalyzer'; // Needed for SA to calculate swaps
+import { GcodeStats, OptimizationResult, SystemConfiguration } from '../types';
+import { Logger } from '../utils/logger';
 
 export enum OptimizationAlgorithm {
   Greedy = 'greedy',
@@ -49,6 +48,7 @@ export class OptimizationService {
         ([slotNum, colors]) => ({
           unit: 1, // Assuming single AMS unit for now
           slot: slotNum,
+          slotId: `1-${slotNum}`,
           colors: colors.map((c) => c.id),
           isPermanent: colors.length === 1,
         })
@@ -57,9 +57,20 @@ export class OptimizationService {
       result = {
         totalColors: print.colors.length,
         requiredSlots: saResult.assignments.size,
-        manualSwaps: saResult.manualSwaps,
+        manualSwaps: saResult.swapDetails.map(swap => ({
+          unit: Math.ceil(swap.slot / 4),
+          slot: ((swap.slot - 1) % 4) + 1,
+          fromColor: swap.fromColor,
+          toColor: swap.toColor,
+          atLayer: swap.atLayer,
+          pauseStartLayer: swap.atLayer,
+          pauseEndLayer: swap.atLayer,
+          zHeight: 0,
+          reason: `Swap at layer ${swap.atLayer}`
+        })),
         estimatedTimeSaved: 0, // SA doesn't calculate this directly, need to derive or estimate
         slotAssignments: slotAssignments,
+        canShareSlots: [], // TODO: Calculate actual color sharing pairs
         configuration: config,
       };
 
@@ -67,7 +78,7 @@ export class OptimizationService {
       // A more accurate calculation would involve comparing the original number of tool changes
       // with the optimized number of manual swaps.
       const originalToolChanges = stats.toolChanges?.length || 0;
-      const optimizedSwaps = saResult.manualSwaps.length;
+      const optimizedSwaps = saResult.swapDetails.length;
       result.estimatedTimeSaved = Math.max(0, (originalToolChanges - optimizedSwaps) * 5 * 60); // 5 mins per swap saved
     } else {
       this.logger.info('Using Greedy algorithm for optimization');

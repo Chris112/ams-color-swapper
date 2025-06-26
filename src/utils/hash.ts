@@ -52,11 +52,19 @@ function getGitCommitHash(): string {
 /**
  * Generate a cache key that includes both file hash and algorithm version
  * This ensures cache is busted when algorithm changes
+ * @deprecated Use generateCacheKeyWithConfiguration instead
  */
 export async function generateCacheKey(file: File): Promise<string> {
   const fileHash = await generateFileHash(file);
   const algorithmVersion = `${ALGORITHM_VERSION}-${getGitCommitHash()}`;
   return `${fileHash}-${algorithmVersion}`;
+}
+
+/**
+ * Get the current algorithm version including git commit hash
+ */
+export function getAlgorithmVersion(): string {
+  return `${ALGORITHM_VERSION}-${getGitCommitHash()}`;
 }
 
 /**

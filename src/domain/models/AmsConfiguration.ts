@@ -6,6 +6,15 @@ import { ColorOverlapAnalyzer } from '../services/ColorOverlapAnalyzer';
 /**
  * Domain model representing an optimized AMS configuration
  */
+export type ParserAlgorithm =
+  | 'optimized'
+  | 'buffer'
+  | 'streams'
+  | 'regex'
+  | 'fsm'
+  | 'worker'
+  | 'lazy';
+
 export class AmsConfiguration {
   private slots: Map<string, AmsSlot> = new Map();
   private configType: 'ams' | 'toolhead';
@@ -13,17 +22,20 @@ export class AmsConfiguration {
   private slotsPerUnit: number;
   private totalSlots: number;
   private optimizationStrategy: 'legacy' | 'groups' | 'intervals' = 'intervals';
+  private parserAlgorithm: ParserAlgorithm = 'optimized';
 
   constructor(
     configType: 'ams' | 'toolhead' = 'ams',
     unitCount: number = 1,
-    strategy: 'legacy' | 'groups' | 'intervals' = 'intervals'
+    strategy: 'legacy' | 'groups' | 'intervals' = 'intervals',
+    parserAlgorithm: ParserAlgorithm = 'optimized'
   ) {
     this.configType = configType;
     this.unitCount = unitCount;
     this.slotsPerUnit = configType === 'ams' ? 4 : 1;
     this.totalSlots = this.unitCount * this.slotsPerUnit;
     this.optimizationStrategy = strategy;
+    this.parserAlgorithm = parserAlgorithm;
     this.initializeSlots();
   }
 
@@ -211,12 +223,11 @@ export class AmsConfiguration {
       }
 
       // Determine if slot should be permanent (only one color) or shared
-      const isPermanent = slotColors.length === 1;
-      amsSlot.isPermanent = isPermanent;
+      amsSlot.isPermanent = slotColors.length === 1;
 
       // Assign all colors to the slot (allow overlaps for shared slots)
       slotColors.forEach((color) => {
-        amsSlot!.assignColor(color, !isPermanent);
+        amsSlot.assignColor(color, !amsSlot.isPermanent);
       });
     });
   }
@@ -288,5 +299,33 @@ export class AmsConfiguration {
     }
 
     return groups;
+  }
+
+  /**
+   * Get the current optimization strategy
+   */
+  getStrategy(): 'legacy' | 'groups' | 'intervals' {
+    return this.optimizationStrategy;
+  }
+
+  /**
+   * Set the optimization strategy
+   */
+  setStrategy(strategy: 'legacy' | 'groups' | 'intervals'): void {
+    this.optimizationStrategy = strategy;
+  }
+
+  /**
+   * Get the current parser algorithm
+   */
+  getParserAlgorithm(): ParserAlgorithm {
+    return this.parserAlgorithm;
+  }
+
+  /**
+   * Set the parser algorithm
+   */
+  setParserAlgorithm(algorithm: ParserAlgorithm): void {
+    this.parserAlgorithm = algorithm;
   }
 }

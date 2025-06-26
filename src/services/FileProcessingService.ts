@@ -1,19 +1,18 @@
 import { Result, GcodeStats, FileError } from '../types';
-import { IFileRepository, ICacheRepository } from '../repositories';
 import { Logger } from '../utils/logger';
 import { parserWorkerService } from './ParserWorkerService';
-import { GcodeParser } from '../parser/gcodeParser';
+import { createParser } from '../parser/parserFactory';
+import { ParserAlgorithm } from '../domain/models/AmsConfiguration';
 
 export interface FileProcessingOptions {
   useWebWorker?: boolean;
   useCache?: boolean;
   onProgress?: (progress: number, message: string) => void;
+  parserAlgorithm?: ParserAlgorithm;
 }
 
 export class FileProcessingService {
   constructor(
-    private fileRepository: IFileRepository,
-    private cacheRepository: ICacheRepository,
     private logger: Logger
   ) {}
 
@@ -21,48 +20,32 @@ export class FileProcessingService {
     file: File,
     options: FileProcessingOptions = {}
   ): Promise<Result<{ stats: GcodeStats; fromCache: boolean }>> {
-    const { useWebWorker = true, useCache = true, onProgress = () => {} } = options;
+    const { 
+      useWebWorker = true, 
+      onProgress = () => {},
+      parserAlgorithm = 'optimized'
+    } = options;
 
     try {
-      // Generate cache key
-      const hashResult = await this.fileRepository.calculateHash(file);
-      if (!hashResult.ok) {
-        return Result.err(hashResult.error);
-      }
-      const cacheKey = hashResult.value;
-
-      // Check cache if enabled
-      if (useCache) {
-        onProgress(5, 'Checking cache...');
-        const cacheResult = await this.cacheRepository.get(cacheKey);
-
-        if (cacheResult.ok && cacheResult.value) {
-          this.logger.info(`Cache hit for ${file.name}`);
-          onProgress(100, 'Loaded from cache');
-          return Result.ok({
-            stats: cacheResult.value.stats,
-            fromCache: true,
-          });
-        }
-
-        this.logger.info(`Cache miss for ${file.name}`);
-      }
+      // Note: Cache checking is now handled at the command level with full configuration context
+      // This service only handles parsing
 
       // Parse file
       onProgress(10, 'Reading file...');
       let parseResult: Result<GcodeStats>;
 
-      if (useWebWorker && file.size > 5 * 1024 * 1024) {
-        // Use Web Worker for files larger than 5MB
+      // Special handling for worker parser
+      if (parserAlgorithm === 'worker' || (useWebWorker && file.size > 5 * 1024 * 1024)) {
+        // Use Web Worker for files larger than 5MB or when explicitly requested
         try {
           const workerResult = await parserWorkerService.parse(file, onProgress);
           parseResult = Result.ok(workerResult.stats);
         } catch (error) {
           this.logger.warn('Web Worker failed, falling back to main thread', error);
-          parseResult = await this.parseOnMainThread(file, onProgress);
+          parseResult = await this.parseOnMainThread(file, onProgress, parserAlgorithm);
         }
       } else {
-        parseResult = await this.parseOnMainThread(file, onProgress);
+        parseResult = await this.parseOnMainThread(file, onProgress, parserAlgorithm);
       }
 
       if (!parseResult.ok) {
@@ -70,13 +53,6 @@ export class FileProcessingService {
       }
 
       const stats = parseResult.value;
-
-      // Cache the results if caching is enabled
-      if (useCache) {
-        // We'll cache this after optimization in the main App
-        // Just store the cache key in stats for later use
-        (stats as any).__cacheKey = cacheKey;
-      }
 
       onProgress(100, 'Complete!');
       return Result.ok({ stats, fromCache: false });
@@ -93,10 +69,11 @@ export class FileProcessingService {
 
   private async parseOnMainThread(
     file: File,
-    onProgress: (progress: number, message: string) => void
+    onProgress: (progress: number, message: string) => void,
+    parserAlgorithm: ParserAlgorithm = 'optimized'
   ): Promise<Result<GcodeStats>> {
-    // Create a parser with progress callback
-    const parser = new GcodeParser(this.logger, onProgress);
+    // Create a parser with progress callback using the factory
+    const parser = createParser(parserAlgorithm, this.logger, onProgress);
 
     try {
       const stats = await parser.parse(file);

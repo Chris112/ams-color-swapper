@@ -40,10 +40,9 @@ describe('7-Color Bug Investigation', () => {
     return new Color({
       id,
       name: name || `Color ${id}`,
-      hexColor: '#000000',
+      hexValue: '#000000',
       firstLayer,
       lastLayer,
-      layerCount: layerCount || lastLayer - firstLayer + 1,
     });
   };
 

@@ -178,7 +178,6 @@ export class ConfigurationSelector extends Component {
 
   private updateUnitInput(): void {
     const label = this.element.querySelector('#unitLabel')!;
-    const slotInfo = this.element.querySelector('#slotInfo')!;
 
     if (this.configType === 'ams') {
       label.textContent = 'Number of AMS Units';

@@ -13,10 +13,9 @@ describe('AmsConfiguration', () => {
     return new Color({
       id,
       name: `Color ${id}`,
-      hexColor: '#000000',
+      hexValue: '#000000',
       firstLayer,
       lastLayer,
-      layerCount: layerCount || lastLayer - firstLayer + 1,
     });
   };
 

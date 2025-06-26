@@ -62,11 +62,7 @@ export class App {
     this.fileRepository = new FileRepository();
 
     // Initialize services
-    this.fileProcessingService = new FileProcessingService(
-      this.fileRepository,
-      this.cacheRepository,
-      this.logger
-    );
+    this.fileProcessingService = new FileProcessingService(this.logger);
 
     this.optimizationService = new OptimizationService();
 

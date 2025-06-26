@@ -36,7 +36,7 @@ export class SimulatedAnnealingOptimizer {
       this.colors.forEach((color, index) => {
         assignments.set(index + 1, [color]);
       });
-      return { assignments, totalSwaps: 0, manualSwaps: [] };
+      return { assignments, totalSwaps: 0, swapDetails: [] };
     }
 
     let currentAssignment: Assignment = this.generateInitialAssignment();
@@ -189,7 +189,7 @@ export class SimulatedAnnealingOptimizer {
     return {
       assignments,
       totalSwaps,
-      manualSwaps,
+      swapDetails: manualSwaps,
     };
   }
 }

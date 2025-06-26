@@ -14,16 +14,18 @@ body {
 /* Glassmorphism base */
 .glass {
   background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px) saturate(200%);
-  -webkit-backdrop-filter: blur(10px) saturate(200%);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  will-change: auto;
 }
 
 .glass-heavy {
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(20px) saturate(200%);
-  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  will-change: auto;
 }
 
 /* Gradient text */
@@ -38,6 +40,10 @@ body {
 /* Improved select elements for dark mode */
 select {
   color-scheme: dark;
+  /* Performance optimizations */
+  will-change: auto;
+  contain: layout style;
+  transform: translateZ(0); /* Force GPU acceleration */
   /* Disable transitions to prevent stuttering */
   transition: none !important;
   /* Add custom arrow */
@@ -58,10 +64,12 @@ select option {
   padding: 0.5rem;
 }
 
-/* Disable all transitions on select to prevent stutter */
-select, select * {
+/* Disable all transitions and animations on select and its children */
+select, select *, select:before, select:after,
+option, option *, option:before, option:after {
   transition: none !important;
   animation: none !important;
+  transform: none !important;
 }
 
 /* Firefox specific fixes */
@@ -164,11 +172,11 @@ select, select * {
   border-radius: 24px;
   padding: 32px;
   background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px) saturate(200%);
-  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  will-change: auto;
 }
 
 .card-glass:hover {
@@ -315,11 +323,16 @@ select, select * {
   }
 }
 
-/* Smooth transitions */
-* {
+/* Smooth transitions - only on elements that need them */
+button, a, .card-glass, .btn-gradient, .btn-glass, .glass, .modal-content {
   transition-property: transform, opacity, box-shadow;
   transition-duration: 300ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Explicitly disable transitions on form elements */
+select, input, textarea, option {
+  transition: none !important;
 }
 
 /* Micro-interactions */
