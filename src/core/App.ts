@@ -2,7 +2,6 @@ import { appState } from '../state/AppState';
 import { eventBus, AppEvents } from './EventEmitter';
 import { FileUploader } from '../ui/components/FileUploader';
 import { ResultsView } from '../ui/components/ResultsView';
-import { DebugPanel } from '../ui/components/DebugPanel';
 import { FactoryFloorUI } from '../ui/components/FactoryFloorUI';
 import { ExamplePanel } from '../ui/components/ExamplePanel';
 import { ConfigurationModal } from '../ui/components/ConfigurationModal';
@@ -111,7 +110,7 @@ export class App {
 
   private initializeComponents(): void {
     // Initialize main components (not the configuration modal yet)
-    this.components = [new FileUploader(), new ResultsView(), new DebugPanel()];
+    this.components = [new FileUploader(), new ResultsView()];
 
     // Initialize configuration modal
     const configModal = new ConfigurationModal();
@@ -173,11 +172,6 @@ export class App {
       this.handleReset();
     });
 
-    // Debug toggle event
-    eventBus.on(AppEvents.DEBUG_TOGGLE, () => {
-      const currentState = appState.getState();
-      appState.setState({ debugVisible: !currentState.debugVisible });
-    });
 
     // Clear cache event
     eventBus.on(AppEvents.CLEAR_CACHE, async () => {

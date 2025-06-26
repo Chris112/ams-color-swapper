@@ -11,8 +11,6 @@ export interface AppStateData {
   logs: LogEntry[];
   error: string | null;
   view: 'upload' | 'results';
-  debugVisible: boolean;
-  debugTab: 'logs' | 'performance' | 'raw';
   configuration: SystemConfiguration;
 }
 
@@ -29,8 +27,6 @@ export class AppState {
     logs: [],
     error: null,
     view: 'upload',
-    debugVisible: false,
-    debugTab: 'logs',
     configuration: {
       type: 'ams',
       unitCount: 1,
@@ -117,8 +113,6 @@ export class AppState {
       logs: [],
       error: null,
       view: 'upload',
-      debugVisible: false,
-      debugTab: 'logs',
     });
   }
 

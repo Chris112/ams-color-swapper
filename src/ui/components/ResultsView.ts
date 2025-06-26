@@ -21,7 +21,6 @@ export class ResultsView extends Component {
   private exportBtn!: HTMLElement;
   private exportGcodeBtn: HTMLElement | null = null;
   private newFileBtn!: HTMLElement;
-  private toggleDebugBtn!: HTMLElement;
   private clearCacheBtn!: HTMLElement;
   private volumetricHologram: VolumetricHologram | null = null;
 
@@ -31,17 +30,15 @@ export class ResultsView extends Component {
     const exportBtn = this.element.querySelector('#exportBtn');
     const exportGcodeBtn = this.element.querySelector('#exportGcodeBtn') as HTMLElement | null;
     const newFileBtn = this.element.querySelector('#newFileBtn');
-    const toggleDebugBtn = this.element.querySelector('#toggleDebugBtn');
     const clearCacheBtn = this.element.querySelector('#clearCacheBtn');
 
-    if (!exportBtn || !newFileBtn || !toggleDebugBtn || !clearCacheBtn) {
+    if (!exportBtn || !newFileBtn || !clearCacheBtn) {
       throw new Error('ResultsView: Required buttons not found in DOM');
     }
 
     this.exportBtn = exportBtn as HTMLElement;
     this.exportGcodeBtn = exportGcodeBtn;
     this.newFileBtn = newFileBtn as HTMLElement;
-    this.toggleDebugBtn = toggleDebugBtn as HTMLElement;
     this.clearCacheBtn = clearCacheBtn as HTMLElement;
 
     this.attachEventListeners();
@@ -106,9 +103,6 @@ export class ResultsView extends Component {
     if (this.newFileBtn) {
       this.newFileBtn.addEventListener('click', () => this.emit(AppEvents.RESET_REQUESTED));
     }
-    if (this.toggleDebugBtn) {
-      this.toggleDebugBtn.addEventListener('click', () => this.emit(AppEvents.DEBUG_TOGGLE));
-    }
     if (this.clearCacheBtn) {
       this.clearCacheBtn.addEventListener('click', () => this.emit(AppEvents.CLEAR_CACHE));
     }
@@ -133,7 +127,6 @@ export class ResultsView extends Component {
       this.exportBtn,
       this.exportGcodeBtn,
       this.newFileBtn,
-      this.toggleDebugBtn,
       this.clearCacheBtn,
     ].forEach((btn) => {
       if (btn) {
