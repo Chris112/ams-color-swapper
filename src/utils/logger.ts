@@ -6,9 +6,9 @@ export class Logger {
   private logLevel: 'silly' | 'debug' | 'info' | 'warn' | 'error' = 'debug';
   private componentName?: string;
 
-  constructor(componentName?: string, enabled: boolean = true) {
+  constructor(componentName?: string) {
     this.componentName = componentName;
-    this.enabled = enabled;
+    this.enabled = import.meta.env.MODE === 'development';
   }
 
   private shouldLog(level: 'info' | 'warn' | 'error' | 'debug' | 'silly'): boolean {

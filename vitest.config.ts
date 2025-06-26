@@ -5,15 +5,14 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    include: ['src/**/*.test.ts', 'src/**/*.spec.ts'],
-    coverage: {
-      reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'dist/'],
+    include: ['src/**/*.test.ts', 'src/**/*.spec.ts'], // Exclude benchmark files from regular test runs,
+    benchmark: {
+      include: ['src/**/*.benchmark.ts'],
     },
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './client/src'),
+      '@': resolve(__dirname, './src'),
     },
   },
 });

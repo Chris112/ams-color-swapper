@@ -1,23 +1,32 @@
 import { GcodeStats, OptimizationResult, ManualSwap, ColorInfo, FilamentUsage } from '../../types';
 import { formatColorDisplay } from '../../utils/colorNames';
 
-
 // File statistics template
 export const fileStatsTemplate = (stats: GcodeStats): string => {
   // Calculate total weight from filament estimates
   const totalWeight =
     stats.filamentEstimates?.reduce((sum, est) => sum + (est.weight || 0), 0) || 0;
 
+  // Calculate color changes
+  const colorChanges = stats.colors.reduce(
+    (sum, c) => sum + (c.layerCount || c.lastLayer - c.firstLayer + 1),
+    0
+  );
+
   const items = [
     { label: 'Colors Used', value: stats.colors.length.toString() },
     { label: 'Total Filament', value: totalWeight > 0 ? `${totalWeight.toFixed(1)}g` : 'N/A' },
     { label: 'Print Time', value: stats.printTime || 'N/A' },
-    { label: 'Print Cost', value: stats.printCost ? `$${stats.printCost.toFixed(2)}` : 'N/A' },
+    {
+      label: 'Print Cost (USD)',
+      value: stats.printCost ? `$${stats.printCost.toFixed(2)}` : 'N/A',
+    },
     { label: 'Total Layers', value: stats.totalLayers.toString() },
     { label: 'Tool Changes', value: stats.toolChanges.length.toString() },
+    { label: 'Color Changes', value: colorChanges.toString() },
   ];
 
-  return `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-scale-in">
+  return `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 animate-scale-in">
     ${items
       .map(
         (item, index) => `
@@ -168,28 +177,6 @@ export const colorStatsTemplate = (
           .join('')}
         </div>
       </div>
-      
-      <!-- Color Summary Stats -->
-      <div class="bg-gradient-to-r from-vibrant-purple/10 to-vibrant-pink/10 rounded-3xl p-6 mt-8">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div>
-            <div class="text-2xl font-bold text-white">${colors.length}</div>
-            <div class="text-sm text-white/60">Total Colors</div>
-          </div>
-          <div>
-            <div class="text-2xl font-bold text-white">${totalLayers}</div>
-            <div class="text-sm text-white/60">Total Layers</div>
-          </div>
-          <div>
-            <div class="text-2xl font-bold text-white">${colors.reduce((sum, c) => sum + (c.layerCount || c.lastLayer - c.firstLayer + 1), 0)}</div>
-            <div class="text-sm text-white/60">Color Changes</div>
-          </div>
-          <div>
-            <div class="text-2xl font-bold text-white">${(100 / colors.length).toFixed(1)}%</div>
-            <div class="text-sm text-white/60">Avg Usage</div>
-          </div>
-        </div>
-      </div>
     </div>
   `;
 };
@@ -217,38 +204,89 @@ export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats)
     </div>
   `;
 
-  const slotsHtml = opt.slotAssignments
-    .map((slot) => {
-      const slotColors =
-        slot.colors.length > 0
-          ? slot.colors
-              .map((colorId) => {
-                const color = stats.colors.find((c) => c.id === colorId);
-                return color
-                  ? `
-        <span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
-          <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexColor || '#888888'}"></span>
-          <span class="text-white/80">${color.name || formatColorDisplay(color.hexColor, color.id)}</span>
-        </span>
-      `
-                  : '';
-              })
-              .join('')
-          : `
-      <span class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/50">
-        <span class="w-4 h-4 rounded-full bg-white/20"></span>
-        <span>Empty</span>
-      </span>
-    `;
+  // Group slots by unit for AMS mode
+  const groupedSlots =
+    opt.configuration?.type === 'ams'
+      ? opt.slotAssignments.reduce(
+          (acc, slot) => {
+            const unit = slot.unit;
+            if (!acc[unit]) acc[unit] = [];
+            acc[unit].push(slot);
+            return acc;
+          },
+          {} as Record<number, typeof opt.slotAssignments>
+        )
+      : { 1: opt.slotAssignments }; // For toolhead mode, all in one group
 
-      return `
-      <div class="glass rounded-2xl p-5 hover:scale-[1.02] transition-transform">
-        <div class="font-semibold text-white mb-3">AMS Slot ${slot.slot} <span class="text-sm font-normal text-white/50">${slot.isPermanent ? '(Permanent)' : '(Shared)'}</span></div>
-        <div class="flex flex-wrap gap-2">${slotColors}</div>
-      </div>
-    `;
-    })
-    .join('');
+  const slotsHtml =
+    opt.configuration?.type === 'ams'
+      ? Object.entries(groupedSlots)
+          .map(([unit, unitSlots]) => {
+            const unitSlotsHtml = unitSlots
+              .map((slot) => {
+                const slotColors =
+                  slot.colors.length > 0
+                    ? slot.colors
+                        .map((colorId) => {
+                          const color = stats.colors.find((c) => c.id === colorId);
+                          return color
+                            ? `<span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
+                        <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexColor || '#888888'}"></span>
+                        <span class="text-white/80">${color.name || formatColorDisplay(color.hexColor, color.id)}</span>
+                      </span>`
+                            : '';
+                        })
+                        .join('')
+                    : `<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/50">
+                <span class="w-4 h-4 rounded-full bg-white/20"></span>
+                <span>Empty</span>
+              </span>`;
+
+                return `
+            <div class="glass rounded-xl p-4">
+              <div class="font-medium text-white mb-2">Slot ${slot.slot} <span class="text-sm font-normal text-white/50">${slot.isPermanent ? '(Permanent)' : '(Shared)'}</span></div>
+              <div class="flex flex-wrap gap-2">${slotColors}</div>
+            </div>
+          `;
+              })
+              .join('');
+
+            return `
+          <div class="glass rounded-2xl p-5 hover:scale-[1.02] transition-transform">
+            <div class="font-semibold text-white mb-4">AMS Unit ${unit}</div>
+            <div class="grid grid-cols-2 gap-3">${unitSlotsHtml}</div>
+          </div>
+        `;
+          })
+          .join('')
+      : opt.slotAssignments
+          .map((slot) => {
+            const slotColors =
+              slot.colors.length > 0
+                ? slot.colors
+                    .map((colorId) => {
+                      const color = stats.colors.find((c) => c.id === colorId);
+                      return color
+                        ? `<span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
+                      <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexColor || '#888888'}"></span>
+                      <span class="text-white/80">${color.name || formatColorDisplay(color.hexColor, color.id)}</span>
+                    </span>`
+                        : '';
+                    })
+                    .join('')
+                : `<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/50">
+              <span class="w-4 h-4 rounded-full bg-white/20"></span>
+              <span>Empty</span>
+            </span>`;
+
+            return `
+          <div class="glass rounded-2xl p-5 hover:scale-[1.02] transition-transform">
+            <div class="font-semibold text-white mb-3">Toolhead ${slot.unit} <span class="text-sm font-normal text-white/50">${slot.isPermanent ? '(Permanent)' : '(Shared)'}</span></div>
+            <div class="flex flex-wrap gap-2">${slotColors}</div>
+          </div>
+        `;
+          })
+          .join('');
 
   return (
     statsHtml +
@@ -388,7 +426,7 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats)
             </div>
             <div>
               <div class="font-semibold text-white">${toColor?.name || formatColorDisplay(toColor?.hexColor, toColor?.id || swap.toColor)}</div>
-              <div class="text-vibrant-green font-medium">Insert → Slot ${swap.slot}</div>
+              <div class="text-vibrant-green font-medium">Insert → Unit ${swap.unit} Slot ${swap.slot}</div>
             </div>
           </div>
         </div>

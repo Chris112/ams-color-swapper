@@ -98,4 +98,97 @@ export class ExportService {
 
     return this.fileRepository.downloadFile(content, fileName, 'text/csv');
   }
+
+  /**
+   * Export G-code with pause commands (M600) inserted at manual swap points
+   */
+  exportGcodeWithPauses(stats: GcodeStats, optimization: OptimizationResult): Result<void> {
+    if (!stats.rawContent) {
+      return {
+        ok: false,
+        error: new Error('Original G-code content not available'),
+      };
+    }
+
+    if (optimization.manualSwaps.length === 0) {
+      return {
+        ok: false,
+        error: new Error('No manual swaps required - original G-code can be used as-is'),
+      };
+    }
+
+    // Split the G-code into lines
+    const lines = stats.rawContent.split('\n');
+    const modifiedLines: string[] = [];
+    let currentLayer = 0;
+
+    // Create a map of pause layers for quick lookup
+    const pauseLayers = new Map<number, (typeof optimization.manualSwaps)[0]>();
+    optimization.manualSwaps.forEach((swap) => {
+      pauseLayers.set(swap.pauseStartLayer, swap);
+    });
+
+    // Process each line
+    for (const line of lines) {
+      // Check for layer changes in various formats
+      let layerMatch = null;
+
+      // Bambu Lab format: "; layer num/total_layer_count: 1/197"
+      if (line.includes('layer num/total_layer_count:')) {
+        layerMatch = line.match(/layer num\/total_layer_count:\s*(\d+)/);
+      }
+      // Bambu Lab format: "; layer #2"
+      else if (line.includes('; layer #')) {
+        layerMatch = line.match(/; layer #(\d+)/);
+      }
+      // Standard formats
+      else if (line.includes('LAYER:') || line.includes('layer ')) {
+        layerMatch = line.match(/(?:LAYER:|layer )\s*(\d+)/i);
+      }
+
+      if (layerMatch) {
+        currentLayer = parseInt(layerMatch[1]);
+
+        // Check if we need to insert a pause before this layer
+        const swap = pauseLayers.get(currentLayer);
+        if (swap) {
+          // Find color information
+          const fromColor = stats.colors.find((c) => c.id === swap.fromColor);
+          const toColor = stats.colors.find((c) => c.id === swap.toColor);
+
+          // Add pause command with detailed comments
+          modifiedLines.push('');
+          modifiedLines.push('; ========================================');
+          modifiedLines.push('; AMS COLOR SWAP REQUIRED');
+          modifiedLines.push(`; Layer ${swap.pauseStartLayer} to ${swap.pauseEndLayer}`);
+          modifiedLines.push(`; Z Height: ${swap.zHeight.toFixed(2)}mm`);
+          modifiedLines.push('; ----------------------------------------');
+          modifiedLines.push(
+            `; REMOVE: ${swap.fromColor} - ${fromColor?.name || 'Unknown'} (${fromColor?.hexColor || 'N/A'})`
+          );
+          modifiedLines.push(
+            `; INSERT: ${swap.toColor} - ${toColor?.name || 'Unknown'} (${toColor?.hexColor || 'N/A'}) → Slot ${swap.slot}`
+          );
+          modifiedLines.push('; ----------------------------------------');
+          modifiedLines.push(`; Reason: ${swap.reason}`);
+          modifiedLines.push('; ========================================');
+          modifiedLines.push('M600 ; Filament change pause');
+          modifiedLines.push('');
+        }
+      }
+
+      // Add the original line
+      modifiedLines.push(line);
+    }
+
+    // Join lines back together
+    const modifiedGcode = modifiedLines.join('\n');
+
+    // Create filename with _pauses suffix
+    const baseName = stats.fileName.replace(/\.[^.]+$/, '');
+    const extension = stats.fileName.match(/\.[^.]+$/)?.[0] || '.gcode';
+    const fileName = `${baseName}_with_pauses${extension}`;
+
+    return this.fileRepository.downloadFile(modifiedGcode, fileName, 'text/plain');
+  }
 }

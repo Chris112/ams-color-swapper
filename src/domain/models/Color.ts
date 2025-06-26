@@ -2,13 +2,24 @@
  * Domain model for a color used in 3D printing
  */
 export class Color {
-  constructor(
-    public readonly id: string,
-    public readonly name: string | undefined,
-    public readonly hexValue: string | undefined,
-    public readonly firstLayer: number,
-    public readonly lastLayer: number
-  ) {
+  public readonly id: string;
+  public readonly name: string | undefined;
+  public readonly hexValue: string | undefined;
+  public readonly firstLayer: number;
+  public readonly lastLayer: number;
+
+  constructor(params: {
+    id: string;
+    name: string | undefined;
+    hexValue: string | undefined;
+    firstLayer: number;
+    lastLayer: number;
+  }) {
+    this.id = params.id;
+    this.name = params.name;
+    this.hexValue = params.hexValue;
+    this.firstLayer = params.firstLayer;
+    this.lastLayer = params.lastLayer;
     this.validate();
   }
 
@@ -52,7 +63,13 @@ export class Color {
     firstLayer: number;
     lastLayer: number;
   }): Color {
-    return new Color(data.id, data.name, data.hexColor, data.firstLayer, data.lastLayer);
+    return new Color({
+      id: data.id,
+      name: data.name,
+      hexValue: data.hexColor,
+      firstLayer: data.firstLayer,
+      lastLayer: data.lastLayer,
+    });
   }
 
   private validate(): void {

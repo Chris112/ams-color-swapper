@@ -35,6 +35,42 @@ body {
   text-fill-color: transparent;
 }
 
+/* Improved select elements for dark mode */
+select {
+  color-scheme: dark;
+  /* Disable transitions to prevent stuttering */
+  transition: none !important;
+  /* Add custom arrow */
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23ffffff66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  background-size: 12px;
+  padding-right: 2.5rem;
+}
+
+select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%233b82f6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+select option {
+  background-color: #111827;
+  color: #ffffff;
+  padding: 0.5rem;
+}
+
+/* Disable all transitions on select to prevent stutter */
+select, select * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Firefox specific fixes */
+@-moz-document url-prefix() {
+  select {
+    background-image: none !important;
+  }
+}
+
 /* Enhanced Progress bar */
 .progress-bar {
   @apply relative w-full rounded-full h-4 overflow-hidden;
@@ -745,5 +781,16 @@ body {
 
   .expandable-details {
     font-size: 0.875rem;
+  }
+}
+
+/* Ensure buttons are properly aligned on mobile */
+@media (max-width: 640px) {
+  #uploadSection .flex.justify-center {
+    flex-wrap: wrap;
+  }
+
+  #uploadSection .flex.justify-center button {
+    min-width: 150px;
   }
 }

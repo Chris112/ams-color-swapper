@@ -8,14 +8,21 @@ describe('AmsConfiguration', () => {
     id: string,
     firstLayer: number,
     lastLayer: number,
-    _layerCount?: number
+    layerCount?: number
   ): Color => {
-    return new Color(id, `Color ${id}`, '#000000', firstLayer, lastLayer);
+    return new Color({
+      id,
+      name: `Color ${id}`,
+      hexColor: '#000000',
+      firstLayer,
+      lastLayer,
+      layerCount: layerCount || lastLayer - firstLayer + 1,
+    });
   };
 
   describe('Legacy Algorithm', () => {
     it('should assign colors using legacy algorithm', () => {
-      const config = new AmsConfiguration('legacy');
+      const config = new AmsConfiguration('ams', 1, 'legacy');
       const colors = [
         createColor('T0', 0, 100, 100),
         createColor('T1', 0, 80, 80),
@@ -48,7 +55,7 @@ describe('AmsConfiguration', () => {
 
   describe('Optimized Algorithm - Groups', () => {
     it('should optimize color assignment using group strategy', () => {
-      const config = new AmsConfiguration('groups');
+      const config = new AmsConfiguration('ams', 1, 'groups');
       const colors = [
         createColor('T0', 0, 30),
         createColor('T1', 31, 60),
@@ -77,7 +84,7 @@ describe('AmsConfiguration', () => {
 
   describe('Optimized Algorithm - Intervals', () => {
     it('should optimize color assignment using interval scheduling', () => {
-      const config = new AmsConfiguration('intervals');
+      const config = new AmsConfiguration('ams', 1, 'intervals');
       const colors = [
         createColor('T0', 0, 25),
         createColor('T1', 26, 50),
@@ -105,7 +112,7 @@ describe('AmsConfiguration', () => {
 
   describe('Manual Swaps', () => {
     it('should generate correct manual swaps for shared slots', () => {
-      const config = new AmsConfiguration('intervals');
+      const config = new AmsConfiguration('ams', 1, 'intervals');
       const colors = [
         createColor('T0', 0, 50),
         createColor('T1', 51, 100),
@@ -125,7 +132,7 @@ describe('AmsConfiguration', () => {
     });
 
     it('should calculate pause layer ranges correctly', () => {
-      const config = new AmsConfiguration('intervals');
+      const config = new AmsConfiguration('ams', 1, 'intervals');
       const colors = [
         createColor('T0', 0, 30), // Ends at layer 30
         createColor('T1', 60, 100), // Starts at layer 60 (gap between 31-59)
@@ -162,7 +169,7 @@ describe('AmsConfiguration', () => {
     });
 
     it('should calculate correct time saved', () => {
-      const config = new AmsConfiguration();
+      const config = new AmsConfiguration('ams', 1);
       const colors = [
         createColor('T0', 0, 50),
         createColor('T1', 51, 100),
@@ -182,7 +189,7 @@ describe('AmsConfiguration', () => {
 
   describe('Edge Cases', () => {
     it('should handle single color', () => {
-      const config = new AmsConfiguration();
+      const config = new AmsConfiguration('ams', 1);
       const colors = [createColor('T0', 0, 100)];
 
       config.assignColors(colors);
@@ -193,7 +200,7 @@ describe('AmsConfiguration', () => {
     });
 
     it('should handle exactly 4 colors', () => {
-      const config = new AmsConfiguration();
+      const config = new AmsConfiguration('ams', 1);
       const colors = [
         createColor('T0', 0, 100),
         createColor('T1', 0, 100),
@@ -214,7 +221,7 @@ describe('AmsConfiguration', () => {
     });
 
     it('should handle 10+ colors', () => {
-      const config = new AmsConfiguration('intervals');
+      const config = new AmsConfiguration('ams', 1, 'intervals');
       const colors: Color[] = [];
 
       // Create 10 colors with various overlaps
@@ -238,7 +245,7 @@ describe('AmsConfiguration', () => {
 
   describe('Validation', () => {
     it('should validate non-overlapping colors in same slot', () => {
-      const config = new AmsConfiguration();
+      const config = new AmsConfiguration('ams', 1);
       const colors = [
         createColor('T0', 0, 50),
         createColor('T1', 51, 100),
@@ -251,7 +258,7 @@ describe('AmsConfiguration', () => {
     });
 
     it('should detect invalid overlapping colors in same slot', () => {
-      const config = new AmsConfiguration('legacy');
+      const config = new AmsConfiguration('ams', 1, 'legacy');
       const colors = [
         createColor('T0', 0, 100, 100),
         createColor('T1', 0, 100, 80),
@@ -267,7 +274,7 @@ describe('AmsConfiguration', () => {
 
       // If invalid, there should be overlapping colors in slot 4
       if (!isValid) {
-        const slot4 = config.getSlot(4);
+        const slot4 = config.getSlot(1, 4);
         expect(slot4?.colors.length).toBeGreaterThan(1);
       }
     });

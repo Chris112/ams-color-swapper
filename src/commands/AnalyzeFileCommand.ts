@@ -1,7 +1,7 @@
 import { ICommand } from './ICommand';
-import { Result, GcodeStats, OptimizationResult } from '../types';
+import { Result, GcodeStats, OptimizationResult, SystemConfiguration } from '../types';
 import { FileProcessingService } from '../services/FileProcessingService';
-import { OptimizationService } from '../services/OptimizationService';
+import { OptimizationService, OptimizationAlgorithm } from '../services/OptimizationService';
 import { ICacheRepository } from '../repositories';
 import { Logger } from '../utils/logger';
 
@@ -25,6 +25,8 @@ export class AnalyzeFileCommand implements ICommand<AnalyzeFileResult> {
       useWebWorker?: boolean;
       useCache?: boolean;
       onProgress?: (progress: number, message: string) => void;
+      configuration?: SystemConfiguration;
+      optimizationAlgorithm?: OptimizationAlgorithm; // New option
     } = {}
   ) {}
 
@@ -63,7 +65,11 @@ export class AnalyzeFileCommand implements ICommand<AnalyzeFileResult> {
         this.options.onProgress(95, 'Optimizing...');
       }
 
-      const optimization = this.optimizationService.generateOptimization(stats);
+      const optimization = this.optimizationService.generateOptimization(
+        stats,
+        this.options.configuration,
+        this.options.optimizationAlgorithm // Pass the algorithm
+      );
 
       // Cache the results if not from cache
       if (!fromCache && this.options.useCache !== false) {

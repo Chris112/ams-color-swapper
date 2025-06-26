@@ -1,4 +1,4 @@
-import type { GcodeStats, OptimizationResult } from '../types';
+import type { GcodeStats, OptimizationResult, SystemConfiguration } from '../types';
 
 export type EventHandler<T = unknown> = (data: T) => void;
 
@@ -9,10 +9,12 @@ export interface AppEventMap {
   'analysis:complete': { stats: GcodeStats; optimization: OptimizationResult };
   'analysis:error': Error;
   'export:requested': void;
+  'export:gcode:requested': void;
   'reset:requested': void;
   'debug:toggle': void;
   'tab:change': 'logs' | 'performance' | 'raw';
   'cache:clear': void;
+  'configuration:changed': SystemConfiguration;
 }
 
 export type AppEventKey = keyof AppEventMap;
@@ -66,8 +68,10 @@ export const AppEvents = {
   ANALYSIS_COMPLETE: 'analysis:complete',
   ANALYSIS_ERROR: 'analysis:error',
   EXPORT_REQUESTED: 'export:requested',
+  EXPORT_GCODE_REQUESTED: 'export:gcode:requested',
   RESET_REQUESTED: 'reset:requested',
   DEBUG_TOGGLE: 'debug:toggle',
   TAB_CHANGE: 'tab:change',
   CLEAR_CACHE: 'cache:clear',
+  CONFIGURATION_CHANGED: 'configuration:changed',
 } as const;
