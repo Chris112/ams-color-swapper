@@ -459,17 +459,6 @@
                 </svg>
                 Analyze New File
               </button>
-              <button id="toggleDebugBtn" class="btn-glass inline-flex items-center gap-2">
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                  ></path>
-                </svg>
-                Debug Info
-              </button>
               <button id="clearCacheBtn" class="btn-glass inline-flex items-center gap-2">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
                   <path
@@ -613,62 +602,6 @@
             </div>
           </section>
 
-          <!-- Debug Section -->
-          <section id="debugSection" class="mt-8 animate-slide-up" hidden>
-            <div class="card-glass">
-              <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
-                <svg
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  class="w-5 h-5 text-vibrant-blue"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                  ></path>
-                </svg>
-                Debug Information
-              </h3>
-
-              <div class="flex gap-2 mb-4 border-b border-white/10">
-                <button
-                  data-tab="logs"
-                  class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-pink transition-all duration-300"
-                >
-                  Parser Logs
-                </button>
-                <button
-                  data-tab="performance"
-                  class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-purple transition-all duration-300"
-                >
-                  Performance
-                </button>
-                <button
-                  data-tab="raw"
-                  class="px-4 py-2 text-sm font-medium text-white/60 hover:text-white border-b-2 border-transparent hover:border-vibrant-blue transition-all duration-300"
-                >
-                  Raw Data
-                </button>
-              </div>
-
-              <div id="debugContent">
-                <div id="logsTab" class="glass rounded-xl p-4 overflow-x-auto">
-                  <pre id="parserLogs" class="text-code font-mono text-white/80"></pre>
-                </div>
-                <div id="performanceTab" class="bg-gray-900 rounded-sm p-4" hidden>
-                  <div id="performanceStats" class="space-y-2 text-code font-mono text-gray-300">
-                    <!-- Performance metrics will be populated here -->
-                  </div>
-                </div>
-                <div id="rawTab" class="bg-gray-900 rounded-sm p-4 overflow-x-auto" hidden>
-                  <pre id="rawData" class="text-code font-mono text-gray-300"></pre>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
       </main>
 

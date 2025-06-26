@@ -11,8 +11,6 @@ export interface AppEventMap {
   'export:requested': void;
   'export:gcode:requested': void;
   'reset:requested': void;
-  'debug:toggle': void;
-  'tab:change': 'logs' | 'performance' | 'raw';
   'cache:clear': void;
   'configuration:changed': SystemConfiguration;
 }
@@ -70,8 +68,6 @@ export const AppEvents = {
   EXPORT_REQUESTED: 'export:requested',
   EXPORT_GCODE_REQUESTED: 'export:gcode:requested',
   RESET_REQUESTED: 'reset:requested',
-  DEBUG_TOGGLE: 'debug:toggle',
-  TAB_CHANGE: 'tab:change',
   CLEAR_CACHE: 'cache:clear',
   CONFIGURATION_CHANGED: 'configuration:changed',
 } as const;
