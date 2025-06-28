@@ -4,6 +4,7 @@
  */
 
 import { FilamentDatabaseStorage, StoredFilament } from '../services/FilamentDatabaseStorage';
+import { Logger } from '../utils/logger';
 
 interface FilamentSwatch {
   id: number;
@@ -77,6 +78,7 @@ class FilamentDatabaseWorker {
   private storage: FilamentDatabaseStorage;
   private isInitialized = false;
   private currentSyncController: AbortController | null = null;
+  private logger = new Logger('FilamentDatabaseWorker');
 
   // Parallel sync configuration
   private readonly PARALLEL_BATCH_SIZE = 4; // Concurrent requests per batch
@@ -90,10 +92,10 @@ class FilamentDatabaseWorker {
 
   private async initialize(): Promise<void> {
     try {
-      console.log('[FilamentDB] Worker initializing...');
+      this.logger.info('Worker initializing...');
       await this.storage.initialize();
       this.isInitialized = true;
-      console.log('[FilamentDB] Worker initialized successfully');
+      this.logger.info('Worker initialized successfully');
 
       // Notify main thread that worker is ready
       this.sendResponse({
@@ -101,7 +103,7 @@ class FilamentDatabaseWorker {
         payload: { initialized: true },
       });
     } catch (error) {
-      console.error('[FilamentDB] Failed to initialize worker storage:', error);
+      this.logger.error('Failed to initialize worker storage', error);
       this.sendResponse({
         type: 'SYNC_ERROR',
         payload: { error: 'Failed to initialize worker storage' },
@@ -110,10 +112,10 @@ class FilamentDatabaseWorker {
   }
 
   async handleMessage(message: WorkerMessage): Promise<void> {
-    console.log('[FilamentDB] Worker received message:', message.type, message.payload);
+    this.logger.debug('Worker received message', { type: message.type, payload: message.payload });
 
     if (!this.isInitialized) {
-      console.error('[FilamentDB] Worker not initialized, rejecting message');
+      this.logger.error('Worker not initialized, rejecting message');
       this.sendResponse({
         type: 'SYNC_ERROR',
         payload: { error: 'Worker not initialized' },
@@ -123,23 +125,23 @@ class FilamentDatabaseWorker {
 
     switch (message.type) {
       case 'START_SYNC':
-        console.log('[FilamentDB] Starting sync, force:', message.payload?.force || false);
+        this.logger.info('Starting sync', { force: message.payload?.force || false });
         await this.startSync(message.payload?.force || false);
         break;
       case 'STOP_SYNC':
-        console.log('[FilamentDB] Stopping sync');
+        this.logger.info('Stopping sync');
         this.stopSync();
         break;
       case 'GET_STATUS':
-        console.log('[FilamentDB] Getting status');
+        this.logger.debug('Getting status');
         await this.getStatus();
         break;
       case 'CLEAR_DATA':
-        console.log('[FilamentDB] Clearing data');
+        this.logger.info('Clearing data');
         await this.clearData();
         break;
       default:
-        console.warn('[FilamentDB] Unknown message type:', message.type);
+        this.logger.warn('Unknown message type', { type: message.type });
     }
   }
 
@@ -157,10 +159,10 @@ class FilamentDatabaseWorker {
         const timeSinceLastSync = Date.now() - syncStatus.last_sync;
 
         if (timeSinceLastSync > staleSyncThreshold) {
-          console.warn('[FilamentDB] Detected stale sync state, clearing it');
+          this.logger.warn('Detected stale sync state, clearing it');
           await this.storage.updateSyncStatus({ is_syncing: false });
         } else {
-          console.log('[FilamentDB] Sync already in progress, rejecting new sync request');
+          this.logger.info('Sync already in progress, rejecting new sync request');
           this.sendResponse({
             type: 'SYNC_ERROR',
             payload: { error: 'Sync already in progress' },
@@ -169,7 +171,7 @@ class FilamentDatabaseWorker {
         }
       } else if (syncStatus?.is_syncing) {
         // If is_syncing is true but no last_sync timestamp, it's definitely stale
-        console.warn('[FilamentDB] Clearing stale sync state (no timestamp)');
+        this.logger.warn('Clearing stale sync state (no timestamp)');
         await this.storage.updateSyncStatus({ is_syncing: false });
       }
 
@@ -177,17 +179,14 @@ class FilamentDatabaseWorker {
       let needsSync: boolean;
       try {
         needsSync = await this.checkIfSyncNeeded(syncStatus, force);
-        console.log('[FilamentDB] Sync needed check result:', needsSync);
+        this.logger.info('Sync needed check result', { needsSync });
       } catch (error) {
-        console.error(
-          '[FilamentDB] Error checking sync requirements, defaulting to sync needed:',
-          error
-        );
+        this.logger.error('Error checking sync requirements, defaulting to sync needed', error);
         needsSync = true; // Default to syncing on error
       }
 
       if (!needsSync) {
-        console.log('[FilamentDB] Sync not needed, sending complete message');
+        this.logger.info('Sync not needed, sending complete message');
         this.sendResponse({
           type: 'SYNC_COMPLETE',
           payload: { message: 'Database is up to date, skipping sync' },
@@ -196,13 +195,13 @@ class FilamentDatabaseWorker {
       }
 
       // Start sync process with parallel batching
-      console.log('[FilamentDB] Starting optimized parallel sync process...');
+      this.logger.info('Starting optimized parallel sync process...');
       this.currentSyncController = new AbortController();
       await this.storage.updateSyncStatus({ is_syncing: true, synced_pages: 0 });
 
       // First, get initial page to determine total pages
       const firstPageUrl = 'https://filamentcolors.xyz/api/swatch/';
-      console.log('[FilamentDB] Fetching first page to determine total pages...');
+      this.logger.info('Fetching first page to determine total pages...');
 
       const firstResponse = await this.fetchPage(firstPageUrl, 1);
       if (!firstResponse) return;
@@ -211,9 +210,11 @@ class FilamentDatabaseWorker {
       const pageSize = firstData.results.length;
       totalPages = Math.ceil(firstData.count / pageSize);
 
-      console.log(
-        `[FilamentDB] Total pages detected: ${totalPages} (${firstData.count} total items, ${pageSize} per page)`
-      );
+      this.logger.info('Total pages detected', {
+        totalPages,
+        totalItems: firstData.count,
+        pageSize,
+      });
       await this.storage.updateSyncStatus({ total_pages: totalPages });
 
       // Generate all page URLs for parallel fetching
@@ -227,10 +228,11 @@ class FilamentDatabaseWorker {
         pageUrls.push(`https://filamentcolors.xyz/api/swatch/?page=${page}`);
       }
 
-      console.log(`[FilamentDB] Starting parallel sync of ${totalPages} pages with batching...`);
-      console.log(
-        `[FilamentDB] Configuration: ${this.PARALLEL_BATCH_SIZE} concurrent requests, ${this.BATCH_DELAY_MS}ms delay between batches`
-      );
+      this.logger.info('Starting parallel sync with batching', { totalPages });
+      this.logger.info('Parallel sync configuration', {
+        concurrentRequests: this.PARALLEL_BATCH_SIZE,
+        delayBetweenBatches: this.BATCH_DELAY_MS,
+      });
 
       let allFilaments: StoredFilament[] = [];
 
@@ -241,9 +243,11 @@ class FilamentDatabaseWorker {
         const batchNumber = Math.floor(i / this.PARALLEL_BATCH_SIZE) + 1;
         const totalBatches = Math.ceil(pageUrls.length / this.PARALLEL_BATCH_SIZE);
 
-        console.log(
-          `[FilamentDB] Processing batch ${batchNumber}/${totalBatches} (pages ${i + 1}-${Math.min(i + this.PARALLEL_BATCH_SIZE, pageUrls.length)})`
-        );
+        this.logger.info('Processing batch', {
+          batchNumber,
+          totalBatches,
+          pageRange: `${i + 1}-${Math.min(i + this.PARALLEL_BATCH_SIZE, pageUrls.length)}`,
+        });
 
         try {
           // Fetch batch of pages in parallel
@@ -265,11 +269,13 @@ class FilamentDatabaseWorker {
               allFilaments.push(...validFilaments);
               syncedPages++;
 
-              console.log(
-                `[FilamentDB] Page ${pageNumber}: ${data.results.length} total swatches, ${validFilaments.length} valid filaments`
-              );
+              this.logger.info('Page processed', {
+                pageNumber,
+                totalSwatches: data.results.length,
+                validFilaments: validFilaments.length,
+              });
             } else if (result.status === 'rejected') {
-              console.error(`[FilamentDB] Batch request failed:`, result.reason);
+              this.logger.error('Batch request failed', result.reason);
               // Continue with other pages in batch
             }
           }
@@ -289,11 +295,9 @@ class FilamentDatabaseWorker {
 
           // Store filaments in batches for memory management
           if (allFilaments.length >= this.STORAGE_BATCH_SIZE) {
-            console.log(
-              `[FilamentDB] Storing batch of ${allFilaments.length} filaments to IndexedDB...`
-            );
+            this.logger.info('Storing batch to IndexedDB', { filamentsCount: allFilaments.length });
             await this.storage.storeFilaments(allFilaments);
-            console.log(`[FilamentDB] Batch stored successfully`);
+            this.logger.info('Batch stored successfully');
             allFilaments = []; // Clear memory
           }
 
@@ -307,10 +311,10 @@ class FilamentDatabaseWorker {
           }
         } catch (error) {
           if (error instanceof Error && error.name === 'AbortError') {
-            console.log('[FilamentDB] Sync was cancelled');
+            this.logger.info('Sync was cancelled');
             return;
           }
-          console.error(`[FilamentDB] Batch ${batchNumber} failed:`, error);
+          this.logger.error('Batch failed', { batchNumber, error });
           // Continue with next batch
         }
       }
@@ -320,13 +324,13 @@ class FilamentDatabaseWorker {
 
       // Store remaining filaments
       if (allFilaments.length > 0) {
-        console.log(`[FilamentDB] Storing final batch of ${allFilaments.length} filaments...`);
+        this.logger.info('Storing final batch', { filamentsCount: allFilaments.length });
         await this.storage.storeFilaments(allFilaments);
-        console.log(`[FilamentDB] Final batch stored successfully`);
+        this.logger.info('Final batch stored successfully');
       }
 
       if (wasCancelled) {
-        console.log(`[FilamentDB] Sync was cancelled after processing ${syncedPages} pages`);
+        this.logger.info('Sync was cancelled after processing pages', { syncedPages });
 
         // Update sync status to not syncing
         await this.storage.updateSyncStatus({ is_syncing: false });
@@ -344,9 +348,10 @@ class FilamentDatabaseWorker {
         return;
       }
 
-      console.log(
-        `[FilamentDB] Sync completed! Total pages: ${syncedPages}, Total estimated filaments: ${syncedPages * 50}`
-      );
+      this.logger.info('Sync completed', {
+        totalPages: syncedPages,
+        estimatedFilaments: syncedPages * 50,
+      });
 
       // Get current version info to store with sync completion
       let versionInfo: ApiVersionResponse | null = null;
@@ -354,22 +359,21 @@ class FilamentDatabaseWorker {
       // Only fetch version info if sync wasn't cancelled
       if (this.currentSyncController && !this.currentSyncController.signal.aborted) {
         try {
-          console.log('[FilamentDB] Fetching final version info...');
+          this.logger.info('Fetching final version info...');
           const versionResponse = await fetch('https://filamentcolors.xyz/api/version/', {
             signal: this.currentSyncController.signal,
           });
           if (versionResponse.ok) {
             const versionText = await versionResponse.text();
             versionInfo = JSON.parse(versionText);
-            console.log('[FilamentDB] Final version info:', versionInfo);
+            this.logger.info('Final version info', versionInfo);
           } else {
-            console.warn(
-              '[FilamentDB] Failed to fetch final version info:',
-              versionResponse.status
-            );
+            this.logger.warn('Failed to fetch final version info', {
+              status: versionResponse.status,
+            });
           }
         } catch (error) {
-          console.warn('[FilamentDB] Failed to fetch version info at sync completion:', error);
+          this.logger.warn('Failed to fetch version info at sync completion', error);
         }
       }
 
@@ -382,7 +386,7 @@ class FilamentDatabaseWorker {
         db_version: versionInfo?.db_version,
         db_last_modified: versionInfo?.db_last_modified,
       };
-      console.log('[FilamentDB] Updating sync status with completion data:', syncCompletionData);
+      this.logger.info('Updating sync status with completion data', syncCompletionData);
       await this.storage.updateSyncStatus(syncCompletionData);
 
       const completionPayload = {
@@ -390,18 +394,17 @@ class FilamentDatabaseWorker {
         totalPages: syncedPages,
         completedAt: new Date().toISOString(),
       };
-      console.log('[FilamentDB] Sending sync complete message:', completionPayload);
+      this.logger.info('Sending sync complete message', completionPayload);
 
       this.sendResponse({
         type: 'SYNC_COMPLETE',
         payload: completionPayload,
       });
     } catch (error) {
-      console.error('[FilamentDB] Sync failed with error:', error);
-      console.error(
-        '[FilamentDB] Error stack:',
-        error instanceof Error ? error.stack : 'No stack trace'
-      );
+      this.logger.error('Sync failed with error', error);
+      this.logger.error('Error stack', {
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+      });
 
       // Mark sync as failed
       await this.storage.updateSyncStatus({ is_syncing: false });
@@ -412,7 +415,7 @@ class FilamentDatabaseWorker {
         syncedPages: typeof syncedPages !== 'undefined' ? syncedPages : 0,
         totalPages: typeof totalPages !== 'undefined' ? totalPages : 0,
       };
-      console.error('[FilamentDB] Sending error response:', errorPayload);
+      this.logger.error('Sending error response', errorPayload);
 
       this.sendResponse({
         type: 'SYNC_ERROR',
@@ -420,7 +423,7 @@ class FilamentDatabaseWorker {
       });
     } finally {
       this.currentSyncController = null;
-      console.log('[FilamentDB] Sync process cleanup completed');
+      this.logger.info('Sync process cleanup completed');
     }
   }
 
@@ -433,7 +436,7 @@ class FilamentDatabaseWorker {
 
   private async checkIfSyncNeeded(syncStatus: any, force: boolean): Promise<boolean> {
     try {
-      console.log('[FilamentDB] Checking if sync needed...', {
+      this.logger.info('Checking if sync needed', {
         force,
         syncStatus: syncStatus
           ? {
@@ -447,17 +450,17 @@ class FilamentDatabaseWorker {
 
       // Always sync if forced or never synced before
       if (force || !syncStatus || !syncStatus.last_sync) {
-        console.log('[FilamentDB] Sync needed: force or never synced');
+        this.logger.info('Sync needed: force or never synced');
         return true;
       }
 
       // Check remote database version
-      console.log('[FilamentDB] Fetching version info from API...');
+      this.logger.info('Fetching version info from API...');
       const response = await fetch('https://filamentcolors.xyz/api/version/', {
         signal: this.currentSyncController?.signal,
       });
 
-      console.log('[FilamentDB] Version API response:', {
+      this.logger.info('Version API response', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
@@ -465,12 +468,12 @@ class FilamentDatabaseWorker {
       });
 
       if (!response.ok) {
-        console.warn('[FilamentDB] Failed to fetch version info, falling back to time-based sync');
+        this.logger.warn('Failed to fetch version info, falling back to time-based sync');
         // Fall back to time-based sync (24 hours)
         const dayInMs = 24 * 60 * 60 * 1000;
         const now = Date.now();
         const needsSync = now - syncStatus.last_sync > dayInMs;
-        console.log('[FilamentDB] Time-based sync decision:', {
+        this.logger.info('Time-based sync decision', {
           needsSync,
           hoursSinceLastSync: (now - syncStatus.last_sync) / (60 * 60 * 1000),
         });
@@ -478,44 +481,46 @@ class FilamentDatabaseWorker {
       }
 
       const responseText = await response.text();
-      console.log('[FilamentDB] Version API raw response:', responseText);
+      this.logger.info('Version API raw response', { responseText });
 
       let versionInfo: ApiVersionResponse;
       try {
         versionInfo = JSON.parse(responseText);
-        console.log('[FilamentDB] Parsed version info:', versionInfo);
+        this.logger.info('Parsed version info', versionInfo);
       } catch (parseError) {
-        console.error('[FilamentDB] Failed to parse version response:', parseError);
+        this.logger.error('Failed to parse version response', parseError);
         throw new Error(`Invalid JSON response: ${responseText}`);
       }
 
       // Compare database versions
       if (syncStatus.db_version !== versionInfo.db_version) {
-        console.log(
-          `[FilamentDB] Database version changed: ${syncStatus.db_version} -> ${versionInfo.db_version}`
-        );
+        this.logger.info('Database version changed', {
+          from: syncStatus.db_version,
+          to: versionInfo.db_version,
+        });
         return true;
       }
 
       // Compare last modified timestamps
       if (syncStatus.db_last_modified !== versionInfo.db_last_modified) {
-        console.log(
-          `[FilamentDB] Database modified: ${syncStatus.db_last_modified} -> ${versionInfo.db_last_modified}`
-        );
+        this.logger.info('Database modified', {
+          from: syncStatus.db_last_modified,
+          to: versionInfo.db_last_modified,
+        });
         return true;
       }
 
       // Database hasn't changed
-      console.log('[FilamentDB] Database is up to date, no sync needed');
+      this.logger.info('Database is up to date, no sync needed');
       return false;
     } catch (error) {
-      console.error('[FilamentDB] Error checking sync requirements:', error);
+      this.logger.error('Error checking sync requirements', error);
       // Fall back to time-based sync (24 hours) on error
       const dayInMs = 24 * 60 * 60 * 1000;
       const now = Date.now();
       const needsSync = !syncStatus || now - syncStatus.last_sync > dayInMs;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.log('[FilamentDB] Fallback time-based sync decision:', {
+      this.logger.info('Fallback time-based sync decision', {
         needsSync,
         error: errorMessage,
       });
@@ -612,7 +617,7 @@ class FilamentDatabaseWorker {
     pageNumber: number
   ): Promise<{ data: ApiResponse; pageNumber: number } | null> {
     try {
-      console.log(`[FilamentDB] Fetching page ${pageNumber} from: ${url}`);
+      this.logger.info('Fetching page', { pageNumber, url });
 
       const response = await fetch(url, {
         signal: this.currentSyncController?.signal,
@@ -620,7 +625,8 @@ class FilamentDatabaseWorker {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[FilamentDB] Page ${pageNumber} request failed:`, {
+        this.logger.error('Page request failed', {
+          pageNumber,
           status: response.status,
           statusText: response.statusText,
           body: errorText,
@@ -629,30 +635,33 @@ class FilamentDatabaseWorker {
       }
 
       const responseText = await response.text();
-      console.log(`[FilamentDB] Page ${pageNumber} response length: ${responseText.length}`);
+      this.logger.info('Page response received', {
+        pageNumber,
+        responseLength: responseText.length,
+      });
 
       let data: ApiResponse;
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error(`[FilamentDB] Failed to parse page ${pageNumber}:`, parseError);
+        this.logger.error('Failed to parse page', { pageNumber, error: parseError });
         const errorMessage =
           parseError instanceof Error ? parseError.message : 'Unknown parse error';
         throw new Error(`Failed to parse JSON response: ${errorMessage}`);
       }
 
       if (!data.results || !Array.isArray(data.results)) {
-        console.error(`[FilamentDB] Invalid API response format for page ${pageNumber}:`, data);
+        this.logger.error('Invalid API response format for page', { pageNumber, data });
         throw new Error('Invalid API response format - results is not an array');
       }
 
       return { data, pageNumber };
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.log(`[FilamentDB] Page ${pageNumber} fetch was cancelled`);
+        this.logger.info('Page fetch was cancelled', { pageNumber });
         return null;
       }
-      console.error(`[FilamentDB] Failed to fetch page ${pageNumber}:`, error);
+      this.logger.error('Failed to fetch page', { pageNumber, error });
       throw error;
     }
   }
@@ -665,7 +674,7 @@ class FilamentDatabaseWorker {
       !!swatch.manufacturer?.name;
 
     if (!isValid) {
-      console.log('[FilamentDB] Filtered out invalid swatch:', {
+      this.logger.info('Filtered out invalid swatch', {
         id: swatch.id,
         published: swatch.published,
         has_hex_color: !!swatch.hex_color,

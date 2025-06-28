@@ -3,6 +3,8 @@
  * Provides consistent state management and UI behavior across all sync triggers
  */
 
+import { Logger } from '../utils/logger';
+
 export type SyncState = 'idle' | 'checking' | 'syncing' | 'cancelling' | 'error' | 'complete';
 
 export type SyncTrigger = 'manual' | 'refresh' | 'auto' | 'background';
@@ -59,6 +61,7 @@ export class FilamentSyncController {
   private currentOperation: SyncOperation | null = null;
   private stateListeners = new Set<SyncStateListener>();
   private abortController: AbortController | null = null;
+  private logger = new Logger('FilamentSyncController');
 
   // State machine rules
   private readonly validTransitions: Record<SyncState, SyncState[]> = {
@@ -85,9 +88,9 @@ export class FilamentSyncController {
   public async startSync(trigger: SyncTrigger, force: boolean = false): Promise<void> {
     // Prevent multiple simultaneous operations
     if (this.currentOperation && this.currentOperation.state !== 'idle') {
-      console.warn(
-        `[SyncController] Sync already in progress (${this.currentOperation.state}), ignoring new request`
-      );
+      this.logger.warn('Sync already in progress, ignoring new request', {
+        currentState: this.currentOperation.state,
+      });
       return;
     }
 
@@ -157,7 +160,7 @@ export class FilamentSyncController {
    */
   public async cancelSync(): Promise<void> {
     if (!this.currentOperation || this.currentOperation.state !== 'syncing') {
-      console.warn('[SyncController] No active sync to cancel');
+      this.logger.warn('No active sync to cancel');
       return;
     }
 
@@ -342,10 +345,10 @@ export class FilamentSyncController {
 
     // Validate transition
     if (!this.validTransitions[currentState].includes(newState)) {
-      throw new Error(`[SyncController] Invalid state transition: ${currentState} → ${newState}`);
+      throw new Error(`Invalid state transition: ${currentState} → ${newState}`);
     }
 
-    console.log(`[SyncController] State transition: ${currentState} → ${newState}`);
+    this.logger.debug('State transition', { from: currentState, to: newState });
     operation.state = newState;
 
     this.notifyListeners({
@@ -358,7 +361,7 @@ export class FilamentSyncController {
    * Handle errors during sync operations
    */
   private async handleError(error: unknown, operation: SyncOperation): Promise<void> {
-    console.error('[SyncController] Sync error:', error);
+    this.logger.error('Sync error', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     operation.error = errorMessage;
@@ -562,7 +565,7 @@ export class FilamentSyncController {
       try {
         listener(fullUpdate);
       } catch (error) {
-        console.error('[SyncController] Error in state listener:', error);
+        this.logger.error('Error in state listener', error);
       }
     });
   }
