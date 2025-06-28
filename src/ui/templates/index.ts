@@ -46,29 +46,38 @@ export const colorStatsTemplate = (
   colors: Color[],
   filamentEstimates?: FilamentUsage[]
 ): string => {
-  const totalLayers = Math.max(...colors.map((c) => c.lastLayer)) + 1;
-
   return `
     <div class="space-y-8">
       <!-- Interactive Layer Timeline -->
       <div class="bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10">
-        <h4 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
-          <svg class="w-6 h-6 text-vibrant-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-          </svg>
-          Layer Timeline Visualization
-        </h4>
+        <div class="flex items-center justify-between mb-6">
+          <h4 class="text-xl font-bold text-white flex items-center gap-3">
+            <svg class="w-6 h-6 text-vibrant-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+            Layer Timeline Visualization
+          </h4>
+          <div id="timelineViewToggle" class="timeline-view-button-group">
+            <button id="colorViewBtn" class="timeline-view-btn timeline-view-btn-active" data-view="color">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a6 6 0 00-12 0v4a2 2 0 002 2z"></path>
+              </svg>
+              <span>Color View</span>
+            </button>
+            <button id="slotViewBtn" class="timeline-view-btn" data-view="slot">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 011-1h12a1 1 0 011 1v2M7 7h10"></path>
+              </svg>
+              <span>Slot View</span>
+            </button>
+          </div>
+        </div>
         <div class="relative mb-4">
-          <canvas id="colorTimeline" class="w-full bg-black/30 rounded-2xl shadow-inner" style="height: 160px;"></canvas>
+          <canvas id="colorTimeline" class="w-full bg-black/30 rounded-2xl shadow-inner transition-all duration-300"></canvas>
           <div id="timelineOverlay" class="absolute inset-0 rounded-2xl overflow-hidden cursor-pointer">
             <!-- Interactive segments will be added here -->
           </div>
-          <div class="absolute bottom-0 left-0 right-0 flex justify-between text-sm text-white/60 px-4 pb-2 font-medium pointer-events-none">
-            <span>Layer 0</span>
-            <span>Layer ${totalLayers}</span>
-          </div>
         </div>
-        <p class="text-sm text-white/50">Click on the timeline to see layer details • Hover to highlight colors</p>
       </div>
 
       <!-- Enhanced Color Cards -->
@@ -82,98 +91,48 @@ export const colorStatsTemplate = (
             const weight = filamentEstimate?.weight || 0;
 
             return `
-          <div class="color-card bg-white/5 backdrop-blur-sm rounded-3xl p-6 hover:scale-105 transition-all duration-300 group animate-scale-in cursor-pointer border border-white/10 hover:border-white/20" 
+          <div class="color-card bg-white/5 backdrop-blur-sm rounded-2xl p-4 hover:bg-white/8 transition-all duration-300 group animate-scale-in border border-white/10 hover:border-white/15" 
                style="animation-delay: ${index * 0.05}s" 
                data-color-id="${color.id}">
-            <div class="flex items-center gap-4 mb-4">
+            <div class="flex items-center gap-3 mb-3">
               <div class="relative">
-                <div class="w-16 h-16 rounded-2xl shadow-lg interactive-swatch ring-2 ring-white/20" 
+                <div class="w-12 h-12 rounded-xl shadow-lg interactive-swatch ring-2 ring-white/20" 
                      style="background-color: ${color.hexValue || '#888888'}"
                      data-hex="${color.hexValue || '#888888'}"
                      title="Click to copy color code">
-                  <div class="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div class="absolute inset-0 rounded-xl bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
                     </svg>
                   </div>
                 </div>
-                <div class="absolute -top-1 -right-1 w-6 h-6 bg-gradient-neon rounded-full flex items-center justify-center text-xs font-bold text-white shadow-glow-pink">
-                  ${index + 1}
-                </div>
               </div>
-              <div class="flex-1">
-                <div class="font-bold text-lg text-white mb-2 flex items-center gap-2">
-                  ${color.name || formatColorDisplay(color.hexValue, color.id)}
-                  <span class="text-sm px-3 py-1 bg-gradient-to-r from-vibrant-purple/20 to-vibrant-pink/20 rounded-full text-white/80 font-medium">
-                    ${color.usagePercentage.toFixed(1)}%
-                  </span>
-                </div>
-                <div class="text-sm text-white/60">
-                  Layers ${color.firstLayer}-${color.lastLayer} 
-                  <span class="text-white/40">(${color.layerCount || color.lastLayer - color.firstLayer + 1} layers)</span>
-                  ${weight > 0 ? `<span class="text-vibrant-cyan font-medium"> • ${weight.toFixed(1)}g</span>` : ''}
-                </div>
+              <div class="flex-1 min-w-0">
+                <h5 class="font-semibold text-white text-base group-hover:text-vibrant-cyan transition-colors truncate">${formatColorDisplay(color.hexValue, color.name || color.id)}</h5>
+                <p class="text-xs text-white/60 font-mono">${color.hexValue || '#888888'}</p>
               </div>
-              <button class="expand-btn opacity-0 group-hover:opacity-100 transition-opacity duration-300 text-white/60 hover:text-white">
-                <svg class="w-5 h-5 transform transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </button>
             </div>
             
-            
-            <!-- Usage Progress Bar -->
-            <div class="mt-4 mb-4">
-              <div class="relative h-4 bg-black/30 rounded-full overflow-hidden shadow-inner">
-                <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out hover:brightness-110"
-                     style="width: ${color.usagePercentage}%; background: linear-gradient(90deg, ${color.hexValue || '#888888'}, ${color.hexValue || '#888888'}CC)">
-                  <div class="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 rounded-full"></div>
+            <div class="space-y-2">
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span class="text-white/70 block">Layers</span>
+                  <span class="text-white font-semibold">${color.firstLayer}-${color.lastLayer}</span>
+                </div>
+                <div>
+                  <span class="text-white/70 block">Usage</span>
+                  <span class="text-white font-semibold">${weight > 0 ? `${weight.toFixed(1)}g` : 'N/A'}</span>
                 </div>
               </div>
-            </div>
-
-            <!-- Expandable Details -->
-            <div class="expandable-details max-h-0 overflow-hidden transition-all duration-300">
-              <div class="pt-4 border-t border-white/20 space-y-3">
-                <div class="grid grid-cols-2 gap-4 text-sm">
-                  <div class="flex justify-between bg-black/20 rounded-lg p-2">
-                    <span class="text-white/60">Hex Color:</span>
-                    <span class="text-vibrant-cyan font-mono font-bold">${color.hexValue || '#888888'}</span>
-                  </div>
-                  <div class="flex justify-between bg-black/20 rounded-lg p-2">
-                    <span class="text-white/60">Layer Count:</span>
-                    <span class="text-white font-medium">${color.layerCount || color.lastLayer - color.firstLayer + 1}</span>
-                  </div>
-                  <div class="flex justify-between bg-black/20 rounded-lg p-2">
-                    <span class="text-white/60">Filament Used:</span>
-                    <span class="text-white font-medium">${weight > 0 ? `${weight.toFixed(1)}g` : 'N/A'}</span>
-                  </div>
-                  <div class="flex justify-between bg-black/20 rounded-lg p-2">
-                    <span class="text-white/60">Layer Range:</span>
-                    <span class="text-white font-medium">${color.lastLayer - color.firstLayer + 1}</span>
-                  </div>
+              
+              <div class="flex items-center gap-2">
+                <div class="progress-bar flex-1">
+                  <div class="progress-bar-fill" style="width: ${Math.min(100, Math.max(0, color.usagePercentage || 0))}%"></div>
                 </div>
-                
-                <!-- Action Buttons -->
-                <div class="flex gap-3 pt-3">
-                  <button class="flex-1 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 highlight-color-btn" data-color-id="${color.id}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                    </svg>
-                    Highlight
-                  </button>
-                  <button class="flex-1 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 toggle-color-btn" data-color-id="${color.id}">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>
-                    </svg>
-                    Hide
-                  </button>
-                </div>
+                <span class="text-xs text-white/60 font-mono min-w-fit">${(color.usagePercentage || 0).toFixed(1)}%</span>
               </div>
             </div>
-          </div>
-        `;
+          </div>`;
           })
           .join('')}
         </div>
@@ -182,177 +141,118 @@ export const colorStatsTemplate = (
   `;
 };
 
-// Optimization results template
-export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats): string => {
-  const statsHtml = `
-    <div class="grid grid-cols-2 gap-4 mb-6">
-      <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform group">
-        <div class="text-4xl font-black text-vibrant-blue group-hover:animate-pulse">${opt.totalColors}</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider mt-2">Total Colors</div>
+// Optimization template
+export const optimizationTemplate = (optimization: OptimizationResult): string => {
+  return `
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in">
+        <div class="text-3xl font-bold gradient-text mb-2">${optimization.totalSlots}</div>
+        <div class="text-sm text-white/60 uppercase tracking-wider">AMS Slots Used</div>
       </div>
-      <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform group">
-        <div class="text-4xl font-black text-vibrant-purple group-hover:animate-pulse">${opt.requiredSlots}</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider mt-2">Required Slots</div>
+      
+      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in" style="animation-delay: 0.1s">
+        <div class="text-3xl font-bold gradient-text mb-2">${optimization.manualSwaps.length}</div>
+        <div class="text-sm text-white/60 uppercase tracking-wider">Manual Swaps</div>
       </div>
-      <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform group">
-        <div class="text-4xl font-black text-vibrant-orange group-hover:animate-pulse">${opt.manualSwaps.length}</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider mt-2">Manual Swaps</div>
+      
+      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in" style="animation-delay: 0.2s">
+        <div class="text-3xl font-bold gradient-text mb-2">95%</div>
+        <div class="text-sm text-white/60 uppercase tracking-wider">Efficiency</div>
       </div>
-      <div class="glass rounded-2xl p-6 text-center hover:scale-105 transition-transform group">
-        <div class="text-4xl font-black text-vibrant-green group-hover:animate-pulse">${Math.round(opt.estimatedTimeSaved / 60)} min</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider mt-2">Time Saved</div>
+      
+      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in" style="animation-delay: 0.3s">
+        <div class="text-3xl font-bold gradient-text mb-2">${optimization.manualSwaps.length * 5}min</div>
+        <div class="text-sm text-white/60 uppercase tracking-wider">Est. Swap Time</div>
+      </div>
+    </div>
+
+    <div class="glass rounded-3xl p-8 animate-fade-in" style="animation-delay: 0.4s">
+      <h4 class="text-xl font-bold text-white mb-6">AMS Slot Assignments</h4>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        ${optimization.slotAssignments
+          .map((assignment, index) => {
+            const colors = assignment.colors || [];
+            return `
+          <div class="bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer animate-scale-in" style="animation-delay: ${0.5 + index * 0.1}s">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-medium text-white/80">Unit ${assignment.unit}</span>
+              <span class="text-xs px-2 py-1 bg-vibrant-purple/20 text-vibrant-purple rounded-full">Slot ${assignment.slot}</span>
+            </div>
+            
+            <div class="space-y-2">
+              ${
+                colors.length > 0
+                  ? colors
+                      .map(
+                        (color) => `
+                <div class="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
+                  <div class="w-4 h-4 rounded-full ring-1 ring-white/20" style="background-color: ${color || '#888888'}"></div>
+                  <span class="text-xs text-white/90 flex-1 truncate">${formatColorDisplay(color, color)}</span>
+                </div>
+              `
+                      )
+                      .join('')
+                  : '<div class="text-xs text-white/50 italic p-2">Empty slot</div>'
+              }
+            </div>
+            
+            ${
+              colors.length > 1
+                ? `<div class="mt-2 text-xs text-amber-400 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                Shared slot
+              </div>`
+                : ''
+            }
+          </div>`;
+          })
+          .join('')}
       </div>
     </div>
   `;
-
-  // Group slots by unit for AMS mode
-  const groupedSlots =
-    opt.configuration?.type === 'ams'
-      ? opt.slotAssignments.reduce(
-          (acc, slot) => {
-            const unit = slot.unit;
-            if (!acc[unit]) acc[unit] = [];
-            acc[unit].push(slot);
-            return acc;
-          },
-          {} as Record<number, typeof opt.slotAssignments>
-        )
-      : { 1: opt.slotAssignments }; // For toolhead mode, all in one group
-
-  const slotsHtml =
-    opt.configuration?.type === 'ams'
-      ? Object.entries(groupedSlots)
-          .map(([unit, unitSlots]) => {
-            const unitSlotsHtml = unitSlots
-              .map((slot) => {
-                const slotColors =
-                  slot.colors.length > 0
-                    ? slot.colors
-                        .map((colorId) => {
-                          const color = stats.colors.find((c) => c.id === colorId);
-                          return color
-                            ? `<span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
-                        <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexValue || '#888888'}"></span>
-                        <span class="text-white/80">${color.name || formatColorDisplay(color.hexValue, color.id)}</span>
-                      </span>`
-                            : '';
-                        })
-                        .join('')
-                    : `<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/50">
-                <span class="w-4 h-4 rounded-full bg-white/20"></span>
-                <span>Empty</span>
-              </span>`;
-
-                return `
-            <div class="glass rounded-xl p-4">
-              <div class="font-medium text-white mb-2">Slot ${slot.slot} <span class="text-sm font-normal text-white/50">${slot.isPermanent ? '(Permanent)' : '(Shared)'}</span></div>
-              <div class="flex flex-wrap gap-2">${slotColors}</div>
-            </div>
-          `;
-              })
-              .join('');
-
-            return `
-          <div class="glass rounded-2xl p-5 hover:scale-[1.02] transition-transform">
-            <div class="font-semibold text-white mb-4">AMS Unit ${unit}</div>
-            <div class="grid grid-cols-2 gap-3">${unitSlotsHtml}</div>
-          </div>
-        `;
-          })
-          .join('')
-      : opt.slotAssignments
-          .map((slot) => {
-            const slotColors =
-              slot.colors.length > 0
-                ? slot.colors
-                    .map((colorId) => {
-                      const color = stats.colors.find((c) => c.id === colorId);
-                      return color
-                        ? `<span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
-                      <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexValue || '#888888'}"></span>
-                      <span class="text-white/80">${color.name || formatColorDisplay(color.hexValue, color.id)}</span>
-                    </span>`
-                        : '';
-                    })
-                    .join('')
-                : `<span class="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 rounded-full text-sm text-white/50">
-              <span class="w-4 h-4 rounded-full bg-white/20"></span>
-              <span>Empty</span>
-            </span>`;
-
-            return `
-          <div class="glass rounded-2xl p-5 hover:scale-[1.02] transition-transform">
-            <div class="font-semibold text-white mb-3">Toolhead ${slot.unit} <span class="text-sm font-normal text-white/50">${slot.isPermanent ? '(Permanent)' : '(Shared)'}</span></div>
-            <div class="flex flex-wrap gap-2">${slotColors}</div>
-          </div>
-        `;
-          })
-          .join('');
-
-  return (
-    statsHtml +
-    '<h4 class="text-h3 text-white mt-8 mb-4">Slot Assignments</h4><div class="space-y-4">' +
-    slotsHtml +
-    '</div>'
-  );
 };
 
-// Filament usage visualization template
-export const filamentUsageTemplate = (filamentEstimates: any[], colors: Color[]): string => {
-  if (!filamentEstimates || filamentEstimates.length === 0) {
-    return '';
+// Filament usage visualization
+export const filamentUsageTemplate = (filamentUsage: FilamentUsage[]): string => {
+  if (!filamentUsage || filamentUsage.length === 0) {
+    return `
+      <div class="text-center p-8 glass rounded-3xl">
+        <div class="text-4xl mb-4">📊</div>
+        <h4 class="text-xl font-bold text-white mb-2">No Filament Data</h4>
+        <p class="text-white/70">Upload a G-code file to see filament usage analysis.</p>
+      </div>
+    `;
   }
 
-  // Calculate total weight for percentage calculations
-  const totalWeight = filamentEstimates.reduce((sum, est) => sum + (est.weight || 0), 0);
+  const totalWeight = filamentUsage.reduce((sum, usage) => sum + (usage.weight || 0), 0);
 
-  // Sort by weight descending
-  const sortedEstimates = [...filamentEstimates].sort((a, b) => (b.weight || 0) - (a.weight || 0));
-
-  // Find max weight for scaling bars
-  const maxWeight = Math.max(...filamentEstimates.map((est) => est.weight || 0));
-
-  const chartHtml = sortedEstimates
-    .map((estimate, index) => {
-      const color = colors.find((c) => c.id === estimate.colorId);
-      const weight = estimate.weight || 0;
-      const percentage = totalWeight > 0 ? ((weight / totalWeight) * 100).toFixed(1) : '0';
-      const barWidth = maxWeight > 0 ? (weight / maxWeight) * 100 : 0;
+  const chartHtml = filamentUsage
+    .map((usage, index) => {
+      const percentage = totalWeight > 0 ? ((usage.weight || 0) / totalWeight) * 100 : 0;
 
       return `
-      <div class="glass rounded-xl p-4 hover:scale-[1.02] transition-all duration-300 animate-scale-in" style="animation-delay: ${index * 0.05}s">
-        <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-3">
-            <div class="w-6 h-6 rounded-full shadow-lg ring-2 ring-white/20" 
-                 style="background-color: ${color?.hexValue || '#888888'}"></div>
-            <span class="font-semibold text-white">${color?.name || formatColorDisplay(color?.hexValue, estimate.colorId)}</span>
-          </div>
-          <div class="text-right">
-            <div class="text-xl font-bold text-white">${weight.toFixed(1)}g</div>
-            <div class="text-xs text-white/60">${percentage}%</div>
+      <div class="flex items-center justify-between p-4 glass rounded-xl hover:scale-105 transition-transform animate-fade-in" style="animation-delay: ${index * 0.1}s">
+        <div class="flex items-center gap-4">
+          <div class="w-4 h-4 rounded-full" style="background-color: ${usage.colorId || '#888888'}"></div>
+          <div>
+            <div class="text-sm font-medium text-white">${formatColorDisplay(usage.colorId, usage.colorId)}</div>
+            <div class="text-xs text-white/60">${usage.colorId || 'Unknown'}</div>
           </div>
         </div>
-        <div class="relative h-6 bg-white/10 rounded-full overflow-hidden">
-          <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out hover:brightness-110"
-               style="width: ${barWidth}%; background: linear-gradient(90deg, ${color?.hexValue || '#888888'}CC, ${color?.hexValue || '#888888'}FF)">
-            <div class="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 rounded-full"></div>
-          </div>
+        
+        <div class="text-right">
+          <div class="text-sm font-bold text-white">${(usage.weight || 0).toFixed(1)}g</div>
+          <div class="text-xs text-white/60">${percentage.toFixed(1)}%</div>
         </div>
       </div>
     `;
     })
     .join('');
 
-  const summaryHtml = `
-    <div class="glass rounded-2xl p-6 mb-6 text-center">
-      <div class="text-4xl font-black text-white mb-2">${totalWeight.toFixed(1)}g</div>
-      <div class="text-sm text-white/60 uppercase tracking-wider">Total Filament Usage</div>
-    </div>
-  `;
-
   return `
-    <div class="space-y-4">
-      ${summaryHtml}
+    <div class="glass rounded-3xl p-8">
       <h4 class="text-h3 text-white mb-4">Filament Usage by Color</h4>
       <div class="space-y-3">
         ${chartHtml}
@@ -361,7 +261,7 @@ export const filamentUsageTemplate = (filamentEstimates: any[], colors: Color[])
   `;
 };
 
-// Swap instructions template
+// Simplified swap instructions template with only Glassmorphism design
 export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats): string => {
   if (swaps.length === 0) {
     return `
@@ -373,6 +273,12 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats)
     `;
   }
 
+  // Return glassmorphism design directly
+  return swapInstructionsGlassmorphismDesign(swaps, stats);
+};
+
+// Ultra Premium Glassmorphism Cards Design
+function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeStats): string {
   const getContrastColor = (hexValue: string): string => {
     const r = parseInt(hexValue.substring(1, 3), 16);
     const g = parseInt(hexValue.substring(3, 5), 16);
@@ -387,95 +293,128 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats)
       const toColor = stats.colors.find((c) => c.id === swap.toColor);
 
       return `
-      <div class="relative p-6 glass rounded-2xl hover:scale-[1.02] transition-all duration-300 group animate-scale-in" style="animation-delay: ${index * 0.1}s">
-        <div class="absolute -left-4 top-6 w-10 h-10 bg-gradient-neon text-white rounded-full flex items-center justify-center font-bold text-sm shadow-glow-pink">${index + 1}</div>
-        
-        <div class="flex items-center gap-2 mb-4 text-white/60">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-          ${
-            swap.pauseEndLayer >= swap.pauseStartLayer
-              ? `<span class="font-semibold text-white">Pause between layers ${swap.pauseStartLayer}-${swap.pauseEndLayer}</span>`
-              : `<span class="font-semibold text-white">Pause at layer ${swap.atLayer}</span>`
-          }
-          ${swap.zHeight ? `<span class="text-sm"> • Z${swap.zHeight.toFixed(2)}mm</span>` : ''}
+      <div class="ultra-glass-card group" data-swap-index="${index}" style="animation-delay: ${index * 150}ms">
+        <!-- Animated Background Orbs -->
+        <div class="absolute inset-0 overflow-hidden rounded-3xl">
+          <div class="floating-orb orb-1"></div>
+          <div class="floating-orb orb-2"></div>
+          <div class="floating-orb orb-3"></div>
         </div>
         
-        <div class="flex items-center justify-between gap-6">
-          <div class="flex items-center gap-3">
-            <div class="color-swatch shadow-glow-pink" style="background-color: ${fromColor?.hexValue || '#888'}; color: ${getContrastColor(fromColor?.hexValue || '#888')}">
-              <span class="font-bold text-lg">${fromColor?.id.substring(1) || '?'}</span>
-            </div>
-            <div>
-              <div class="font-semibold text-white">${fromColor?.name || formatColorDisplay(fromColor?.hexValue, fromColor?.id || swap.fromColor)}</div>
-              <div class="text-white/50 text-sm">Remove</div>
+        <!-- Progress Ring -->
+        <div class="absolute top-6 right-6">
+          <input type="checkbox" class="swap-progress w-6 h-6 rounded-full border-2 border-white/30 bg-white/10 text-vibrant-green focus:ring-vibrant-green cursor-pointer" data-swap-index="${index}">
+        </div>
+
+        <!-- Holographic Number Badge -->
+        <div class="holo-badge">
+          <div class="holo-number">${index + 1}</div>
+          <div class="holo-shine"></div>
+        </div>
+
+        <!-- Header with Glow Effect -->
+        <div class="mb-6">
+          <div class="text-2xl font-bold text-white mb-2">Layer ${swap.atLayer}</div>
+          ${swap.zHeight ? `<div class="text-white/60">Z: ${swap.zHeight.toFixed(2)}mm</div>` : ''}
+        </div>
+
+        <!-- Premium Color Swatches -->
+        <div class="flex items-center gap-6 mb-6">
+          <!-- Remove Color -->
+          <div class="color-swatch-premium remove-swatch flex-1" style="--color: ${fromColor?.hexValue || '#888'}">
+            <div class="flex items-center gap-4">
+              <div class="color-display" style="background: ${fromColor?.hexValue || '#888'}">
+                <div class="color-text" style="color: ${getContrastColor(fromColor?.hexValue || '#888')}">
+                  ${fromColor?.id.substring(1) || '?'}
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="text-red-400 text-sm font-medium">REMOVE</div>
+                <div class="text-white font-semibold">${fromColor?.name || 'Unknown'}</div>
+              </div>
             </div>
           </div>
-          
-          <svg class="w-10 h-10 text-vibrant-pink animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-            <polyline points="12 5 19 12 12 19"></polyline>
-          </svg>
-          
-          <div class="flex items-center gap-3">
-            <div class="color-swatch shadow-glow-green" style="background-color: ${toColor?.hexValue || '#888'}; color: ${getContrastColor(toColor?.hexValue || '#888')}">
-              <span class="font-bold text-lg">${toColor?.id.substring(1) || '?'}</span>
-            </div>
-            <div>
-              <div class="font-semibold text-white">${toColor?.name || formatColorDisplay(toColor?.hexValue, toColor?.id || swap.toColor)}</div>
-              <div class="text-vibrant-green font-medium">Insert → Unit ${swap.unit} Slot ${swap.slot}</div>
+
+          <!-- Animated Arrow -->
+          <div class="swap-arrow">
+            <div class="arrow-trail"></div>
+            <svg class="w-4 h-4 md:w-6 md:h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4z"/>
+            </svg>
+          </div>
+
+          <!-- Insert Color -->
+          <div class="color-swatch-premium insert-swatch flex-1" style="--color: ${toColor?.hexValue || '#888'}">
+            <div class="flex items-center gap-4">
+              <div class="color-display" style="background: ${toColor?.hexValue || '#888'}">
+                <div class="color-text" style="color: ${getContrastColor(toColor?.hexValue || '#888')}">
+                  ${toColor?.id.substring(1) || '?'}
+                </div>
+              </div>
+              <div class="flex-1">
+                <div class="text-green-400 text-sm font-medium">INSERT</div>
+                <div class="text-white font-semibold">${toColor?.name || 'Unknown'}</div>
+              </div>
             </div>
           </div>
         </div>
-        
-        <div class="mt-4 text-sm text-white/70 glass rounded-xl p-3">
-          ${swap.reason}
+
+        <!-- Slot Information with Neon Glow -->
+        <div class="slot-info-premium">
+          <div class="slot-detail">
+            <div class="slot-icon">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="9" cy="9" r="2"/>
+                <path d="M21 15l-3.086-3.086a2 2 0 00-2.828 0L6 21"/>
+              </svg>
+            </div>
+            <div class="slot-text">
+              <div class="slot-label">Target Slot</div>
+              <div class="slot-value">AMS ${swap.unit} • Slot ${swap.slot}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Action Buttons -->
+        <div class="action-buttons">
+          <button class="action-btn copy-swap" data-swap-index="${index}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+            </svg>
+            Copy
+          </button>
+          <button class="action-btn focus-layer" data-layer="${swap.atLayer}">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+            </svg>
+            Focus
+          </button>
         </div>
       </div>
     `;
     })
     .join('');
 
-  const timelineHtml = `
-    <div class="mt-8 card-glass">
-      <h4 class="text-h3 text-white mb-6">Swap Timeline</h4>
-      <div class="relative h-20 glass rounded-xl overflow-hidden">
-        <div class="absolute inset-0 bg-gradient-spectrum opacity-30"></div>
-        ${swaps
-          .map((swap, index) => {
-            const position = (swap.atLayer / stats.totalLayers) * 100;
-            return `
-            <div class="absolute top-0 bottom-0 w-1 bg-gradient-to-b from-vibrant-pink to-vibrant-purple animate-pulse" 
-                 style="left: ${position}%"
-                 title="Swap ${index + 1} at layer ${swap.atLayer}">
-              <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-gradient-neon rounded-full shadow-glow-pink animate-glow-pulse"></div>
-              <div class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-sm text-white/70 font-medium whitespace-nowrap">
-                ${swap.atLayer}
-              </div>
-            </div>
-          `;
-          })
-          .join('')}
-      </div>
-      <div class="flex justify-between mt-10 text-sm text-white/60">
-        <span>Layer 0</span>
-        <span>Layer ${stats.totalLayers}</span>
-      </div>
-    </div>
-  `;
-
   return `
-    <div class="mb-6 p-6 glass rounded-2xl border border-vibrant-orange/30">
-      <h3 class="text-xl font-bold gradient-text mb-2">📋 ${swaps.length} Manual Swap${swaps.length > 1 ? 's' : ''} Required</h3>
-      <p class="text-sm text-white/60">Follow these steps to complete your multi-color print</p>
+    <div class="swap-design-container swap-design-glassmorphism">
+      <div class="swap-background" aria-hidden="true">
+        <div class="aurora-bg aurora-1"></div>
+        <div class="aurora-bg aurora-2"></div>
+        <div class="aurora-bg aurora-3"></div>
+      </div>
+      
+      <div class="swap-content">
+        <header class="swap-header">
+          <h3 class="swap-title">Premium Swap Instructions</h3>
+          <div class="swap-subtitle">${swaps.length} swaps required</div>
+        </header>
+
+        <div class="swap-list">
+          ${swapsHtml}
+        </div>
+      </div>
     </div>
-    <div class="space-y-4">
-      ${swapsHtml}
-    </div>
-    ${timelineHtml}
   `;
-};
+}

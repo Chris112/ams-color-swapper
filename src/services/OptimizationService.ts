@@ -67,6 +67,24 @@ export class OptimizationService {
           pauseEndLayer: swap.atLayer,
           zHeight: 0,
           reason: `Swap at layer ${swap.atLayer}`,
+          timingOptions: {
+            earliest: swap.atLayer,
+            latest: swap.atLayer,
+            optimal: swap.atLayer,
+            adjacentOnly: true,
+            bufferLayers: 0,
+          },
+          swapWindow: {
+            startLayer: swap.atLayer,
+            endLayer: swap.atLayer,
+            flexibilityScore: 0,
+            constraints: [],
+          },
+          confidence: {
+            timing: 90,
+            necessity: 100,
+            userControl: 50,
+          },
         })),
         estimatedTimeSaved: 0, // SA doesn't calculate this directly, need to derive or estimate
         slotAssignments: slotAssignments,

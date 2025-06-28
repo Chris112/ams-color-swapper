@@ -210,6 +210,18 @@ export function formatColorDisplay(hexColor: string | undefined, colorIdOrName: 
     return colorIdOrName;
   }
 
+  // First check if the provided name is already meaningful (enhanced from FilamentDatabase)
+  // Don't re-resolve color names that are already enhanced with manufacturer info
+  if (
+    colorIdOrName &&
+    !colorIdOrName.match(/^(Color \d+|T\d+|#[0-9A-Fa-f]{6})/) && // Not generic patterns
+    !colorIdOrName.includes('Unused') &&
+    colorIdOrName.length > 3 // Not just basic color names like "Red"
+  ) {
+    return colorIdOrName;
+  }
+
+  // Only fallback to basic color resolution if we have a generic name
   const colorName = getColorName(hexColor);
 
   // If we have a good color name (not generic), use it
@@ -226,7 +238,7 @@ export function formatColorDisplay(hexColor: string | undefined, colorIdOrName: 
 
   // If the provided name is generic like "Color 1", try to use a better approximation
   if (colorIdOrName.match(/^Color \d+/)) {
-    // Even if it's a generic color, return the approximation if we have one
+    // Even if it's an approximation, return it if we have one
     if (colorName !== hexColor) {
       return colorName;
     }

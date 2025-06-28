@@ -5,6 +5,7 @@ import { ResultsView } from '../ui/components/ResultsView';
 import { FactoryFloorUI } from '../ui/components/FactoryFloorUI';
 import { ExamplePanel } from '../ui/components/ExamplePanel';
 import { ConfigurationModal } from '../ui/components/ConfigurationModal';
+import { FilamentSyncStatus } from '../ui/components/FilamentSyncStatus';
 import { Logger } from '../utils/logger';
 import { Component } from './Component';
 import { parserWorkerService } from '../services/ParserWorkerService';
@@ -52,6 +53,9 @@ export class App {
   private factoryFloorService: FactoryFloorService | null = null;
   private factoryFloorUI: FactoryFloorUI | null = null;
   private currentView: 'analysis' | 'factory' = 'analysis';
+
+  // UI Components
+  private resultsView: ResultsView | null = null;
 
   constructor() {
     this.logger = new Logger();
@@ -110,7 +114,12 @@ export class App {
 
   private initializeComponents(): void {
     // Initialize main components (not the configuration modal yet)
-    this.components = [new FileUploader(), new ResultsView()];
+    this.resultsView = new ResultsView();
+    this.components = [
+      new FileUploader(),
+      this.resultsView,
+      new FilamentSyncStatus('body'), // Add sync status indicator
+    ];
 
     // Initialize configuration modal
     const configModal = new ConfigurationModal();
@@ -576,6 +585,45 @@ export class App {
         </div>
       `;
     }
+  }
+
+  /**
+   * Debug method to force clear filament database sync state
+   * Available in browser console as: window.debugFilamentDB.clearSyncState()
+   */
+  public debugClearFilamentSyncState(): void {
+    import('../services/FilamentDatabase').then(({ FilamentDatabase }) => {
+      const filamentDb = FilamentDatabase.getInstance();
+      filamentDb.forceClearSyncState();
+    });
+  }
+
+  /**
+   * Debug method to force start filament database sync
+   * Available in browser console as: window.debugFilamentDB.forceSync()
+   */
+  public debugForceFilamentSync(): void {
+    import('../services/FilamentDatabase').then(({ FilamentDatabase }) => {
+      const filamentDb = FilamentDatabase.getInstance();
+      filamentDb.startSync(true);
+    });
+  }
+
+  /**
+   * Debug method to get filament database status
+   * Available in browser console as: window.debugFilamentDB.getStatus()
+   */
+  public async debugGetFilamentStatus(): Promise<void> {
+    const { FilamentDatabase } = await import('../services/FilamentDatabase');
+    const filamentDb = FilamentDatabase.getInstance();
+    const stats = await filamentDb.getStats();
+    const syncStatus = await filamentDb.getSyncStatus();
+
+    console.log('Filament Database Status:', {
+      stats,
+      syncStatus,
+      storageReady: (filamentDb as any).isStorageReady,
+    });
   }
 
   public destroy(): void {

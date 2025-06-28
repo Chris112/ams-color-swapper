@@ -17,6 +17,10 @@
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": false,
+    "noImplicitThis": false,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]

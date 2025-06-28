@@ -1,0 +1,1562 @@
+{
+  "timestamp": "2025-06-27T14:24:59.821Z",
+  "summary": {
+    "totalFiles": 73,
+    "unusedImports": 7,
+    "unusedExports": 28,
+    "circularDependencies": 2
+  },
+  "unusedImports": [
+    {
+      "file": "parser/gcodeToGeometry.ts",
+      "import": "* as THREE",
+      "from": "three"
+    },
+    {
+      "file": "services/FactoryFloorService.ts",
+      "import": "* as THREE",
+      "from": "three"
+    },
+    {
+      "file": "ui/components/VolumetricHologram.ts",
+      "import": "* as THREE",
+      "from": "three"
+    },
+    {
+      "file": "ui/components/factory/FactoryFloorScene.ts",
+      "import": "* as THREE",
+      "from": "three"
+    },
+    {
+      "file": "ui/components/factory/PrintBuilder.ts",
+      "import": "* as THREE",
+      "from": "three"
+    },
+    {
+      "file": "ui/components/volumetric/HologramEffects.ts",
+      "import": "* as THREE",
+      "from": "three"
+    },
+    {
+      "file": "ui/components/volumetric/InteractionController.ts",
+      "import": "* as THREE",
+      "from": "three"
+    }
+  ],
+  "unusedExports": [
+    {
+      "file": "commands/AnalyzeFileCommand.ts",
+      "export": "AnalyzeFileResult",
+      "type": "named"
+    },
+    {
+      "file": "commands/AnalyzeFileCommand.ts",
+      "export": "AnalyzeFileCommand",
+      "type": "named"
+    },
+    {
+      "file": "commands/ClearCacheCommand.ts",
+      "export": "ClearCacheCommand",
+      "type": "named"
+    },
+    {
+      "file": "commands/CommandExecutor.ts",
+      "export": "CommandExecutor",
+      "type": "named"
+    },
+    {
+      "file": "commands/ExportResultsCommand.ts",
+      "export": "ExportFormat",
+      "type": "named"
+    },
+    {
+      "file": "commands/ExportResultsCommand.ts",
+      "export": "ExportResultsCommand",
+      "type": "named"
+    },
+    {
+      "file": "core/App.ts",
+      "export": "App",
+      "type": "named"
+    },
+    {
+      "file": "domain/mappers/AmsConfigurationMapper.ts",
+      "export": "AmsConfigurationMapper",
+      "type": "named"
+    },
+    {
+      "file": "domain/mappers/PrintMapper.ts",
+      "export": "PrintMapper",
+      "type": "named"
+    },
+    {
+      "file": "domain/models/Print.ts",
+      "export": "Print",
+      "type": "named"
+    },
+    {
+      "file": "parser/gcodeParserOptimized.ts",
+      "export": "GcodeParserOptimized",
+      "type": "named"
+    },
+    {
+      "file": "repositories/CacheRepository.ts",
+      "export": "CacheRepository",
+      "type": "named"
+    },
+    {
+      "file": "repositories/FactoryFloorRepository.ts",
+      "export": "IFactoryFloorRepository",
+      "type": "named"
+    },
+    {
+      "file": "repositories/FactoryFloorRepository.ts",
+      "export": "FactoryFloorRepository",
+      "type": "named"
+    },
+    {
+      "file": "repositories/FileRepository.ts",
+      "export": "FileRepository",
+      "type": "named"
+    },
+    {
+      "file": "repositories/GcodeRepository.ts",
+      "export": "GcodeRepository",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "ParseError",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "ValidationError",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "CacheError",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "FileError",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "WorkerError",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "isAppError",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "hasErrorCode",
+      "type": "named"
+    },
+    {
+      "file": "types/errors.ts",
+      "export": "getUserMessage",
+      "type": "named"
+    },
+    {
+      "file": "types/result.ts",
+      "export": "Result",
+      "type": "named"
+    },
+    {
+      "file": "types/result.ts",
+      "export": "Result",
+      "type": "named"
+    },
+    {
+      "file": "ui/components/ConfigurationSelector.ts",
+      "export": "ConfigurationSelector",
+      "type": "named"
+    },
+    {
+      "file": "utils/consoleOverride.ts",
+      "export": "disableConsoleInProduction",
+      "type": "named"
+    }
+  ],
+  "circularDependencies": [
+    ["types/index.ts", "domain/models/AmsConfiguration.ts", "types/index.ts"],
+    [
+      "repositories/HMRStateRepository.ts",
+      "state/AppState.ts",
+      "repositories/HMRStateRepository.ts"
+    ]
+  ],
+  "fileStats": [
+    {
+      "file": "ui/components/ResultsView.ts",
+      "imports": 7,
+      "exports": 1,
+      "definitions": 97,
+      "size": 25396,
+      "importedBy": 1
+    },
+    {
+      "file": "ui/templates/index.ts",
+      "imports": 3,
+      "exports": 5,
+      "definitions": 39,
+      "size": 24581,
+      "importedBy": 1
+    },
+    {
+      "file": "ui/components/ConfigurationModal.ts",
+      "imports": 5,
+      "exports": 1,
+      "definitions": 25,
+      "size": 24160,
+      "importedBy": 1
+    },
+    {
+      "file": "parser/gcodeParserOptimized.ts",
+      "imports": 4,
+      "exports": 1,
+      "definitions": 72,
+      "size": 21368,
+      "importedBy": 0
+    },
+    {
+      "file": "core/App.ts",
+      "imports": 18,
+      "exports": 1,
+      "definitions": 40,
+      "size": 19680,
+      "importedBy": 0
+    },
+    {
+      "file": "parser/gcodeParser.ts",
+      "imports": 4,
+      "exports": 1,
+      "definitions": 46,
+      "size": 17924,
+      "importedBy": 2
+    },
+    {
+      "file": "ui/components/factory/FactoryFloorScene.ts",
+      "imports": 3,
+      "exports": 3,
+      "definitions": 67,
+      "size": 17852,
+      "importedBy": 2
+    },
+    {
+      "file": "parser/gcodeToGeometry.ts",
+      "imports": 3,
+      "exports": 4,
+      "definitions": 88,
+      "size": 17613,
+      "importedBy": 2
+    },
+    {
+      "file": "parser/variants/GcodeParserLazy.ts",
+      "imports": 4,
+      "exports": 1,
+      "definitions": 71,
+      "size": 16477,
+      "importedBy": 1
+    },
+    {
+      "file": "parser/variants/GcodeParserBuffer.ts",
+      "imports": 2,
+      "exports": 1,
+      "definitions": 47,
+      "size": 15617,
+      "importedBy": 1
+    },
+    {
+      "file": "parser/variants/GcodeParserFSM.ts",
+      "imports": 3,
+      "exports": 1,
+      "definitions": 35,
+      "size": 15510,
+      "importedBy": 1
+    },
+    {
+      "file": "parser/variants/GcodeParserRegex.ts",
+      "imports": 3,
+      "exports": 1,
+      "definitions": 32,
+      "size": 14535,
+      "importedBy": 1
+    },
+    {
+      "file": "services/FactoryFloorService.ts",
+      "imports": 7,
+      "exports": 6,
+      "definitions": 37,
+      "size": 14362,
+      "importedBy": 2
+    },
+    {
+      "file": "ui/components/factory/PrintBuilder.ts",
+      "imports": 3,
+      "exports": 5,
+      "definitions": 33,
+      "size": 14068,
+      "importedBy": 1
+    },
+    {
+      "file": "parser/variants/GcodeParserStreams.ts",
+      "imports": 2,
+      "exports": 1,
+      "definitions": 46,
+      "size": 13967,
+      "importedBy": 1
+    },
+    {
+      "file": "ui/components/VolumetricHologram.ts",
+      "imports": 8,
+      "exports": 1,
+      "definitions": 29,
+      "size": 13307,
+      "importedBy": 1
+    },
+    {
+      "file": "ui/components/ConfigurationSelector.ts",
+      "imports": 4,
+      "exports": 1,
+      "definitions": 18,
+      "size": 12826,
+      "importedBy": 0
+    },
+    {
+      "file": "parser/variants/GcodeParserWorker.ts",
+      "imports": 3,
+      "exports": 1,
+      "definitions": 57,
+      "size": 12602,
+      "importedBy": 1
+    },
+    {
+      "file": "domain/models/AmsConfiguration.ts",
+      "imports": 4,
+      "exports": 2,
+      "definitions": 43,
+      "size": 9715,
+      "importedBy": 4
+    },
+    {
+      "file": "ui/components/FactoryFloorUI.ts",
+      "imports": 1,
+      "exports": 1,
+      "definitions": 11,
+      "size": 8908,
+      "importedBy": 1
+    },
+    {
+      "file": "domain/services/ColorOverlapAnalyzer.ts",
+      "imports": 1,
+      "exports": 5,
+      "definitions": 55,
+      "size": 8591,
+      "importedBy": 2
+    },
+    {
+      "file": "services/GcodeCache.ts",
+      "imports": 1,
+      "exports": 2,
+      "definitions": 46,
+      "size": 8391,
+      "importedBy": 1
+    },
+    {
+      "file": "ui/components/FileUploader.ts",
+      "imports": 4,
+      "exports": 1,
+      "definitions": 23,
+      "size": 7780,
+      "importedBy": 1
+    },
+    {
+      "file": "ui/components/volumetric/VoxelDataStructure.ts",
+      "imports": 4,
+      "exports": 1,
+      "definitions": 50,
+      "size": 7345,
+      "importedBy": 1
+    },
+    {
+      "file": "services/OptimizationService.ts",
+      "imports": 5,
+      "exports": 2,
+      "definitions": 20,
+      "size": 7280,
+      "importedBy": 3
+    },
+    {
+      "file": "ui/components/ExamplePanel.ts",
+      "imports": 1,
+      "exports": 2,
+      "definitions": 12,
+      "size": 7220,
+      "importedBy": 1
+    },
+    {
+      "file": "utils/colorNames.ts",
+      "imports": 0,
+      "exports": 2,
+      "definitions": 21,
+      "size": 6779,
+      "importedBy": 2
+    },
+    {
+      "file": "repositories/CacheRepository.ts",
+      "imports": 2,
+      "exports": 1,
+      "definitions": 25,
+      "size": 6727,
+      "importedBy": 0
+    },
+    {
+      "file": "services/ExportService.ts",
+      "imports": 3,
+      "exports": 2,
+      "definitions": 25,
+      "size": 6634,
+      "importedBy": 2
+    },
+    {
+      "file": "ui/components/volumetric/HologramEffects.ts",
+      "imports": 1,
+      "exports": 1,
+      "definitions": 18,
+      "size": 6211,
+      "importedBy": 1
+    },
+    {
+      "file": "domain/services/SimulatedAnnealingOptimizer.ts",
+      "imports": 2,
+      "exports": 1,
+      "definitions": 34,
+      "size": 5952,
+      "importedBy": 1
+    },
+    {
+      "file": "utils/animations.ts",
+      "imports": 0,
+      "exports": 10,
+      "definitions": 53,
+      "size": 5841,
+      "importedBy": 4
+    },
+    {
+      "file": "repositories/FactoryFloorRepository.ts",
+      "imports": 2,
+      "exports": 2,
+      "definitions": 21,
+      "size": 5544,
+      "importedBy": 0
+    },
+    {
+      "file": "ui/components/volumetric/InteractionController.ts",
+      "imports": 3,
+      "exports": 1,
+      "definitions": 10,
+      "size": 5202,
+      "importedBy": 1
+    },
+    {
+      "file": "parser/variants/gcode.worker.ts",
+      "imports": 0,
+      "exports": 0,
+      "definitions": 32,
+      "size": 5083,
+      "importedBy": 0
+    },
+    {
+      "file": "state/AppState.ts",
+      "imports": 2,
+      "exports": 4,
+      "definitions": 6,
+      "size": 4855,
+      "importedBy": 5
+    },
+    {
+      "file": "domain/models/Color.ts",
+      "imports": 0,
+      "exports": 1,
+      "definitions": 4,
+      "size": 4599,
+      "importedBy": 14
+    },
+    {
+      "file": "repositories/HMRStateRepository.ts",
+      "imports": 1,
+      "exports": 2,
+      "definitions": 16,
+      "size": 4227,
+      "importedBy": 2
+    },
+    {
+      "file": "commands/AnalyzeFileCommand.ts",
+      "imports": 8,
+      "exports": 2,
+      "definitions": 8,
+      "size": 4070,
+      "importedBy": 0
+    },
+    {
+      "file": "parser/colorExtractor.ts",
+      "imports": 2,
+      "exports": 2,
+      "definitions": 19,
+      "size": 3575,
+      "importedBy": 1
+    },
+    {
+      "file": "parser/statistics.ts",
+      "imports": 4,
+      "exports": 0,
+      "definitions": 17,
+      "size": 3417,
+      "importedBy": 1
+    },
+    {
+      "file": "domain/models/Print.ts",
+      "imports": 4,
+      "exports": 1,
+      "definitions": 7,
+      "size": 3237,
+      "importedBy": 0
+    },
+    {
+      "file": "domain/models/AmsSlot.ts",
+      "imports": 1,
+      "exports": 1,
+      "definitions": 5,
+      "size": 2993,
+      "importedBy": 1
+    },
+    {
+      "file": "types/errors.ts",
+      "imports": 0,
+      "exports": 8,
+      "definitions": 10,
+      "size": 2915,
+      "importedBy": 0
+    },
+    {
+      "file": "domain/mappers/PrintMapper.ts",
+      "imports": 2,
+      "exports": 1,
+      "definitions": 5,
+      "size": 2904,
+      "importedBy": 0
+    },
+    {
+      "file": "services/FileProcessingService.ts",
+      "imports": 5,
+      "exports": 2,
+      "definitions": 7,
+      "size": 2848,
+      "importedBy": 2
+    },
+    {
+      "file": "utils/hash.ts",
+      "imports": 0,
+      "exports": 2,
+      "definitions": 25,
+      "size": 2717,
+      "importedBy": 2
+    },
+    {
+      "file": "commands/CommandExecutor.ts",
+      "imports": 3,
+      "exports": 1,
+      "definitions": 5,
+      "size": 2700,
+      "importedBy": 0
+    },
+    {
+      "file": "types/index.ts",
+      "imports": 2,
+      "exports": 12,
+      "definitions": 13,
+      "size": 2615,
+      "importedBy": 42
+    },
+    {
+      "file": "repositories/GcodeRepository.ts",
+      "imports": 3,
+      "exports": 1,
+      "definitions": 9,
+      "size": 2503,
+      "importedBy": 0
+    },
+    {
+      "file": "core/Component.ts",
+      "imports": 2,
+      "exports": 0,
+      "definitions": 6,
+      "size": 2496,
+      "importedBy": 6
+    },
+    {
+      "file": "utils/logger.ts",
+      "imports": 1,
+      "exports": 1,
+      "definitions": 7,
+      "size": 2494,
+      "importedBy": 15
+    },
+    {
+      "file": "core/EventEmitter.ts",
+      "imports": 1,
+      "exports": 6,
+      "definitions": 9,
+      "size": 2208,
+      "importedBy": 10
+    },
+    {
+      "file": "services/ParserWorkerService.ts",
+      "imports": 1,
+      "exports": 3,
+      "definitions": 5,
+      "size": 2152,
+      "importedBy": 2
+    },
+    {
+      "file": "repositories/interfaces.ts",
+      "imports": 1,
+      "exports": 5,
+      "definitions": 5,
+      "size": 1974,
+      "importedBy": 3
+    },
+    {
+      "file": "domain/mappers/AmsConfigurationMapper.ts",
+      "imports": 2,
+      "exports": 1,
+      "definitions": 7,
+      "size": 1901,
+      "importedBy": 0
+    },
+    {
+      "file": "repositories/FileRepository.ts",
+      "imports": 3,
+      "exports": 1,
+      "definitions": 6,
+      "size": 1850,
+      "importedBy": 0
+    },
+    {
+      "file": "domain/models/ToolChange.ts",
+      "imports": 0,
+      "exports": 1,
+      "definitions": 2,
+      "size": 1844,
+      "importedBy": 1
+    },
+    {
+      "file": "utils/configurationHash.ts",
+      "imports": 1,
+      "exports": 2,
+      "definitions": 13,
+      "size": 1708,
+      "importedBy": 1
+    },
+    {
+      "file": "types/result.ts",
+      "imports": 0,
+      "exports": 2,
+      "definitions": 4,
+      "size": 1506,
+      "importedBy": 0
+    },
+    {
+      "file": "utils/fileReader.ts",
+      "imports": 0,
+      "exports": 1,
+      "definitions": 10,
+      "size": 1479,
+      "importedBy": 5
+    },
+    {
+      "file": "parser/parserFactory.ts",
+      "imports": 9,
+      "exports": 2,
+      "definitions": 2,
+      "size": 1422,
+      "importedBy": 1
+    },
+    {
+      "file": "commands/ExportResultsCommand.ts",
+      "imports": 3,
+      "exports": 2,
+      "definitions": 1,
+      "size": 1178,
+      "importedBy": 0
+    },
+    {
+      "file": "commands/ClearCacheCommand.ts",
+      "imports": 5,
+      "exports": 1,
+      "definitions": 2,
+      "size": 1163,
+      "importedBy": 0
+    },
+    {
+      "file": "ui/components/volumetric/types.ts",
+      "imports": 2,
+      "exports": 7,
+      "definitions": 6,
+      "size": 1153,
+      "importedBy": 3
+    },
+    {
+      "file": "utils/consoleOverride.ts",
+      "imports": 0,
+      "exports": 1,
+      "definitions": 5,
+      "size": 1056,
+      "importedBy": 0
+    },
+    {
+      "file": "repositories/index.ts",
+      "imports": 0,
+      "exports": 4,
+      "definitions": 0,
+      "size": 428,
+      "importedBy": 5
+    },
+    {
+      "file": "commands/ICommand.ts",
+      "imports": 1,
+      "exports": 1,
+      "definitions": 2,
+      "size": 385,
+      "importedBy": 4
+    },
+    {
+      "file": "domain/models/Slicer.ts",
+      "imports": 0,
+      "exports": 2,
+      "definitions": 2,
+      "size": 370,
+      "importedBy": 1
+    },
+    {
+      "file": "commands/index.ts",
+      "imports": 0,
+      "exports": 6,
+      "definitions": 1,
+      "size": 314,
+      "importedBy": 1
+    },
+    {
+      "file": "domain/models/index.ts",
+      "imports": 0,
+      "exports": 7,
+      "definitions": 2,
+      "size": 266,
+      "importedBy": 3
+    },
+    {
+      "file": "domain/mappers/index.ts",
+      "imports": 0,
+      "exports": 2,
+      "definitions": 0,
+      "size": 112,
+      "importedBy": 1
+    },
+    {
+      "file": "domain/services/index.ts",
+      "imports": 0,
+      "exports": 0,
+      "definitions": 0,
+      "size": 40,
+      "importedBy": 0
+    }
+  ],
+  "importGraph": [
+    {
+      "file": "commands/AnalyzeFileCommand.ts",
+      "imports": [
+        "commands/ICommand.ts",
+        "types/index.ts",
+        "services/FileProcessingService.ts",
+        "services/OptimizationService.ts",
+        "repositories/index.ts",
+        "utils/logger.ts",
+        "utils/hash.ts",
+        "utils/configurationHash.ts"
+      ]
+    },
+    {
+      "file": "commands/ClearCacheCommand.ts",
+      "imports": [
+        "commands/ICommand.ts",
+        "types/index.ts",
+        "repositories/index.ts",
+        "utils/logger.ts",
+        "repositories/HMRStateRepository.ts"
+      ]
+    },
+    {
+      "file": "commands/CommandExecutor.ts",
+      "imports": ["commands/ICommand.ts", "types/index.ts", "utils/logger.ts"]
+    },
+    {
+      "file": "commands/ExportResultsCommand.ts",
+      "imports": ["commands/ICommand.ts", "types/index.ts", "services/ExportService.ts"]
+    },
+    {
+      "file": "commands/ICommand.ts",
+      "imports": ["types/index.ts"]
+    },
+    {
+      "file": "commands/index.ts",
+      "imports": []
+    },
+    {
+      "file": "core/App.ts",
+      "imports": [
+        "state/AppState.ts",
+        "core/EventEmitter.ts",
+        "ui/components/FileUploader.ts",
+        "ui/components/ResultsView.ts",
+        "ui/components/FactoryFloorUI.ts",
+        "ui/components/ExamplePanel.ts",
+        "ui/components/ConfigurationModal.ts",
+        "utils/logger.ts",
+        "core/Component.ts",
+        "services/ParserWorkerService.ts",
+        "services/GcodeCache.ts",
+        "ui/components/factory/FactoryFloorScene.ts",
+        "services/FactoryFloorService.ts",
+        "services/FileProcessingService.ts",
+        "services/OptimizationService.ts",
+        "services/ExportService.ts",
+        "repositories/index.ts",
+        "commands/index.ts"
+      ]
+    },
+    {
+      "file": "core/Component.ts",
+      "imports": ["state/AppState.ts", "core/EventEmitter.ts"]
+    },
+    {
+      "file": "core/EventEmitter.ts",
+      "imports": ["types/index.ts"]
+    },
+    {
+      "file": "domain/mappers/AmsConfigurationMapper.ts",
+      "imports": ["types/index.ts", "domain/models/index.ts"]
+    },
+    {
+      "file": "domain/mappers/PrintMapper.ts",
+      "imports": ["types/index.ts", "domain/models/index.ts"]
+    },
+    {
+      "file": "domain/mappers/index.ts",
+      "imports": []
+    },
+    {
+      "file": "domain/models/AmsConfiguration.ts",
+      "imports": [
+        "domain/models/AmsSlot.ts",
+        "domain/models/Color.ts",
+        "types/index.ts",
+        "domain/services/ColorOverlapAnalyzer.ts"
+      ]
+    },
+    {
+      "file": "domain/models/AmsSlot.ts",
+      "imports": ["domain/models/Color.ts"]
+    },
+    {
+      "file": "domain/models/Color.ts",
+      "imports": []
+    },
+    {
+      "file": "domain/models/Print.ts",
+      "imports": [
+        "domain/models/Color.ts",
+        "domain/models/ToolChange.ts",
+        "domain/models/Slicer.ts",
+        "types/index.ts"
+      ]
+    },
+    {
+      "file": "domain/models/Slicer.ts",
+      "imports": []
+    },
+    {
+      "file": "domain/models/ToolChange.ts",
+      "imports": []
+    },
+    {
+      "file": "domain/models/index.ts",
+      "imports": []
+    },
+    {
+      "file": "domain/services/ColorOverlapAnalyzer.ts",
+      "imports": ["domain/models/Color.ts"]
+    },
+    {
+      "file": "domain/services/SimulatedAnnealingOptimizer.ts",
+      "imports": ["domain/models/Color.ts", "domain/services/ColorOverlapAnalyzer.ts"]
+    },
+    {
+      "file": "domain/services/index.ts",
+      "imports": []
+    },
+    {
+      "file": "parser/colorExtractor.ts",
+      "imports": ["types/index.ts", "domain/models/Color.ts"]
+    },
+    {
+      "file": "parser/gcodeParser.ts",
+      "imports": [
+        "types/index.ts",
+        "utils/logger.ts",
+        "utils/fileReader.ts",
+        "parser/statistics.ts"
+      ]
+    },
+    {
+      "file": "parser/gcodeParserOptimized.ts",
+      "imports": [
+        "types/index.ts",
+        "domain/models/Color.ts",
+        "utils/logger.ts",
+        "utils/fileReader.ts"
+      ]
+    },
+    {
+      "file": "parser/gcodeToGeometry.ts",
+      "imports": ["types/index.ts", "domain/models/Color.ts"]
+    },
+    {
+      "file": "parser/parserFactory.ts",
+      "imports": [
+        "utils/logger.ts",
+        "domain/models/AmsConfiguration.ts",
+        "parser/gcodeParser.ts",
+        "parser/variants/GcodeParserBuffer.ts",
+        "parser/variants/GcodeParserStreams.ts",
+        "parser/variants/GcodeParserRegex.ts",
+        "parser/variants/GcodeParserFSM.ts",
+        "parser/variants/GcodeParserWorker.ts",
+        "parser/variants/GcodeParserLazy.ts"
+      ]
+    },
+    {
+      "file": "parser/statistics.ts",
+      "imports": [
+        "types/index.ts",
+        "domain/models/Color.ts",
+        "parser/colorExtractor.ts",
+        "utils/colorNames.ts"
+      ]
+    },
+    {
+      "file": "parser/variants/GcodeParserBuffer.ts",
+      "imports": ["types/index.ts", "utils/logger.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserFSM.ts",
+      "imports": ["types/index.ts", "utils/logger.ts", "utils/fileReader.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserLazy.ts",
+      "imports": [
+        "types/index.ts",
+        "domain/models/Color.ts",
+        "utils/logger.ts",
+        "utils/fileReader.ts"
+      ]
+    },
+    {
+      "file": "parser/variants/GcodeParserRegex.ts",
+      "imports": ["types/index.ts", "utils/logger.ts", "utils/fileReader.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserStreams.ts",
+      "imports": ["types/index.ts", "utils/logger.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserWorker.ts",
+      "imports": ["types/index.ts", "domain/models/Color.ts", "utils/logger.ts"]
+    },
+    {
+      "file": "parser/variants/gcode.worker.ts",
+      "imports": []
+    },
+    {
+      "file": "repositories/CacheRepository.ts",
+      "imports": ["repositories/interfaces.ts", "types/index.ts"]
+    },
+    {
+      "file": "repositories/FactoryFloorRepository.ts",
+      "imports": ["types/index.ts", "services/FactoryFloorService.ts"]
+    },
+    {
+      "file": "repositories/FileRepository.ts",
+      "imports": ["repositories/interfaces.ts", "types/index.ts", "utils/hash.ts"]
+    },
+    {
+      "file": "repositories/GcodeRepository.ts",
+      "imports": ["repositories/interfaces.ts", "types/index.ts", "parser/gcodeParser.ts"]
+    },
+    {
+      "file": "repositories/HMRStateRepository.ts",
+      "imports": ["state/AppState.ts"]
+    },
+    {
+      "file": "repositories/index.ts",
+      "imports": []
+    },
+    {
+      "file": "repositories/interfaces.ts",
+      "imports": ["types/index.ts"]
+    },
+    {
+      "file": "services/ExportService.ts",
+      "imports": ["types/index.ts", "repositories/index.ts", "services/OptimizationService.ts"]
+    },
+    {
+      "file": "services/FactoryFloorService.ts",
+      "imports": [
+        "core/EventEmitter.ts",
+        "ui/components/factory/FactoryFloorScene.ts",
+        "ui/components/factory/PrintBuilder.ts",
+        "types/index.ts",
+        "repositories/index.ts",
+        "parser/gcodeToGeometry.ts"
+      ]
+    },
+    {
+      "file": "services/FileProcessingService.ts",
+      "imports": [
+        "types/index.ts",
+        "utils/logger.ts",
+        "services/ParserWorkerService.ts",
+        "parser/parserFactory.ts",
+        "domain/models/AmsConfiguration.ts"
+      ]
+    },
+    {
+      "file": "services/GcodeCache.ts",
+      "imports": ["types/index.ts"]
+    },
+    {
+      "file": "services/OptimizationService.ts",
+      "imports": [
+        "domain/mappers/index.ts",
+        "domain/models/index.ts",
+        "domain/services/SimulatedAnnealingOptimizer.ts",
+        "types/index.ts",
+        "utils/logger.ts"
+      ]
+    },
+    {
+      "file": "services/ParserWorkerService.ts",
+      "imports": ["types/index.ts"]
+    },
+    {
+      "file": "state/AppState.ts",
+      "imports": ["types/index.ts", "repositories/HMRStateRepository.ts"]
+    },
+    {
+      "file": "types/errors.ts",
+      "imports": []
+    },
+    {
+      "file": "types/index.ts",
+      "imports": ["domain/models/Color.ts", "domain/models/AmsConfiguration.ts"]
+    },
+    {
+      "file": "types/result.ts",
+      "imports": []
+    },
+    {
+      "file": "ui/components/ConfigurationModal.ts",
+      "imports": [
+        "core/Component.ts",
+        "core/EventEmitter.ts",
+        "types/index.ts",
+        "utils/animations.ts",
+        "domain/models/AmsConfiguration.ts"
+      ]
+    },
+    {
+      "file": "ui/components/ConfigurationSelector.ts",
+      "imports": [
+        "core/Component.ts",
+        "core/EventEmitter.ts",
+        "types/index.ts",
+        "utils/animations.ts"
+      ]
+    },
+    {
+      "file": "ui/components/ExamplePanel.ts",
+      "imports": ["config/exampleFiles.ts"]
+    },
+    {
+      "file": "ui/components/FactoryFloorUI.ts",
+      "imports": ["core/EventEmitter.ts"]
+    },
+    {
+      "file": "ui/components/FileUploader.ts",
+      "imports": [
+        "core/Component.ts",
+        "core/EventEmitter.ts",
+        "state/AppState.ts",
+        "utils/animations.ts"
+      ]
+    },
+    {
+      "file": "ui/components/ResultsView.ts",
+      "imports": [
+        "core/Component.ts",
+        "core/EventEmitter.ts",
+        "state/AppState.ts",
+        "types/index.ts",
+        "ui/templates/index.ts",
+        "utils/animations.ts",
+        "ui/components/VolumetricHologram.ts"
+      ]
+    },
+    {
+      "file": "ui/components/VolumetricHologram.ts",
+      "imports": [
+        "core/Component.ts",
+        "types/index.ts",
+        "ui/components/volumetric/types.ts",
+        "ui/components/volumetric/VoxelDataStructure.ts",
+        "ui/components/volumetric/HologramEffects.ts",
+        "ui/components/volumetric/InteractionController.ts"
+      ]
+    },
+    {
+      "file": "ui/components/factory/FactoryFloorScene.ts",
+      "imports": ["core/EventEmitter.ts"]
+    },
+    {
+      "file": "ui/components/factory/PrintBuilder.ts",
+      "imports": ["core/EventEmitter.ts", "parser/gcodeToGeometry.ts"]
+    },
+    {
+      "file": "ui/components/volumetric/HologramEffects.ts",
+      "imports": []
+    },
+    {
+      "file": "ui/components/volumetric/InteractionController.ts",
+      "imports": ["ui/components/volumetric/types.ts"]
+    },
+    {
+      "file": "ui/components/volumetric/VoxelDataStructure.ts",
+      "imports": ["types/index.ts", "ui/components/volumetric/types.ts", "domain/models/Color.ts"]
+    },
+    {
+      "file": "ui/components/volumetric/types.ts",
+      "imports": ["types/index.ts"]
+    },
+    {
+      "file": "ui/templates/index.ts",
+      "imports": ["types/index.ts", "domain/models/Color.ts", "utils/colorNames.ts"]
+    },
+    {
+      "file": "utils/animations.ts",
+      "imports": []
+    },
+    {
+      "file": "utils/colorNames.ts",
+      "imports": []
+    },
+    {
+      "file": "utils/configurationHash.ts",
+      "imports": ["types/index.ts"]
+    },
+    {
+      "file": "utils/consoleOverride.ts",
+      "imports": []
+    },
+    {
+      "file": "utils/fileReader.ts",
+      "imports": []
+    },
+    {
+      "file": "utils/hash.ts",
+      "imports": []
+    },
+    {
+      "file": "utils/logger.ts",
+      "imports": ["types/index.ts"]
+    }
+  ],
+  "exportUsage": [
+    {
+      "file": "commands/ICommand.ts",
+      "importedBy": [
+        "commands/AnalyzeFileCommand.ts",
+        "commands/ClearCacheCommand.ts",
+        "commands/CommandExecutor.ts",
+        "commands/ExportResultsCommand.ts"
+      ]
+    },
+    {
+      "file": "types/index.ts",
+      "importedBy": [
+        "commands/AnalyzeFileCommand.ts",
+        "commands/ClearCacheCommand.ts",
+        "commands/CommandExecutor.ts",
+        "commands/ExportResultsCommand.ts",
+        "commands/ICommand.ts",
+        "core/EventEmitter.ts",
+        "domain/mappers/AmsConfigurationMapper.ts",
+        "domain/mappers/PrintMapper.ts",
+        "domain/models/AmsConfiguration.ts",
+        "domain/models/Print.ts",
+        "parser/colorExtractor.ts",
+        "parser/gcodeParser.ts",
+        "parser/gcodeParserOptimized.ts",
+        "parser/gcodeToGeometry.ts",
+        "parser/statistics.ts",
+        "parser/variants/GcodeParserBuffer.ts",
+        "parser/variants/GcodeParserFSM.ts",
+        "parser/variants/GcodeParserLazy.ts",
+        "parser/variants/GcodeParserRegex.ts",
+        "parser/variants/GcodeParserStreams.ts",
+        "parser/variants/GcodeParserWorker.ts",
+        "repositories/CacheRepository.ts",
+        "repositories/FactoryFloorRepository.ts",
+        "repositories/FileRepository.ts",
+        "repositories/GcodeRepository.ts",
+        "repositories/interfaces.ts",
+        "services/ExportService.ts",
+        "services/FactoryFloorService.ts",
+        "services/FileProcessingService.ts",
+        "services/GcodeCache.ts",
+        "services/OptimizationService.ts",
+        "services/ParserWorkerService.ts",
+        "state/AppState.ts",
+        "ui/components/ConfigurationModal.ts",
+        "ui/components/ConfigurationSelector.ts",
+        "ui/components/ResultsView.ts",
+        "ui/components/VolumetricHologram.ts",
+        "ui/components/volumetric/VoxelDataStructure.ts",
+        "ui/components/volumetric/types.ts",
+        "ui/templates/index.ts",
+        "utils/configurationHash.ts",
+        "utils/logger.ts"
+      ]
+    },
+    {
+      "file": "services/FileProcessingService.ts",
+      "importedBy": ["commands/AnalyzeFileCommand.ts", "core/App.ts"]
+    },
+    {
+      "file": "services/OptimizationService.ts",
+      "importedBy": ["commands/AnalyzeFileCommand.ts", "core/App.ts", "services/ExportService.ts"]
+    },
+    {
+      "file": "repositories/index.ts",
+      "importedBy": [
+        "commands/AnalyzeFileCommand.ts",
+        "commands/ClearCacheCommand.ts",
+        "core/App.ts",
+        "services/ExportService.ts",
+        "services/FactoryFloorService.ts"
+      ]
+    },
+    {
+      "file": "utils/logger.ts",
+      "importedBy": [
+        "commands/AnalyzeFileCommand.ts",
+        "commands/ClearCacheCommand.ts",
+        "commands/CommandExecutor.ts",
+        "core/App.ts",
+        "parser/gcodeParser.ts",
+        "parser/gcodeParserOptimized.ts",
+        "parser/parserFactory.ts",
+        "parser/variants/GcodeParserBuffer.ts",
+        "parser/variants/GcodeParserFSM.ts",
+        "parser/variants/GcodeParserLazy.ts",
+        "parser/variants/GcodeParserRegex.ts",
+        "parser/variants/GcodeParserStreams.ts",
+        "parser/variants/GcodeParserWorker.ts",
+        "services/FileProcessingService.ts",
+        "services/OptimizationService.ts"
+      ]
+    },
+    {
+      "file": "utils/hash.ts",
+      "importedBy": ["commands/AnalyzeFileCommand.ts", "repositories/FileRepository.ts"]
+    },
+    {
+      "file": "utils/configurationHash.ts",
+      "importedBy": ["commands/AnalyzeFileCommand.ts"]
+    },
+    {
+      "file": "repositories/HMRStateRepository.ts",
+      "importedBy": ["commands/ClearCacheCommand.ts", "state/AppState.ts"]
+    },
+    {
+      "file": "services/ExportService.ts",
+      "importedBy": ["commands/ExportResultsCommand.ts", "core/App.ts"]
+    },
+    {
+      "file": "state/AppState.ts",
+      "importedBy": [
+        "core/App.ts",
+        "core/Component.ts",
+        "repositories/HMRStateRepository.ts",
+        "ui/components/FileUploader.ts",
+        "ui/components/ResultsView.ts"
+      ]
+    },
+    {
+      "file": "core/EventEmitter.ts",
+      "importedBy": [
+        "core/App.ts",
+        "core/Component.ts",
+        "services/FactoryFloorService.ts",
+        "ui/components/ConfigurationModal.ts",
+        "ui/components/ConfigurationSelector.ts",
+        "ui/components/FactoryFloorUI.ts",
+        "ui/components/FileUploader.ts",
+        "ui/components/ResultsView.ts",
+        "ui/components/factory/FactoryFloorScene.ts",
+        "ui/components/factory/PrintBuilder.ts"
+      ]
+    },
+    {
+      "file": "ui/components/FileUploader.ts",
+      "importedBy": ["core/App.ts"]
+    },
+    {
+      "file": "ui/components/ResultsView.ts",
+      "importedBy": ["core/App.ts"]
+    },
+    {
+      "file": "ui/components/FactoryFloorUI.ts",
+      "importedBy": ["core/App.ts"]
+    },
+    {
+      "file": "ui/components/ExamplePanel.ts",
+      "importedBy": ["core/App.ts"]
+    },
+    {
+      "file": "ui/components/ConfigurationModal.ts",
+      "importedBy": ["core/App.ts"]
+    },
+    {
+      "file": "core/Component.ts",
+      "importedBy": [
+        "core/App.ts",
+        "ui/components/ConfigurationModal.ts",
+        "ui/components/ConfigurationSelector.ts",
+        "ui/components/FileUploader.ts",
+        "ui/components/ResultsView.ts",
+        "ui/components/VolumetricHologram.ts"
+      ]
+    },
+    {
+      "file": "services/ParserWorkerService.ts",
+      "importedBy": ["core/App.ts", "services/FileProcessingService.ts"]
+    },
+    {
+      "file": "services/GcodeCache.ts",
+      "importedBy": ["core/App.ts"]
+    },
+    {
+      "file": "ui/components/factory/FactoryFloorScene.ts",
+      "importedBy": ["core/App.ts", "services/FactoryFloorService.ts"]
+    },
+    {
+      "file": "services/FactoryFloorService.ts",
+      "importedBy": ["core/App.ts", "repositories/FactoryFloorRepository.ts"]
+    },
+    {
+      "file": "commands/index.ts",
+      "importedBy": ["core/App.ts"]
+    },
+    {
+      "file": "domain/models/index.ts",
+      "importedBy": [
+        "domain/mappers/AmsConfigurationMapper.ts",
+        "domain/mappers/PrintMapper.ts",
+        "services/OptimizationService.ts"
+      ]
+    },
+    {
+      "file": "domain/models/AmsSlot.ts",
+      "importedBy": ["domain/models/AmsConfiguration.ts"]
+    },
+    {
+      "file": "domain/models/Color.ts",
+      "importedBy": [
+        "domain/models/AmsConfiguration.ts",
+        "domain/models/AmsSlot.ts",
+        "domain/models/Print.ts",
+        "domain/services/ColorOverlapAnalyzer.ts",
+        "domain/services/SimulatedAnnealingOptimizer.ts",
+        "parser/colorExtractor.ts",
+        "parser/gcodeParserOptimized.ts",
+        "parser/gcodeToGeometry.ts",
+        "parser/statistics.ts",
+        "parser/variants/GcodeParserLazy.ts",
+        "parser/variants/GcodeParserWorker.ts",
+        "types/index.ts",
+        "ui/components/volumetric/VoxelDataStructure.ts",
+        "ui/templates/index.ts"
+      ]
+    },
+    {
+      "file": "domain/services/ColorOverlapAnalyzer.ts",
+      "importedBy": [
+        "domain/models/AmsConfiguration.ts",
+        "domain/services/SimulatedAnnealingOptimizer.ts"
+      ]
+    },
+    {
+      "file": "domain/models/ToolChange.ts",
+      "importedBy": ["domain/models/Print.ts"]
+    },
+    {
+      "file": "domain/models/Slicer.ts",
+      "importedBy": ["domain/models/Print.ts"]
+    },
+    {
+      "file": "utils/fileReader.ts",
+      "importedBy": [
+        "parser/gcodeParser.ts",
+        "parser/gcodeParserOptimized.ts",
+        "parser/variants/GcodeParserFSM.ts",
+        "parser/variants/GcodeParserLazy.ts",
+        "parser/variants/GcodeParserRegex.ts"
+      ]
+    },
+    {
+      "file": "parser/statistics.ts",
+      "importedBy": ["parser/gcodeParser.ts"]
+    },
+    {
+      "file": "domain/models/AmsConfiguration.ts",
+      "importedBy": [
+        "parser/parserFactory.ts",
+        "services/FileProcessingService.ts",
+        "types/index.ts",
+        "ui/components/ConfigurationModal.ts"
+      ]
+    },
+    {
+      "file": "parser/gcodeParser.ts",
+      "importedBy": ["parser/parserFactory.ts", "repositories/GcodeRepository.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserBuffer.ts",
+      "importedBy": ["parser/parserFactory.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserStreams.ts",
+      "importedBy": ["parser/parserFactory.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserRegex.ts",
+      "importedBy": ["parser/parserFactory.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserFSM.ts",
+      "importedBy": ["parser/parserFactory.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserWorker.ts",
+      "importedBy": ["parser/parserFactory.ts"]
+    },
+    {
+      "file": "parser/variants/GcodeParserLazy.ts",
+      "importedBy": ["parser/parserFactory.ts"]
+    },
+    {
+      "file": "parser/colorExtractor.ts",
+      "importedBy": ["parser/statistics.ts"]
+    },
+    {
+      "file": "utils/colorNames.ts",
+      "importedBy": ["parser/statistics.ts", "ui/templates/index.ts"]
+    },
+    {
+      "file": "repositories/interfaces.ts",
+      "importedBy": [
+        "repositories/CacheRepository.ts",
+        "repositories/FileRepository.ts",
+        "repositories/GcodeRepository.ts"
+      ]
+    },
+    {
+      "file": "ui/components/factory/PrintBuilder.ts",
+      "importedBy": ["services/FactoryFloorService.ts"]
+    },
+    {
+      "file": "parser/gcodeToGeometry.ts",
+      "importedBy": ["services/FactoryFloorService.ts", "ui/components/factory/PrintBuilder.ts"]
+    },
+    {
+      "file": "parser/parserFactory.ts",
+      "importedBy": ["services/FileProcessingService.ts"]
+    },
+    {
+      "file": "domain/mappers/index.ts",
+      "importedBy": ["services/OptimizationService.ts"]
+    },
+    {
+      "file": "domain/services/SimulatedAnnealingOptimizer.ts",
+      "importedBy": ["services/OptimizationService.ts"]
+    },
+    {
+      "file": "utils/animations.ts",
+      "importedBy": [
+        "ui/components/ConfigurationModal.ts",
+        "ui/components/ConfigurationSelector.ts",
+        "ui/components/FileUploader.ts",
+        "ui/components/ResultsView.ts"
+      ]
+    },
+    {
+      "file": "config/exampleFiles.ts",
+      "importedBy": ["ui/components/ExamplePanel.ts"]
+    },
+    {
+      "file": "ui/templates/index.ts",
+      "importedBy": ["ui/components/ResultsView.ts"]
+    },
+    {
+      "file": "ui/components/VolumetricHologram.ts",
+      "importedBy": ["ui/components/ResultsView.ts"]
+    },
+    {
+      "file": "ui/components/volumetric/types.ts",
+      "importedBy": [
+        "ui/components/VolumetricHologram.ts",
+        "ui/components/volumetric/InteractionController.ts",
+        "ui/components/volumetric/VoxelDataStructure.ts"
+      ]
+    },
+    {
+      "file": "ui/components/volumetric/VoxelDataStructure.ts",
+      "importedBy": ["ui/components/VolumetricHologram.ts"]
+    },
+    {
+      "file": "ui/components/volumetric/HologramEffects.ts",
+      "importedBy": ["ui/components/VolumetricHologram.ts"]
+    },
+    {
+      "file": "ui/components/volumetric/InteractionController.ts",
+      "importedBy": ["ui/components/VolumetricHologram.ts"]
+    }
+  ]
+}

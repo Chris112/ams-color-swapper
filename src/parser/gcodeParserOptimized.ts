@@ -1,4 +1,5 @@
-import { GcodeStats, ToolChange } from '../types';
+import { GcodeStats, ToolChange, LayerColorInfo } from '../types';
+import { Color } from '../domain/models/Color';
 import { Logger } from '../utils/logger';
 import { BrowserFileReader } from '../utils/fileReader';
 
@@ -9,7 +10,9 @@ export class GcodeParserOptimized {
   private currentZ: number = 0;
   private currentTool: string = 'T0';
   private toolChanges: ToolChange[] = [];
-  private layerColorMap: Map<number, string> = new Map();
+  private layerColorMap: Map<number, string[]> = new Map();
+  private layerDetails: Map<number, LayerColorInfo> = new Map();
+  private layerToolChanges: ToolChange[] = [];
   private colorFirstSeen: Map<string, number> = new Map();
   private colorLastSeen: Map<string, number> = new Map();
   private lineNumber: number = 0;
@@ -23,6 +26,7 @@ export class GcodeParserOptimized {
     this.stats = {
       toolChanges: [],
       layerColorMap: new Map(),
+      layerDetails: [],
       parserWarnings: [],
       colors: [],
     };
@@ -42,8 +46,16 @@ export class GcodeParserOptimized {
     this.stats.totalHeight = 0;
 
     // Initialize layer 0 with the default tool
-    this.layerColorMap.set(0, this.currentTool);
+    this.layerColorMap.set(0, [this.currentTool]);
     this.updateColorSeen(this.currentTool, 0);
+    // Initialize layer 0 details
+    this.layerDetails.set(0, {
+      layer: 0,
+      colors: [this.currentTool],
+      primaryColor: this.currentTool,
+      toolChangeCount: 0,
+      toolChangesInLayer: [],
+    });
 
     // Estimate total lines for progress tracking (approximately 24 bytes per line)
     if (this.onProgress) {
@@ -75,12 +87,32 @@ export class GcodeParserOptimized {
       `Setting totalLayers to ${this.stats.totalLayers} (maxLayerSeen: ${this.maxLayerSeen})`
     );
 
-    // This parser needs to be updated to properly track multicolor layers
-    // For now, throw an error to indicate it's not compatible
-    throw new Error(
-      'GcodeParserOptimized is not compatible with the new multicolor system. ' +
-      'Please use the standard GcodeParser instead.'
+    // Finalize the last layer's details
+    this.finalizeLayerDetails(this.currentLayer);
+
+    // Finalize stats
+    this.stats.toolChanges = this.toolChanges;
+    this.stats.layerColorMap = this.layerColorMap;
+
+    // Convert layerDetails map to array
+    this.stats.layerDetails = Array.from(this.layerDetails.values()).sort(
+      (a, b) => a.layer - b.layer
     );
+
+    // Calculate color usage ranges
+    this.stats.colorUsageRanges = this.calculateColorUsageRanges();
+
+    // Populate unique colors list
+    this.stats.colors = this.extractUniqueColors();
+
+    // Set parse time
+    this.stats.parseTime = Date.now() - this.startTime;
+
+    if (this.onProgress) {
+      this.onProgress(100, 'Parse complete!');
+    }
+
+    return this.stats as GcodeStats;
   }
 
   private async processLines(reader: BrowserFileReader, totalLines: number): Promise<void> {
@@ -95,7 +127,7 @@ export class GcodeParserOptimized {
       if (this.onProgress && this.lineNumber % progressInterval === 0) {
         const progressPercent = (this.lineNumber / totalLines) * 60; // 60% of total progress for line processing
         const totalProgress = Math.min(20 + progressPercent, 80);
-        const percentage = Math.round((this.lineNumber / totalLines) * 100);
+        const percentage = Math.min(Math.round((this.lineNumber / totalLines) * 100), 100);
         this.onProgress(
           totalProgress,
           `Processing lines: ${percentage}% (${this.lineNumber.toLocaleString()}/${totalLines.toLocaleString()})`
@@ -178,12 +210,30 @@ export class GcodeParserOptimized {
       }
 
       if (newLayer !== null && newLayer !== this.currentLayer) {
+        // Finalize previous layer details
+        this.finalizeLayerDetails(this.currentLayer);
+
         this.currentLayer = newLayer;
         if (newLayer > this.maxLayerSeen) {
           this.maxLayerSeen = newLayer;
         }
-        this.layerColorMap.set(this.currentLayer, this.currentTool);
+
+        // Initialize new layer with current tool
+        this.layerColorMap.set(this.currentLayer, [this.currentTool]);
         this.updateColorSeen(this.currentTool, this.currentLayer);
+
+        // Reset layer tool changes for new layer
+        this.layerToolChanges = [];
+
+        // Initialize layer details
+        this.layerDetails.set(this.currentLayer, {
+          layer: this.currentLayer,
+          colors: [this.currentTool],
+          primaryColor: this.currentTool,
+          toolChangeCount: 0,
+          toolChangesInLayer: [],
+        });
+
         this.logger.silly(
           `Layer ${this.currentLayer} - Tool: ${this.currentTool}, Max: ${this.maxLayerSeen}`
         );
@@ -437,11 +487,25 @@ export class GcodeParserOptimized {
       };
 
       this.toolChanges.push(change);
+      this.layerToolChanges.push(change);
       this.logger.silly(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
 
       this.currentTool = tool;
-      // Don't update the layer color map here - wait for the layer change
-      // This ensures we track which tool is active when the layer actually starts printing
+
+      // Add new color to current layer if not already present
+      const layerColors = this.layerColorMap.get(this.currentLayer) || [];
+      if (!layerColors.includes(tool)) {
+        layerColors.push(tool);
+        this.layerColorMap.set(this.currentLayer, layerColors);
+      }
+
+      // Update layer details
+      const layerDetail = this.layerDetails.get(this.currentLayer);
+      if (layerDetail && !layerDetail.colors.includes(tool)) {
+        layerDetail.colors.push(tool);
+      }
+
+      this.updateColorSeen(tool, this.currentLayer);
     }
   }
 
@@ -450,5 +514,116 @@ export class GcodeParserOptimized {
       this.colorFirstSeen.set(tool, layer);
     }
     this.colorLastSeen.set(tool, layer);
+  }
+
+  private finalizeLayerDetails(layer: number) {
+    const layerDetail = this.layerDetails.get(layer);
+    if (layerDetail) {
+      layerDetail.toolChangesInLayer = [...this.layerToolChanges];
+      layerDetail.toolChangeCount = this.layerToolChanges.length;
+
+      // Determine primary color (most used in layer)
+      // For now, we'll use the first color, but this could be enhanced
+      // to track actual usage within the layer
+      if (layerDetail.colors.length > 0) {
+        layerDetail.primaryColor = layerDetail.colors[0];
+      }
+    }
+  }
+
+  private calculateColorUsageRanges() {
+    const ranges: Array<{
+      colorId: string;
+      startLayer: number;
+      endLayer: number;
+      continuous: boolean;
+    }> = [];
+    const colorRanges = new Map<string, { start: number; end: number }>();
+
+    // Build continuous ranges for each color
+    this.colorFirstSeen.forEach((firstLayer, color) => {
+      const lastLayer = this.colorLastSeen.get(color) || firstLayer;
+      colorRanges.set(color, { start: firstLayer, end: lastLayer });
+    });
+
+    // Convert to ColorRange format
+    colorRanges.forEach((range, colorId) => {
+      ranges.push({
+        colorId,
+        startLayer: range.start,
+        endLayer: range.end,
+        continuous: this.isColorContinuous(colorId, range.start, range.end),
+      });
+    });
+
+    return ranges;
+  }
+
+  private isColorContinuous(colorId: string, startLayer: number, endLayer: number): boolean {
+    // Check if color appears in every layer between start and end
+    for (let layer = startLayer; layer <= endLayer; layer++) {
+      const layerColors = this.layerColorMap.get(layer);
+      if (!layerColors || !layerColors.includes(colorId)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private extractUniqueColors(): Color[] {
+    const uniqueColors = new Set<string>();
+    const layersUsedByColor = new Map<string, Set<number>>();
+
+    // Collect unique colors and track which layers they appear in
+    this.layerColorMap.forEach((colors, layer) => {
+      colors.forEach((color) => {
+        uniqueColors.add(color);
+        if (!layersUsedByColor.has(color)) {
+          layersUsedByColor.set(color, new Set());
+        }
+        layersUsedByColor.get(color)!.add(layer);
+      });
+    });
+
+    return Array.from(uniqueColors).map((colorId) => {
+      const layersUsed = layersUsedByColor.get(colorId) || new Set();
+      const sortedLayers = Array.from(layersUsed).sort((a, b) => a - b);
+
+      return new Color({
+        id: colorId,
+        name: colorId,
+        hexValue: this.getColorHex(colorId),
+        firstLayer: sortedLayers[0] || 0,
+        lastLayer: sortedLayers[sortedLayers.length - 1] || 0,
+        layersUsed: layersUsed,
+        partialLayers: new Set(), // We don't track partial layers in this parser
+        totalLayers: this.stats.totalLayers,
+      });
+    });
+  }
+
+  private getColorHex(colorId: string): string {
+    // Extract color hex from slicer info if available
+    if (this.stats.slicerInfo?.colorDefinitions) {
+      const toolIndex = parseInt(colorId.substring(1));
+      if (toolIndex < this.stats.slicerInfo.colorDefinitions.length) {
+        return this.stats.slicerInfo.colorDefinitions[toolIndex];
+      }
+    }
+
+    // Default color palette
+    const defaultColors = [
+      '#FF0000', // Red
+      '#00FF00', // Green
+      '#0000FF', // Blue
+      '#FFFF00', // Yellow
+      '#FF00FF', // Magenta
+      '#00FFFF', // Cyan
+      '#FFA500', // Orange
+      '#800080', // Purple
+    ];
+
+    const index = parseInt(colorId.substring(1)) % defaultColors.length;
+    return defaultColors[index];
   }
 }
