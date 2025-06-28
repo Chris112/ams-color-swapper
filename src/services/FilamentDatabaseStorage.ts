@@ -3,8 +3,6 @@
  * Provides fast, persistent storage with hex color indexing
  */
 
-import { Logger } from '../utils/logger';
-
 export interface StoredFilament {
   id: number;
   hex_color: string;
@@ -42,7 +40,6 @@ export class FilamentDatabaseStorage {
   private static readonly SYNC_STORE = 'sync_status';
 
   private db: IDBDatabase | null = null;
-  private logger = new Logger('FilamentDatabaseStorage');
 
   async initialize(): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -119,7 +116,6 @@ export class FilamentDatabaseStorage {
       }
       hexGroups.get(hex)!.push(filament);
     }
-
 
     console.log(
       `[FilamentStorage] Grouped ${filaments.length} filaments into ${hexGroups.size} hex color groups`

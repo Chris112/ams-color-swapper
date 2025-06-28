@@ -1,4 +1,12 @@
-import { GcodeStats, OptimizationResult, ManualSwap, FilamentUsage } from '../../types';
+import {
+  GcodeStats,
+  OptimizationResult,
+  ManualSwap,
+  FilamentUsage,
+  ConstraintValidationResult,
+  ConstraintViolationRange,
+  ColorConsolidationSuggestion,
+} from '../../types';
 import { Color } from '../../domain/models/Color';
 import { formatColorDisplay } from '../../utils/colorNames';
 
@@ -27,7 +35,33 @@ export const fileStatsTemplate = (stats: GcodeStats): string => {
     { label: 'Color Changes', value: colorChanges.toString() },
   ];
 
+  // Add deduplication notification if colors were merged
+  const deduplicationNotification = stats.deduplicationInfo
+    ? `
+    <div class="col-span-full glass rounded-2xl p-6 bg-gradient-to-r from-green-500/10 to-blue-500/10 border border-green-500/20 animate-scale-in">
+      <div class="flex items-center gap-4">
+        <div class="text-4xl">🎯</div>
+        <div class="flex-1">
+          <div class="text-lg font-semibold text-green-400">Color Deduplication Applied</div>
+          <div class="text-sm text-white/80 mt-1">
+            Merged ${stats.deduplicationInfo.duplicatesFound.length} duplicate color${stats.deduplicationInfo.duplicatesFound.length > 1 ? 's' : ''}, 
+            freeing ${stats.deduplicationInfo.freedSlots.length} slot${stats.deduplicationInfo.freedSlots.length > 1 ? 's' : ''} for manual swaps
+          </div>
+          <div class="text-xs text-white/60 mt-2">
+            ${stats.deduplicationInfo.duplicatesFound
+              .map(
+                (dup) => `${dup.originalTools.join(', ')} → ${dup.assignedTo} (${dup.colorName})`
+              )
+              .join(' • ')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `
+    : '';
+
   return `<div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4 animate-scale-in">
+    ${deduplicationNotification}
     ${items
       .map(
         (item, index) => `
@@ -82,7 +116,15 @@ export const colorStatsTemplate = (
 
       <!-- Enhanced Color Cards -->
       <div>
-        <h4 class="text-xl font-bold text-white mb-6">Color Details & Usage</h4>
+        <div class="flex items-center justify-between mb-6">
+          <h4 class="text-xl font-bold text-white">Color Details & Usage</h4>
+          <button id="openMergePanelBtn" class="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium hover:from-purple-600 hover:to-purple-700 transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14v6m-3-3h6M6 10h2a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2zm10 0h2a2 2 0 002-2V6a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 002 2zM6 20h2a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2a2 2 0 002 2z"></path>
+            </svg>
+            Merge Colors
+          </button>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         ${colors
           .map((color, index) => {
@@ -418,3 +460,189 @@ function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeSt
     </div>
   `;
 }
+
+// Constraint validation template
+export const constraintValidationTemplate = (
+  validation: ConstraintValidationResult,
+  stats?: GcodeStats
+): string => {
+  if (!validation.hasViolations) {
+    return `
+      <div class="constraint-success-panel bg-green-500/10 border-2 border-green-500/30 rounded-xl p-6 mb-6">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-green-400">Print Constraints Validated ✓</h3>
+        </div>
+        <p class="text-green-200">All layers are printable with your current ${validation.summary.availableSlots}-slot configuration. No manual intervention required.</p>
+      </div>
+    `;
+  }
+
+  // Don't show warning panel if there are no impossible violations
+  if (validation.summary.impossibleLayerCount === 0) {
+    return `
+      <div class="constraint-success-panel bg-green-500/10 border-2 border-green-500/30 rounded-xl p-6 mb-6">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-green-400">Print Constraints Validated ✓</h3>
+        </div>
+        <p class="text-green-200">All layers are printable with your current ${validation.summary.availableSlots}-slot configuration.</p>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="constraint-warning-panel">
+      <div class="constraint-warning-header">
+        <div class="constraint-warning-icon">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+        </div>
+        <div>
+          <h3 class="constraint-warning-title">Constraint Violations Detected</h3>
+          <p class="constraint-warning-subtitle">Some layers require more colors than available slots</p>
+        </div>
+      </div>
+
+      <div class="constraint-summary">
+        <div class="constraint-stat">
+          <span class="constraint-stat-value">${validation.summary.impossibleLayerCount}</span>
+          <span class="constraint-stat-label">Impossible Layers</span>
+        </div>
+        <div class="constraint-stat">
+          <span class="constraint-stat-value">${validation.summary.maxColorsRequired}</span>
+          <span class="constraint-stat-label">Max Colors Needed</span>
+        </div>
+        <div class="constraint-stat">
+          <span class="constraint-stat-value">${validation.summary.availableSlots}</span>
+          <span class="constraint-stat-label">Available Slots</span>
+        </div>
+        <div class="constraint-stat">
+          <span class="constraint-stat-value">${validation.summary.suggestionsCount}</span>
+          <span class="constraint-stat-label">Suggestions</span>
+        </div>
+      </div>
+
+      <div class="constraint-violation-ranges">
+        ${validation.violations.map((range) => constraintViolationRangeTemplate(range, stats)).join('')}
+      </div>
+    </div>
+  `;
+};
+
+// Individual violation range template
+export const constraintViolationRangeTemplate = (
+  range: ConstraintViolationRange,
+  stats?: GcodeStats
+): string => {
+  const layerText =
+    range.startLayer === range.endLayer
+      ? `Layer ${range.startLayer}`
+      : `Layers ${range.startLayer}-${range.endLayer}`;
+
+  return `
+    <div class="constraint-violation-range mb-6">
+      <div class="constraint-violation-header mb-4">
+        <h4 class="text-lg font-semibold text-red-400">
+          ${layerText}: ${range.maxColorsRequired} colors needed, ${range.availableSlots} slots available
+        </h4>
+      </div>
+
+      <div class="constraint-details-content" style="display: block;">
+        ${
+          range.suggestions.length > 0
+            ? `
+          <div class="constraint-suggestions">
+            <h5 class="text-sm font-medium text-white/80 mb-3">Suggested Solutions:</h5>
+            ${range.suggestions.map((suggestion) => constraintSuggestionTemplate(suggestion, stats)).join('')}
+          </div>
+        `
+            : '<p class="text-sm text-white/60">No automatic suggestions available for this range.</p>'
+        }
+      </div>
+    </div>
+  `;
+};
+
+// Individual suggestion template with proper color handling
+export const constraintSuggestionTemplate = (
+  suggestion: ColorConsolidationSuggestion,
+  stats?: GcodeStats
+): string => {
+  const impactIcon = {
+    minimal: '🟢',
+    low: '🟡',
+    medium: '🟠',
+    high: '🔴',
+  }[suggestion.impact.visualImpact];
+
+  // Helper to get hex color from tool ID
+  const getColorHex = (colorId: string): string => {
+    if (!stats) return '#888888';
+    const color = stats.colors.find((c) => c.id === colorId);
+    return color?.hexValue || '#888888';
+  };
+
+  return `
+    <div class="constraint-suggestion-item">
+      <div class="constraint-suggestion-header">
+        <span class="constraint-suggestion-type ${suggestion.type}">${suggestion.type.toUpperCase()}</span>
+        <span class="constraint-suggestion-impact ${suggestion.impact.visualImpact}">
+          ${impactIcon} ${suggestion.impact.visualImpact} impact
+        </span>
+      </div>
+
+      <div class="constraint-suggestion-description">
+        <strong>${suggestion.reason}</strong>
+        ${
+          suggestion.secondaryColor
+            ? `
+          <div class="flex items-center gap-3 mt-2">
+            <div class="w-8 h-8 rounded-full shadow-lg ring-2 ring-white/20" style="background-color: ${getColorHex(suggestion.secondaryColor)}"></div>
+            <div class="relative">
+              <div class="absolute inset-0 bg-white/5 rounded-full blur-sm"></div>
+              <svg class="w-6 h-6 text-white/80 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12H19M5 12L9 8M5 12L9 16M19 12L15 8M19 12L15 16"></path>
+              </svg>
+            </div>
+            <div class="w-8 h-8 rounded-full shadow-lg ring-2 ring-white/20" style="background-color: ${getColorHex(suggestion.primaryColor)}"></div>
+            ${
+              suggestion.similarity
+                ? `
+              <span class="text-xs text-white/60">
+                (${suggestion.similarity.rgbDistance.toFixed(0)} RGB distance)
+              </span>
+            `
+                : ''
+            }
+          </div>
+        `
+            : ''
+        }
+        <div class="text-xs text-white/60 mt-1">
+          Affects ${suggestion.impact.usagePercentage.toFixed(1)}% of these layers
+        </div>
+      </div>
+
+      <div class="constraint-suggestion-instruction">
+        <span>${suggestion.instruction}</span>
+        ${
+          suggestion.type === 'merge' && suggestion.secondaryColor
+            ? `<button class="constraint-merge-btn" data-primary="${suggestion.primaryColor}" data-secondary="${suggestion.secondaryColor}" onclick="window.__app?.mergeColors('${suggestion.primaryColor}', '${suggestion.secondaryColor}')">
+                Apply Merge
+              </button>`
+            : ''
+        }
+      </div>
+    </div>
+  `;
+};

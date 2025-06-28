@@ -3,6 +3,7 @@ import { AmsConfiguration } from '../domain/models';
 import { SimulatedAnnealingOptimizer } from '../domain/services/SimulatedAnnealingOptimizer';
 import { GcodeStats, OptimizationResult, SystemConfiguration } from '../types';
 import { Logger } from '../utils/logger';
+import { LayerConstraintAnalyzer } from './LayerConstraintAnalyzer';
 
 export enum OptimizationAlgorithm {
   Greedy = 'greedy',
@@ -20,15 +21,47 @@ export class OptimizationService {
     configuration?: SystemConfiguration,
     algorithm: OptimizationAlgorithm = OptimizationAlgorithm.Greedy // New parameter
   ): OptimizationResult {
-    // Convert to domain model
-    const print = PrintMapper.toDomain(stats);
-
     // Use provided configuration or default to single AMS unit
     const config = configuration || {
       type: 'ams' as const,
       unitCount: 1,
       totalSlots: 4,
     };
+
+    // Run constraint validation first
+    const constraintValidation = LayerConstraintAnalyzer.validateLayerConstraints(stats, config);
+
+    // Log constraint validation results
+    if (constraintValidation.hasViolations) {
+      this.logger.warn(
+        `Constraint violations detected: ${constraintValidation.summary.impossibleLayerCount} impossible layers`
+      );
+      constraintValidation.violations.forEach((violation, index) => {
+        this.logger.warn(`Violation ${index + 1}`, {
+          layers: `${violation.startLayer}-${violation.endLayer}`,
+          maxColors: violation.maxColorsRequired,
+          availableSlots: violation.availableSlots,
+          suggestions: violation.suggestions.length,
+        });
+      });
+    } else {
+      this.logger.info(
+        'No constraint violations detected - print is valid for current configuration'
+      );
+    }
+
+    // Attach constraint validation to stats for UI consumption
+    stats.constraintValidation = constraintValidation;
+
+    // Convert to domain model
+    const print = PrintMapper.toDomain(stats);
+
+    // Log deduplication info if present
+    if (stats.deduplicationInfo) {
+      this.logger.info(
+        `Color deduplication freed ${stats.deduplicationInfo.freedSlots.length} slots: ${stats.deduplicationInfo.freedSlots.join(', ')}`
+      );
+    }
 
     let result: OptimizationResult;
 

@@ -1,5 +1,6 @@
 import { GcodeStats, OptimizationResult, LogEntry, SystemConfiguration } from '../types';
 import { hmrStateRepository } from '../repositories/HMRStateRepository';
+import { MergeHistoryEntry } from '../services/ColorMergeService';
 
 export interface AppStateData {
   currentFile: File | null;
@@ -16,6 +17,8 @@ export interface AppStateData {
     timelineView: 'color' | 'slot';
     swapInstructionDesign: 'glassmorphism';
   };
+  mergeHistory: MergeHistoryEntry[];
+  originalStats: GcodeStats | null; // Keep original stats for undo
 }
 
 export type StateListener = (state: AppStateData) => void;
@@ -41,6 +44,8 @@ export class AppState {
       timelineView: 'color',
       swapInstructionDesign: 'glassmorphism',
     },
+    mergeHistory: [],
+    originalStats: null,
   };
 
   private listeners = new Set<StateListener>();
@@ -120,6 +125,8 @@ export class AppState {
       loadingMessage: '',
       loadingProgress: 0,
       error: null,
+      originalStats: stats, // Keep original for undo
+      mergeHistory: [], // Reset merge history for new file
     });
 
     // Force immediate persistence when analysis is complete
@@ -139,6 +146,29 @@ export class AppState {
       logs: [],
       error: null,
       view: 'upload',
+      mergeHistory: [],
+      originalStats: null,
+    });
+  }
+
+  setMergedStats(stats: GcodeStats, optimization: OptimizationResult, mergeEntry: MergeHistoryEntry): void {
+    this.setState({
+      stats,
+      optimization,
+      mergeHistory: [...this.state.mergeHistory, mergeEntry],
+    });
+  }
+
+  undoLastMerge(): void {
+    if (this.state.mergeHistory.length === 0 || !this.state.originalStats) {
+      return;
+    }
+
+    // For now, restore original stats
+    // In a full implementation, we'd restore to the previous merge state
+    this.setState({
+      stats: this.state.originalStats,
+      mergeHistory: [],
     });
   }
 
