@@ -67,6 +67,9 @@ export interface LayerColorInfo {
 import { Color } from '../domain/models/Color';
 import type { ParserAlgorithm } from '../domain/models/AmsConfiguration';
 
+// Re-export Color for analytics and other modules
+export { Color } from '../domain/models/Color';
+
 export interface SystemConfiguration {
   type: 'ams' | 'toolhead';
   unitCount: number;
@@ -77,6 +80,7 @@ export interface SystemConfiguration {
 export interface OptimizationResult {
   totalColors: number;
   requiredSlots: number;
+  totalSlots?: number; // Total slots available in the configuration
   slotAssignments: SlotAssignment[];
   manualSwaps: ManualSwap[];
   estimatedTimeSaved: number;
@@ -100,8 +104,27 @@ export interface ManualSwap {
   atLayer: number;
   pauseStartLayer: number;
   pauseEndLayer: number;
-  zHeight: number;
+  zHeight?: number; // Make optional as it might not always be available
   reason: string;
+  // Enhanced timing flexibility
+  timingOptions: {
+    earliest: number; // Earliest possible layer for this swap
+    latest: number; // Latest possible layer for this swap
+    optimal: number; // Recommended layer (same as atLayer)
+    adjacentOnly: boolean; // If swap must be adjacent to color usage
+    bufferLayers: number; // Buffer layers around color usage
+  };
+  swapWindow: {
+    startLayer: number; // Start of valid swap window
+    endLayer: number; // End of valid swap window
+    flexibilityScore: number; // 0-100, how flexible this timing is
+    constraints: string[]; // Reasons for timing constraints
+  };
+  confidence: {
+    timing: number; // 0-100, confidence in timing recommendation
+    necessity: number; // 0-100, how necessary this swap is
+    userControl: number; // 0-100, how much user can adjust this
+  };
 }
 
 export interface ColorPair {

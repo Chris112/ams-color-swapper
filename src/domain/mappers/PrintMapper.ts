@@ -59,13 +59,13 @@ export class PrintMapper {
           continuous: false,
         };
       }
-      
+
       // For now, return the full range (can be improved to find actual continuous ranges)
       return {
         colorId: color.id,
         startLayer: Math.min(...layers),
         endLayer: Math.max(...layers),
-        continuous: layers.length === (Math.max(...layers) - Math.min(...layers) + 1),
+        continuous: layers.length === Math.max(...layers) - Math.min(...layers) + 1,
       };
     });
 

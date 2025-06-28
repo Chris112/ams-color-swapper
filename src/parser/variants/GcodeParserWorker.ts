@@ -1,4 +1,5 @@
-import { GcodeStats } from '../../types';
+import { GcodeStats, LayerColorInfo } from '../../types';
+import { Color } from '../../domain/models/Color';
 import { Logger } from '../../utils/logger';
 
 export class GcodeParserWorker {
@@ -56,6 +57,8 @@ export class GcodeParserWorker {
       stats.totalHeight = mergedData.maxZ;
       stats.slicerInfo = mergedData.slicerInfo;
       stats.printTime = mergedData.printTime;
+      stats.layerColorMap = mergedData.layerColorMap;
+      stats.toolChanges = mergedData.toolChanges;
 
       if (mergedData.estimatedPrintTime) {
         stats.estimatedPrintTime = mergedData.estimatedPrintTime;
@@ -87,18 +90,59 @@ export class GcodeParserWorker {
         stats.parserWarnings?.push('M600 filament changes detected');
       }
 
+      // Calculate colors and color usage ranges
+      const uniqueColors: Color[] = Array.from(mergedData.tools).map((tool) => {
+        const toolIndex = parseInt(tool.slice(1));
+        const hexColor = mergedData.colorDefs?.[toolIndex] || '#888888';
+        const firstLayer = mergedData.colorFirstSeen.get(tool) || 0;
+        const lastLayer = mergedData.colorLastSeen.get(tool) || 0;
+        return new Color({
+          id: tool,
+          name: tool,
+          hexValue: hexColor,
+          firstLayer,
+          lastLayer,
+          totalLayers: stats.totalLayers,
+        });
+      });
+      stats.colors = uniqueColors;
+
+      // Calculate color usage ranges
+      const colorRanges: any[] = [];
+      mergedData.colorFirstSeen.forEach((firstLayer, colorId) => {
+        const lastLayer = mergedData.colorLastSeen.get(colorId) || firstLayer;
+        colorRanges.push({
+          colorId,
+          startLayer: firstLayer,
+          endLayer: lastLayer,
+          continuous: true, // Simplified for now
+        });
+      });
+      stats.colorUsageRanges = colorRanges;
+
+      // Calculate layer details
+      const layerDetails: LayerColorInfo[] = [];
+      mergedData.layerColorMap.forEach((colors, layer) => {
+        const toolChangesInLayer = mergedData.toolChanges.filter((tc) => tc.layer === layer);
+        layerDetails.push({
+          layer,
+          colors,
+          primaryColor: colors[0], // First color as primary for simplicity
+          toolChangeCount: toolChangesInLayer.length,
+          toolChangesInLayer,
+        });
+      });
+      stats.layerDetails = layerDetails;
+
       const parseTime = Date.now() - startTime;
+      stats.parseTime = parseTime;
       this.logger.info(`Worker parse completed in ${parseTime}ms`);
 
       if (this.onProgress) {
-        this.onProgress(85, 'Analyzing colors and calculating statistics...');
+        this.onProgress(100, 'Parse complete');
       }
 
-      // This parser variant is not compatible with the new multicolor system
-      throw new Error(
-        'GcodeParserWorker is not compatible with the new multicolor system. ' +
-        'Please use the standard GcodeParser instead.'
-      );
+      return stats as GcodeStats;
     } catch (error) {
       this.logger.error('Worker parsing failed', error);
       throw error;
@@ -140,7 +184,7 @@ export class GcodeParserWorker {
     const layers = new Set<number>();
     const tools = new Set<string>(['T0']);
     const toolChanges: any[] = [];
-    const layerColorMap: Array<[number, string]> = [];
+    const layerColorMap: Array<[number, string[]]> = [];
 
     let currentLayer = 0;
     let currentTool = 'T0';
@@ -167,7 +211,7 @@ export class GcodeParserWorker {
             if (newLayer !== currentLayer) {
               currentLayer = newLayer;
               layers.add(currentLayer);
-              layerColorMap.push([currentLayer, currentTool]);
+              layerColorMap.push([currentLayer, [currentTool]]);
             }
           }
         } else if (
@@ -216,6 +260,14 @@ export class GcodeParserWorker {
       }
     }
 
+    // Finalize the last layer if it hasn't been added yet
+    if (layers.has(currentLayer)) {
+      const existingEntry = layerColorMap.find(([layer]) => layer === currentLayer);
+      if (!existingEntry) {
+        layerColorMap.push([currentLayer, [currentTool]]);
+      }
+    }
+
     // Progress update
     if (this.onProgress) {
       const progress = 20 + ((chunkIndex + 1) / totalChunks) * 60;
@@ -248,7 +300,7 @@ export class GcodeParserWorker {
     printTime?: string;
     estimatedPrintTime?: number;
     filamentWeights?: number[];
-    layerColorMap: Map<number, string>;
+    layerColorMap: Map<number, string[]>;
     colorFirstSeen: Map<string, number>;
     colorLastSeen: Map<string, number>;
   } {
@@ -263,7 +315,7 @@ export class GcodeParserWorker {
       printTime: undefined as string | undefined,
       estimatedPrintTime: undefined as number | undefined,
       filamentWeights: undefined as number[] | undefined,
-      layerColorMap: new Map<number, string>(),
+      layerColorMap: new Map<number, string[]>(),
       colorFirstSeen: new Map<string, number>(),
       colorLastSeen: new Map<string, number>(),
     };
@@ -314,14 +366,18 @@ export class GcodeParserWorker {
       }
 
       // Merge layer color maps
-      result.layerColorMap.forEach(([layer, tool]: [number, string]) => {
-        merged.layerColorMap.set(layer, tool);
+      result.layerColorMap.forEach(([layer, tools]: [number, string[]]) => {
+        const existingTools = merged.layerColorMap.get(layer) || [];
+        const mergedTools = [...new Set([...existingTools, ...tools])];
+        merged.layerColorMap.set(layer, mergedTools);
 
         // Update color first/last seen
-        if (!merged.colorFirstSeen.has(tool)) {
-          merged.colorFirstSeen.set(tool, layer);
-        }
-        merged.colorLastSeen.set(tool, layer);
+        tools.forEach((tool) => {
+          if (!merged.colorFirstSeen.has(tool)) {
+            merged.colorFirstSeen.set(tool, layer);
+          }
+          merged.colorLastSeen.set(tool, layer);
+        });
       });
 
       globalLineOffset += result.lineCount;
@@ -329,7 +385,7 @@ export class GcodeParserWorker {
 
     // Ensure layer 0 is in the map
     if (!merged.layerColorMap.has(0)) {
-      merged.layerColorMap.set(0, 'T0');
+      merged.layerColorMap.set(0, ['T0']);
     }
 
     return merged;

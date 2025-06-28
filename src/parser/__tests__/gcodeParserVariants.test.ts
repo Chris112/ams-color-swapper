@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import { GcodeParser } from '../gcodeParser';
-import { GcodeParserOptimized } from '../gcodeParserOptimized';
+// import { GcodeParserOptimized } from '../gcodeParserOptimized';
 import { GcodeParserStreams } from '../variants/GcodeParserStreams';
-import { GcodeParserWorker } from '../variants/GcodeParserWorker';
+// import { GcodeParserWorker } from '../variants/GcodeParserWorker';
 import { GcodeParserRegex } from '../variants/GcodeParserRegex';
 import { GcodeParserFSM } from '../variants/GcodeParserFSM';
 import { GcodeParserBuffer } from '../variants/GcodeParserBuffer';
-import { GcodeParserLazy } from '../variants/GcodeParserLazy';
+// import { GcodeParserLazy } from '../variants/GcodeParserLazy';
 import { Logger } from '../../utils/logger';
 
 // Mock the Browser File object for Node.js environment
@@ -56,7 +56,7 @@ const gcodeFilePath = path.resolve(__dirname, '../../../public/examples/4_color_
 const mockFile = new MockFile(gcodeFilePath);
 
 describe('GcodeParser Variants Verification', () => {
-  it.skip('ensures all parser variants produce the same result', async () => {
+  it('ensures all parser variants produce the same result', async () => {
     const file = mockFile as unknown as File;
 
     // Get reference result from original parser
@@ -66,13 +66,14 @@ describe('GcodeParser Variants Verification', () => {
 
     // Test all variants
     const parsers = [
-      { name: 'Optimized', parser: new GcodeParserOptimized(silentLogger) },
+      // TODO: Re-enable once optimized, worker, and lazy parsers support multicolor
+      // { name: 'Optimized', parser: new GcodeParserOptimized(silentLogger) },
       { name: 'Streams', parser: new GcodeParserStreams(silentLogger) },
-      { name: 'Worker', parser: new GcodeParserWorker(silentLogger) },
+      // { name: 'Worker', parser: new GcodeParserWorker(silentLogger) },
       { name: 'Regex', parser: new GcodeParserRegex(silentLogger) },
       { name: 'FSM', parser: new GcodeParserFSM(silentLogger) },
       { name: 'Buffer', parser: new GcodeParserBuffer(silentLogger) },
-      { name: 'Lazy', parser: new GcodeParserLazy(silentLogger) },
+      // { name: 'Lazy', parser: new GcodeParserLazy(silentLogger) },
     ];
 
     for (const { name, parser } of parsers) {

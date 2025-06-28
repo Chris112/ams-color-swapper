@@ -1,4 +1,4 @@
-import { GcodeStats, ToolChange } from '../../types';
+import { GcodeStats, ToolChange, LayerColorInfo } from '../../types';
 import { Logger } from '../../utils/logger';
 
 export class GcodeParserStreams {
@@ -9,9 +9,11 @@ export class GcodeParserStreams {
   private currentZ: number = 0;
   private currentTool: string = 'T0';
   private toolChanges: ToolChange[] = [];
-  private layerColorMap: Map<number, string> = new Map();
+  private layerColorMap: Map<number, string[]> = new Map();
   private colorFirstSeen: Map<string, number> = new Map();
   private colorLastSeen: Map<string, number> = new Map();
+  private layerDetails: Map<number, LayerColorInfo> = new Map();
+  private layerToolChanges: ToolChange[] = []; // Tool changes in current layer
   private lineNumber: number = 0;
   private startTime: number = 0;
   private onProgress?: (progress: number, message: string) => void;
@@ -24,6 +26,7 @@ export class GcodeParserStreams {
       layerColorMap: new Map(),
       parserWarnings: [],
       colors: [],
+      layerDetails: [],
     };
   }
 
@@ -41,7 +44,8 @@ export class GcodeParserStreams {
     this.stats.totalHeight = 0;
 
     // Initialize layer 0
-    this.layerColorMap.set(0, this.currentTool);
+    this.initializeLayer(0);
+    this.addColorToLayer(0, this.currentTool);
     this.updateColorSeen(this.currentTool, 0);
 
     const estimatedLines = Math.ceil(file.size / 24);
@@ -69,14 +73,40 @@ export class GcodeParserStreams {
       this.onProgress(85, 'Analyzing colors and calculating statistics...');
     }
 
+    // Finalize the last layer
+    if (this.currentLayer >= 0) {
+      this.updateLayerDetails(this.currentLayer);
+    }
+
     // Set total layers based on maxLayerSeen
     this.stats.totalLayers = this.maxLayerSeen + 1;
 
-    // This parser needs to be updated to properly track multicolor layers
-    throw new Error(
-      'GcodeParserStreams is not compatible with the new multicolor system. ' +
-      'Please use the standard GcodeParser instead.'
+    // Import and calculate statistics
+    const { calculateStatistics } = await import('../statistics');
+    const completeStats = await calculateStatistics(
+      this.stats as GcodeStats,
+      this.toolChanges,
+      this.layerColorMap,
+      this.colorFirstSeen,
+      this.colorLastSeen,
+      Array.from(this.layerDetails.values()),
+      parseTime
     );
+
+    if (this.onProgress) {
+      this.onProgress(95, 'Finalizing analysis...');
+    }
+
+    // Load raw content for geometry parsing if needed
+    if (!this.stats.rawContent) {
+      if (this.onProgress) {
+        this.onProgress(90, 'Loading content for geometry parsing...');
+      }
+      this.stats.rawContent = await file.text();
+      completeStats.rawContent = this.stats.rawContent;
+    }
+
+    return completeStats;
   }
 
   private async *createLineStream(
@@ -113,7 +143,7 @@ export class GcodeParserStreams {
         if (this.onProgress && this.lineNumber % progressInterval === 0) {
           const progressPercent = (this.lineNumber / estimatedLines) * 60;
           const totalProgress = Math.min(20 + progressPercent, 80);
-          const percentage = Math.round((this.lineNumber / estimatedLines) * 100);
+          const percentage = Math.min(Math.round((this.lineNumber / estimatedLines) * 100), 100);
           this.onProgress(
             totalProgress,
             `Streaming: ${percentage}% (${this.lineNumber.toLocaleString()} lines)`
@@ -202,13 +232,21 @@ export class GcodeParserStreams {
       }
 
       if (newLayer !== null && newLayer !== this.currentLayer) {
+        // Finalize previous layer details
+        if (this.currentLayer >= 0) {
+          this.updateLayerDetails(this.currentLayer);
+        }
+
+        // Start new layer
         this.currentLayer = newLayer;
+        this.layerToolChanges = []; // Reset tool changes for new layer
         if (newLayer > this.maxLayerSeen) {
           this.maxLayerSeen = newLayer;
         }
-        this.layerColorMap.set(this.currentLayer, this.currentTool);
+        this.initializeLayer(this.currentLayer);
+        this.addColorToLayer(this.currentLayer, this.currentTool);
         this.updateColorSeen(this.currentTool, this.currentLayer);
-        this.logger.silly(`Layer ${this.currentLayer} - Tool: ${this.currentTool}`);
+        this.logger.silly(`Layer ${this.currentLayer} - Starting tool: ${this.currentTool}`);
         return;
       }
     }
@@ -217,7 +255,7 @@ export class GcodeParserStreams {
     if (line.includes('extruder_colour') || line.includes('filament_colour')) {
       const parts = line.split('=');
       if (parts.length > 1) {
-        const colors = parts[1].split(';');
+        const colors = parts[1].split(';').map((c) => c.trim());
         this.logger.info(`Found ${colors.length} color definitions`);
         if (!this.stats.slicerInfo) {
           this.stats.slicerInfo = { software: 'Unknown', version: 'Unknown' };
@@ -340,9 +378,14 @@ export class GcodeParserStreams {
       };
 
       this.toolChanges.push(change);
+      this.layerToolChanges.push(change);
       this.logger.silly(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
 
       this.currentTool = tool;
+
+      // Add the new tool to the current layer's color list
+      this.addColorToLayer(this.currentLayer, tool);
+      this.updateColorSeen(tool, this.currentLayer);
     }
   }
 
@@ -351,5 +394,44 @@ export class GcodeParserStreams {
       this.colorFirstSeen.set(tool, layer);
     }
     this.colorLastSeen.set(tool, layer);
+  }
+
+  private initializeLayer(layer: number) {
+    if (!this.layerColorMap.has(layer)) {
+      this.layerColorMap.set(layer, []);
+    }
+    if (!this.layerDetails.has(layer)) {
+      this.layerDetails.set(layer, {
+        layer,
+        colors: [],
+        primaryColor: this.currentTool,
+        toolChangeCount: 0,
+        toolChangesInLayer: [],
+      });
+    }
+  }
+
+  private addColorToLayer(layer: number, tool: string) {
+    const colors = this.layerColorMap.get(layer) || [];
+    if (!colors.includes(tool)) {
+      colors.push(tool);
+      this.layerColorMap.set(layer, colors);
+
+      const layerInfo = this.layerDetails.get(layer);
+      if (layerInfo) {
+        layerInfo.colors = [...colors];
+        layerInfo.primaryColor = colors[0]; // First color is primary for now
+      }
+    }
+  }
+
+  private updateLayerDetails(layer: number) {
+    const layerInfo = this.layerDetails.get(layer);
+    if (layerInfo) {
+      layerInfo.toolChangesInLayer = [...this.layerToolChanges];
+      layerInfo.toolChangeCount = this.layerToolChanges.length;
+      // Primary color is the most recent tool (last one used in layer)
+      layerInfo.primaryColor = this.currentTool;
+    }
   }
 }

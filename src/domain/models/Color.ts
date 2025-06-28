@@ -28,13 +28,11 @@ export class Color {
     this.lastLayer = params.lastLayer;
     this.layersUsed = params.layersUsed || new Set();
     this.partialLayers = params.partialLayers || new Set();
-    
+
     // Calculate usage percentage
     const totalLayers = params.totalLayers || 0;
-    this.usagePercentage = totalLayers > 0 
-      ? (this.layersUsed.size / totalLayers) * 100 
-      : 0;
-      
+    this.usagePercentage = totalLayers > 0 ? (this.layersUsed.size / totalLayers) * 100 : 0;
+
     this.validate();
   }
 

@@ -12,6 +12,10 @@ export interface AppStateData {
   error: string | null;
   view: 'upload' | 'results';
   configuration: SystemConfiguration;
+  preferences: {
+    timelineView: 'color' | 'slot';
+    swapInstructionDesign: 'glassmorphism';
+  };
 }
 
 export type StateListener = (state: AppStateData) => void;
@@ -33,6 +37,10 @@ export class AppState {
       totalSlots: 4,
       parserAlgorithm: 'optimized',
     },
+    preferences: {
+      timelineView: 'color',
+      swapInstructionDesign: 'glassmorphism',
+    },
   };
 
   private listeners = new Set<StateListener>();
@@ -40,6 +48,9 @@ export class AppState {
   private readonly PERSISTENCE_DELAY = 1000; // 1 second debounce
 
   constructor() {
+    // Load persisted preferences from localStorage
+    this.loadPersistedPreferences();
+
     // Load persisted state on startup (only in development)
     if (import.meta.env.DEV) {
       this.initializeHMRPersistence();
@@ -81,6 +92,21 @@ export class AppState {
 
   setConfiguration(configuration: SystemConfiguration): void {
     this.setState({ configuration });
+  }
+
+  setPreferences(preferences: Partial<AppStateData['preferences']>): void {
+    this.setState({
+      preferences: { ...this.state.preferences, ...preferences },
+    });
+
+    // Immediately persist preferences to localStorage
+    try {
+      Object.entries(preferences).forEach(([key, value]) => {
+        localStorage.setItem(key, JSON.stringify(value));
+      });
+    } catch (error) {
+      console.warn('Failed to persist preferences to localStorage:', error);
+    }
   }
 
   setAnalysisResults(stats: GcodeStats, optimization: OptimizationResult, logs: LogEntry[]): void {
@@ -180,6 +206,38 @@ export class AppState {
   async clearPersistedState(): Promise<void> {
     await hmrStateRepository.clear();
     console.log('🗑️ Cleared persisted state');
+  }
+
+  private loadPersistedPreferences(): void {
+    try {
+      // Load timeline view preference
+      const timelineView = localStorage.getItem('timelineView');
+      if (timelineView) {
+        const parsedTimelineView = JSON.parse(timelineView);
+        if (parsedTimelineView === 'color' || parsedTimelineView === 'slot') {
+          this.state.preferences.timelineView = parsedTimelineView;
+        }
+      }
+
+      // Load swap instruction design preference (now only glassmorphism)
+      const swapInstructionDesign = localStorage.getItem('swapInstructionDesign');
+      if (swapInstructionDesign) {
+        try {
+          // Try parsing as JSON first (new format)
+          const parsedDesign = JSON.parse(swapInstructionDesign);
+          if (parsedDesign === 'glassmorphism') {
+            this.state.preferences.swapInstructionDesign = parsedDesign;
+          }
+        } catch {
+          // Handle legacy plain string format (old design selection)
+          // Since we only support glassmorphism now, just clear the old value
+          localStorage.removeItem('swapInstructionDesign');
+          this.state.preferences.swapInstructionDesign = 'glassmorphism';
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load persisted preferences:', error);
+    }
   }
 }
 

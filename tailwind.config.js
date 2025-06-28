@@ -13,6 +13,9 @@ export default {
           green: '#00DC82',
           orange: '#FF8C00',
           yellow: '#FFD600',
+          cyan: '#06B6D4',
+          red: '#EF4444',
+          teal: '#06B6D4',
         },
         // Dark mode colors
         dark: {

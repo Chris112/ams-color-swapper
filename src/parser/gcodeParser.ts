@@ -167,7 +167,7 @@ export class GcodeParser {
       if (this.onProgress && this.lineNumber % progressInterval === 0) {
         const progressPercent = (this.lineNumber / totalLines) * 60; // 60% of total progress for line processing
         const totalProgress = Math.min(20 + progressPercent, 80);
-        const percentage = Math.round((this.lineNumber / totalLines) * 100);
+        const percentage = Math.min(Math.round((this.lineNumber / totalLines) * 100), 100);
         this.onProgress(
           totalProgress,
           `Processing lines: ${percentage}% (${this.lineNumber.toLocaleString()}/${totalLines.toLocaleString()})`
@@ -215,7 +215,7 @@ export class GcodeParser {
     if (line.includes('extruder_colour') || line.includes('filament_colour')) {
       const colorMatch = line.match(/= (.+)/);
       if (colorMatch) {
-        const colors = colorMatch[1].split(';');
+        const colors = colorMatch[1].split(';').map((c) => c.trim());
         this.logger.info(`Found ${colors.length} color definitions`);
         // Store color info for later use
         if (!this.stats.slicerInfo) {

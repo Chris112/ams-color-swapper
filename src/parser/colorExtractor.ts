@@ -1,13 +1,13 @@
 import { ColorRange, LayerColorInfo } from '../types';
 import { Color } from '../domain/models/Color';
 
-export function extractColorInfo(
+export async function extractColorInfo(
   colorFirstSeen: Map<string, number>,
   colorLastSeen: Map<string, number>,
   totalLayers: number,
   layerColorMap: Map<number, string[]>,
   layerDetails?: LayerColorInfo[]
-): Color[] {
+): Promise<Color[]> {
   const colors: Color[] = [];
 
   // Build layer usage information for each color
@@ -40,16 +40,24 @@ export function extractColorInfo(
     const layersUsed = colorLayersUsed.get(colorId) || new Set();
     const partialLayers = colorPartialLayers.get(colorId) || new Set();
 
-    colors.push(new Color({
-      id: colorId,
-      name: `Color ${parseInt(colorId.substring(1)) + 1}`,
-      hexValue: undefined, // Will be set later by statistics
-      firstLayer,
-      lastLayer,
-      layersUsed,
-      partialLayers,
-      totalLayers,
-    }));
+    // Try to get a better name using FilamentDatabase
+    let colorName = `Color ${parseInt(colorId.substring(1)) + 1}`;
+
+    // Note: hexValue will be set later by statistics, so we keep the generic name for now
+    // The FilamentDatabase enhancement will happen in the statistics calculation step
+
+    colors.push(
+      new Color({
+        id: colorId,
+        name: colorName,
+        hexValue: undefined, // Will be set later by statistics
+        firstLayer,
+        lastLayer,
+        layersUsed,
+        partialLayers,
+        totalLayers,
+      })
+    );
   }
 
   // Sort by tool number

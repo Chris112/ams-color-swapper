@@ -26,7 +26,7 @@ export default defineConfig({
     format: 'es',
   },
   optimizeDeps: {
-    exclude: ['src/workers/parserWorker.ts'],
+    exclude: ['src/workers/parserWorker.ts', 'src/workers/filamentDatabase.worker.ts'],
   },
   resolve: {
     alias: {

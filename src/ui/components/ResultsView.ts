@@ -1,7 +1,9 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { AppStateData } from '../../state/AppState';
-import { GcodeStats, ColorRange } from '../../types';
+import { appState } from '../../state/AppState';
+import { GcodeStats } from '../../types';
+import { Color } from '../../domain/models/Color';
 import {
   fileStatsTemplate,
   colorStatsTemplate,
@@ -15,7 +17,17 @@ import {
   add3DTiltEffect,
   addGlowHover,
 } from '../../utils/animations';
+import { formatColorDisplay } from '../../utils/colorNames';
 import { VolumetricHologram } from './VolumetricHologram';
+
+interface ColorBand {
+  colorId: string;
+  startLayer: number;
+  endLayer: number;
+  row: number;
+}
+
+type TimelineView = 'color' | 'slot';
 
 export class ResultsView extends Component {
   private exportBtn!: HTMLElement;
@@ -23,6 +35,10 @@ export class ResultsView extends Component {
   private newFileBtn!: HTMLElement;
   private clearCacheBtn!: HTMLElement;
   private volumetricHologram: VolumetricHologram | null = null;
+  private timelineView: TimelineView = 'color';
+  private layerColorCache: Map<number, Set<string>> | null = null;
+  private currentHoveredLayer: number | null = null;
+  private layerTooltipUpdateTimer: number | null = null;
 
   constructor() {
     super('#resultsSection');
@@ -40,6 +56,9 @@ export class ResultsView extends Component {
     this.exportGcodeBtn = exportGcodeBtn;
     this.newFileBtn = newFileBtn as HTMLElement;
     this.clearCacheBtn = clearCacheBtn as HTMLElement;
+
+    // Initialize timeline view from persistent state
+    this.timelineView = appState.getState().preferences.timelineView;
 
     this.attachEventListeners();
     this.addMicroInteractions();
@@ -71,6 +90,7 @@ export class ResultsView extends Component {
       this.updateOptimization();
       this.updateSwapInstructions();
       this.drawColorTimeline();
+      this.attachTimelineToggle();
 
       // Show/hide export G-code button based on manual swaps
       if (this.exportGcodeBtn) {
@@ -197,76 +217,7 @@ export class ResultsView extends Component {
       });
     });
 
-    // Color card expansion
-    const colorCards = document.querySelectorAll('.color-card');
-    colorCards.forEach((card) => {
-      const el = card as HTMLElement;
-      const expandBtn = el.querySelector('.expand-btn');
-      const expandableDetails = el.querySelector('.expandable-details') as HTMLElement;
-      const expandIcon = expandBtn?.querySelector('svg');
-
-      if (expandBtn && expandableDetails) {
-        expandBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isExpanded =
-            expandableDetails.style.maxHeight !== '' && expandableDetails.style.maxHeight !== '0px';
-
-          if (isExpanded) {
-            expandableDetails.style.maxHeight = '0px';
-            expandIcon?.style.setProperty('transform', 'rotate(0deg)');
-          } else {
-            expandableDetails.style.maxHeight = expandableDetails.scrollHeight + 'px';
-            expandIcon?.style.setProperty('transform', 'rotate(180deg)');
-          }
-        });
-      }
-
-      // Card click to toggle expand/collapse
-      el.addEventListener('click', () => {
-        if (expandBtn && expandableDetails) {
-          const isExpanded =
-            expandableDetails.style.maxHeight !== '' && expandableDetails.style.maxHeight !== '0px';
-
-          if (isExpanded) {
-            // Collapse
-            expandableDetails.style.maxHeight = '0px';
-            expandIcon?.style.setProperty('transform', 'rotate(0deg)');
-          } else {
-            // Expand
-            expandableDetails.style.maxHeight = expandableDetails.scrollHeight + 'px';
-            expandIcon?.style.setProperty('transform', 'rotate(180deg)');
-          }
-        }
-      });
-    });
-
-    // Highlight color buttons
-    const highlightBtns = document.querySelectorAll('.highlight-color-btn');
-    highlightBtns.forEach((btn) => {
-      const el = btn as HTMLElement;
-
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const colorId = el.dataset.colorId;
-        if (colorId) {
-          this.toggleColorHighlight(colorId);
-        }
-      });
-    });
-
-    // Toggle color visibility buttons
-    const toggleBtns = document.querySelectorAll('.toggle-color-btn');
-    toggleBtns.forEach((btn) => {
-      const el = btn as HTMLElement;
-
-      el.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const colorId = el.dataset.colorId;
-        if (colorId) {
-          this.toggleColorVisibility(colorId);
-        }
-      });
-    });
+    // Remove card click interactions since we removed all buttons
   }
 
   private highlightColor(colorId: string, temporary: boolean = false): void {
@@ -297,51 +248,6 @@ export class ResultsView extends Component {
         element.style.zIndex = '';
       }
     });
-  }
-
-  private toggleColorHighlight(colorId: string): void {
-    const segments = document.querySelectorAll(`[data-color-id="${colorId}"]`);
-    const isHighlighted = segments[0]?.classList.contains('highlighted');
-
-    if (isHighlighted) {
-      segments.forEach((segment) => {
-        segment.classList.remove('highlighted');
-        const el = segment as HTMLElement;
-        el.style.filter = '';
-        el.style.transform = '';
-        el.style.zIndex = '';
-      });
-      this.showToast(`Color ${colorId} highlight removed`, 'info');
-    } else {
-      this.highlightColor(colorId, false);
-      this.showToast(`Color ${colorId} highlighted`, 'success');
-    }
-  }
-
-  private toggleColorVisibility(colorId: string): void {
-    const segments = document.querySelectorAll(`[data-color-id="${colorId}"]`);
-    const card = document.querySelector(`.color-card[data-color-id="${colorId}"]`) as HTMLElement;
-    const isHidden = card?.style.opacity === '0.3';
-
-    if (isHidden) {
-      segments.forEach((segment) => {
-        const el = segment as HTMLElement;
-        el.style.opacity = '1';
-      });
-      if (card) {
-        card.style.opacity = '1';
-      }
-      this.showToast(`Color ${colorId} shown`, 'info');
-    } else {
-      segments.forEach((segment) => {
-        const el = segment as HTMLElement;
-        el.style.opacity = '0.3';
-      });
-      if (card) {
-        card.style.opacity = '0.3';
-      }
-      this.showToast(`Color ${colorId} hidden`, 'info');
-    }
   }
 
   private showColorDetails(
@@ -453,7 +359,7 @@ export class ResultsView extends Component {
   private updateOptimization(): void {
     const container = document.getElementById('optimizationResults');
     if (container && this.state.optimization) {
-      container.innerHTML = optimizationTemplate(this.state.optimization, this.state.stats!);
+      container.innerHTML = optimizationTemplate(this.state.optimization);
 
       // Animate optimization numbers
       const numbers = container.querySelectorAll('.text-4xl');
@@ -468,11 +374,7 @@ export class ResultsView extends Component {
         el.classList.add('animate-counter');
       });
 
-      // Add hover effects to slot cards
-      const slots = container.querySelectorAll('.glass');
-      slots.forEach((slot) => {
-        add3DTiltEffect(slot as HTMLElement, 8);
-      });
+      // Slot cards now use CSS hover effects instead of JavaScript 3D tilt
     }
   }
 
@@ -491,8 +393,8 @@ export class ResultsView extends Component {
         el.style.animationDelay = `${index * 100}ms`;
       });
 
-      // Add hover effect to timeline markers
-      const markers = container.querySelectorAll('[title]');
+      // Add hover effect and keyboard navigation to timeline markers
+      const markers = container.querySelectorAll('.timeline-marker');
       markers.forEach((marker) => {
         const el = marker as HTMLElement;
         el.addEventListener('mouseenter', () => {
@@ -501,8 +403,152 @@ export class ResultsView extends Component {
         el.addEventListener('mouseleave', () => {
           el.style.transform = '';
         });
+
+        const handleMarkerActivation = () => {
+          const swapIndex = el.dataset.swapIndex;
+          if (swapIndex) {
+            this.scrollToSwapCard(parseInt(swapIndex));
+            this.announceToScreenReader(`Navigated to swap ${parseInt(swapIndex) + 1}`);
+          }
+        };
+
+        el.addEventListener('click', handleMarkerActivation);
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleMarkerActivation();
+          }
+        });
+      });
+
+      // Add event handlers for new interactive features
+      this.attachSwapInteractionHandlers();
+    }
+  }
+
+  private attachSwapInteractionHandlers(): void {
+    // Progress checkboxes
+    const progressCheckboxes = document.querySelectorAll('.swap-progress');
+    progressCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener('change', (e) => {
+        const target = e.target as HTMLInputElement;
+        const swapIndex = target.dataset.swapIndex;
+        if (swapIndex) {
+          const swapCard = document.querySelector(`.swap-card[data-swap-index="${swapIndex}"]`);
+          if (swapCard) {
+            if (target.checked) {
+              swapCard.classList.add('completed');
+              this.updateProgressCount();
+              // Announce completion to screen readers
+              this.announceToScreenReader(`Swap ${parseInt(swapIndex) + 1} marked as completed`);
+            } else {
+              swapCard.classList.remove('completed');
+              this.updateProgressCount();
+              this.announceToScreenReader(`Swap ${parseInt(swapIndex) + 1} marked as incomplete`);
+            }
+          }
+        }
+      });
+    });
+
+    // Removed copy individual swap and focus layer buttons per user request
+
+    // Copy all swaps button
+    const copyAllBtn = document.querySelector('.copy-all-swaps');
+    if (copyAllBtn) {
+      copyAllBtn.addEventListener('click', () => {
+        this.copyAllSwapsToClipboard();
       });
     }
+
+    // Expand/collapse all swaps
+    const expandAllBtn = document.querySelector('.expand-all-swaps');
+    if (expandAllBtn) {
+      expandAllBtn.addEventListener('click', () => {
+        this.toggleAllSwapDetails();
+      });
+    }
+  }
+
+  private scrollToSwapCard(swapIndex: number): void {
+    const swapCard = document.querySelector(`.swap-card[data-swap-index="${swapIndex}"]`);
+    if (swapCard) {
+      swapCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Add highlight effect
+      swapCard.classList.add('animate-pulse');
+      setTimeout(() => {
+        swapCard.classList.remove('animate-pulse');
+      }, 2000);
+    }
+  }
+
+  private updateProgressCount(): void {
+    const total = document.querySelectorAll('.swap-progress').length;
+    const completed = document.querySelectorAll('.swap-progress:checked').length;
+
+    // Update progress display if exists
+    const progressDisplay = document.querySelector('.swap-progress-display');
+    if (progressDisplay) {
+      progressDisplay.textContent = `${completed} of ${total} completed`;
+    }
+  }
+
+  private copyAllSwapsToClipboard(): void {
+    if (!this.state.optimization || !this.state.stats) return;
+
+    let text = `Manual Swap Instructions for ${this.state.stats.fileName}\n`;
+    text += `Total Swaps: ${this.state.optimization.manualSwaps.length}\n\n`;
+
+    this.state.optimization.manualSwaps.forEach((swap, index) => {
+      const fromColor = this.state.stats?.colors.find((c) => c.id === swap.fromColor);
+      const toColor = this.state.stats?.colors.find((c) => c.id === swap.toColor);
+
+      text += `Swap ${index + 1}:\n`;
+      text += `  Pause at layer ${swap.atLayer} (Z${swap.zHeight?.toFixed(2) || 'N/A'}mm)\n`;
+      text += `  Remove: ${fromColor?.name || swap.fromColor}\n`;
+      text += `  Insert: ${toColor?.name || swap.toColor} → Unit ${swap.unit} Slot ${swap.slot}\n`;
+      text += `  Reason: ${swap.reason}\n\n`;
+    });
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        this.showToast('All swap instructions copied!', 'success');
+      })
+      .catch(() => {
+        this.showToast('Failed to copy instructions', 'error');
+      });
+  }
+
+  private toggleAllSwapDetails(): void {
+    const allDetails = document.querySelectorAll('.swap-card details');
+    const anyOpen = Array.from(allDetails).some((details) => (details as HTMLDetailsElement).open);
+
+    allDetails.forEach((details) => {
+      (details as HTMLDetailsElement).open = !anyOpen;
+    });
+
+    const expandBtn = document.querySelector('.expand-all-swaps');
+    if (expandBtn) {
+      expandBtn.textContent = anyOpen ? 'Expand All' : 'Collapse All';
+    }
+  }
+
+  private announceToScreenReader(message: string): void {
+    // Create a temporary aria-live region for screen reader announcements
+    const announcement = document.createElement('div');
+    announcement.setAttribute('role', 'status');
+    announcement.setAttribute('aria-live', 'polite');
+    announcement.setAttribute('aria-atomic', 'true');
+    announcement.className = 'sr-only';
+    announcement.textContent = message;
+
+    document.body.appendChild(announcement);
+
+    // Remove after announcement is made
+    setTimeout(() => {
+      document.body.removeChild(announcement);
+    }, 1000);
   }
 
   private updateVolumetricHologram(): void {
@@ -559,6 +605,25 @@ export class ResultsView extends Component {
     }, 300);
   }
 
+  private buildLayerColorCache(stats: GcodeStats): void {
+    this.layerColorCache = new Map();
+
+    // Initialize all layers with empty sets
+    for (let layer = 0; layer <= stats.totalLayers; layer++) {
+      this.layerColorCache.set(layer, new Set());
+    }
+
+    // Populate cache with color usage
+    stats.colorUsageRanges.forEach((range) => {
+      for (let layer = range.startLayer; layer <= range.endLayer; layer++) {
+        const layerColors = this.layerColorCache!.get(layer);
+        if (layerColors) {
+          layerColors.add(range.colorId);
+        }
+      }
+    });
+  }
+
   private drawColorTimeline(): void {
     const canvas = document.getElementById('colorTimeline') as HTMLCanvasElement;
     if (!canvas || !this.state.stats) return;
@@ -570,6 +635,9 @@ export class ResultsView extends Component {
     }
 
     const stats = this.state.stats;
+
+    // Always rebuild cache when drawing timeline
+    this.buildLayerColorCache(stats);
 
     // Validate data
     if (!stats.colorUsageRanges || stats.colorUsageRanges.length === 0) {
@@ -587,10 +655,28 @@ export class ResultsView extends Component {
 
     console.log('Drawing timeline with', stats.colorUsageRanges.length, 'ranges');
 
+    // Calculate dynamic height based on view type
+    let newHeight: number;
+    if (this.timelineView === 'color') {
+      // Color view: padding + combined row + gap + (colors * (rowHeight + gap)) + bottom padding + labels
+      const rowHeight = 20;
+      const rowGap = 3;
+      const padding = 20;
+      const bottomSpace = 40; // Space for labels
+      newHeight =
+        padding + rowHeight + 10 + stats.colors.length * (rowHeight + rowGap) + bottomSpace;
+    } else {
+      // Slot view: padding + (totalSlots * (rowHeight + gap)) + bottom padding + labels
+      const totalSlots = this.state.optimization?.totalSlots || 4;
+      const rowHeight = 35;
+      const rowGap = 4;
+      const padding = 20;
+      const bottomSpace = 40; // Space for labels
+      newHeight = padding + totalSlots * (rowHeight + rowGap) + bottomSpace;
+    }
+
     // Only update dimensions if they changed (to avoid clearing canvas)
     const newWidth = canvas.offsetWidth;
-    const newHeight = 160;
-
     if (canvas.width !== newWidth || canvas.height !== newHeight) {
       canvas.width = newWidth;
       canvas.height = newHeight;
@@ -607,63 +693,212 @@ export class ResultsView extends Component {
     ctx.fillStyle = isDark ? '#0F172A' : '#F8FAFC';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    const barHeight = 60;
-    const barY = (canvas.height - barHeight) / 2;
-
-    // Ensure we have valid totalLayers
     if (stats.totalLayers <= 0) {
       console.error('Invalid totalLayers:', stats.totalLayers);
       return;
     }
 
-    const layerWidth = canvas.width / stats.totalLayers;
+    if (this.timelineView === 'color') {
+      this.drawColorView(ctx, stats, canvas, canvas.width, canvas.height);
+    } else {
+      this.drawSlotView(ctx, stats, canvas.width, canvas.height);
+    }
+  }
 
-    // Draw color usage ranges with gradient effect
-    stats.colorUsageRanges.forEach((range, index) => {
+  private drawColorView(
+    ctx: CanvasRenderingContext2D,
+    stats: GcodeStats,
+    canvas: HTMLCanvasElement,
+    width: number,
+    height: number
+  ): void {
+    const isDark = document.documentElement.classList.contains('dark');
+    const padding = 20;
+    const leftPadding = 80;
+    const rightPadding = 20;
+    const rowHeight = 20;
+    const rowGap = 3;
+    const startY = padding;
+    const layerWidth = (width - leftPadding - rightPadding) / stats.totalLayers;
+
+    // Label for combined row
+    ctx.fillStyle = isDark ? '#94A3B8' : '#64748B';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('All Colors', 10, startY + rowHeight / 2 + 3);
+
+    // Draw all colors on first row (combined view)
+    stats.colorUsageRanges.forEach((range) => {
       const color = stats.colors.find((c) => c.id === range.colorId);
       if (!color) return;
 
-      const x = range.startLayer * layerWidth;
-      const width = (range.endLayer - range.startLayer + 1) * layerWidth;
+      const x = leftPadding + range.startLayer * layerWidth;
+      const segmentWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
 
-      // Create gradient
-      const gradient = ctx.createLinearGradient(x, barY, x, barY + barHeight);
-      gradient.addColorStop(0, color.hexValue || '#888888');
-      gradient.addColorStop(0.5, this.lightenColor(color.hexValue || '#888888', 20));
-      gradient.addColorStop(1, color.hexValue || '#888888');
-
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, barY, width, barHeight);
-
-      // Add glow effect immediately (no delay)
-      ctx.save();
-      ctx.globalAlpha = 0.15; // Reduced opacity for subtlety
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = color.hexValue || '#888888';
-      ctx.fillRect(x, barY, width, barHeight);
-      ctx.restore();
+      ctx.fillStyle = color.hexValue || '#888888';
+      ctx.fillRect(x, startY, segmentWidth, rowHeight);
     });
 
-    // Border
+    // Border for combined row
     ctx.strokeStyle = isDark ? '#334155' : '#CBD5E1';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(0, barY, canvas.width, barHeight);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(leftPadding, startY, width - leftPadding - rightPadding, rowHeight);
+
+    // Draw individual color rows
+    stats.colors.forEach((color, index) => {
+      const y = startY + (index + 1) * (rowHeight + rowGap) + 10;
+
+      // Color label
+      ctx.fillStyle = isDark ? '#94A3B8' : '#64748B';
+      ctx.font = '11px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      const label = formatColorDisplay(color.hexValue, color.name || color.id);
+      const truncatedLabel = label.length > 12 ? label.substring(0, 11) + '...' : label;
+      ctx.fillText(truncatedLabel, 10, y + rowHeight / 2 + 3);
+
+      // Draw background for empty timeline
+      ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)';
+      ctx.fillRect(leftPadding, y, width - leftPadding - rightPadding, rowHeight);
+
+      // Draw color segments for this specific color
+      const colorRanges = stats.colorUsageRanges.filter((r) => r.colorId === color.id);
+      colorRanges.forEach((range) => {
+        const x = leftPadding + range.startLayer * layerWidth;
+        const segmentWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
+
+        // Gradient for depth
+        const gradient = ctx.createLinearGradient(x, y, x, y + rowHeight);
+        gradient.addColorStop(0, this.lightenColor(color.hexValue || '#888888', 10));
+        gradient.addColorStop(0.5, color.hexValue || '#888888');
+        gradient.addColorStop(1, this.darkenColor(color.hexValue || '#888888', 10));
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, y, segmentWidth, rowHeight);
+      });
+
+      // Row border
+      ctx.strokeStyle = isDark ? '#334155' : '#CBD5E1';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(leftPadding, y, width - leftPadding - rightPadding, rowHeight);
+    });
 
     // Labels
     ctx.fillStyle = isDark ? '#94A3B8' : '#64748B';
     ctx.font = '12px Inter, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Layer 0', 30, barY + barHeight + 20);
-    ctx.fillText(`Layer ${stats.totalLayers}`, canvas.width - 30, barY + barHeight + 20);
+    const labelY = startY + (stats.colors.length + 1) * (rowHeight + rowGap) + 25;
+    ctx.fillText('Layer 0', leftPadding + 50, labelY);
+    ctx.fillText(`Layer ${stats.totalLayers}`, width - rightPadding - 50, labelY);
 
-    // Create interactive overlay elements
-    this.createTimelineOverlay(stats, barY, barHeight, layerWidth);
+    // Create overlay for color view
+    this.createColorViewOverlay(stats, startY, rowHeight, rowGap, layerWidth);
+
+    // Add timeline hover tracking
+    this.attachTimelineHoverTracking(canvas, stats, leftPadding, rightPadding, layerWidth);
   }
 
-  private createTimelineOverlay(
+  private drawSlotView(
+    ctx: CanvasRenderingContext2D,
     stats: GcodeStats,
-    barY: number,
-    barHeight: number,
+    width: number,
+    height: number
+  ): void {
+    if (!this.state.optimization) return;
+
+    const isDark = document.documentElement.classList.contains('dark');
+    const padding = 20;
+    const leftPadding = 80;
+    const rightPadding = 20;
+    const totalSlots = this.state.optimization.totalSlots || 4;
+    const rowHeight = Math.min(35, (height - padding * 2 - 40) / totalSlots);
+    const rowGap = 4;
+    const startY = padding;
+    const layerWidth = (width - leftPadding - rightPadding) / stats.totalLayers;
+
+    // Group slots by unit and slot number
+    const slotMap = new Map<string, (typeof this.state.optimization.slotAssignments)[0]>();
+    this.state.optimization.slotAssignments.forEach((slot) => {
+      slotMap.set(`${slot.unit}-${slot.slot}`, slot);
+    });
+
+    // Draw each slot row
+    let currentRow = 0;
+    for (let unit = 1; unit <= (this.state.optimization.configuration?.unitCount || 1); unit++) {
+      for (let slot = 1; slot <= 4; slot++) {
+        const slotAssignment = slotMap.get(`${unit}-${slot}`);
+        const y = startY + currentRow * (rowHeight + rowGap);
+
+        // Slot label
+        ctx.fillStyle = isDark ? '#94A3B8' : '#64748B';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Unit ${unit} Slot ${slot}`, 10, y + rowHeight / 2 + 3);
+
+        // Draw background for empty slots
+        ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)';
+        ctx.fillRect(leftPadding, y, width - leftPadding - rightPadding, rowHeight);
+
+        if (slotAssignment && slotAssignment.colors.length > 0) {
+          // Draw colors assigned to this slot
+          slotAssignment.colors.forEach((colorId, colorIndex) => {
+            const color = stats.colors.find((c) => c.id === colorId);
+            if (!color) return;
+
+            const colorRanges = stats.colorUsageRanges.filter((r) => r.colorId === colorId);
+            colorRanges.forEach((range) => {
+              const x = leftPadding + range.startLayer * layerWidth;
+              const segmentWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
+              const segmentY = y + (colorIndex * rowHeight) / slotAssignment.colors.length;
+              const segmentHeight = rowHeight / slotAssignment.colors.length;
+
+              // Draw with gradient
+              const gradient = ctx.createLinearGradient(x, segmentY, x, segmentY + segmentHeight);
+              gradient.addColorStop(0, this.lightenColor(color.hexValue || '#888888', 10));
+              gradient.addColorStop(0.5, color.hexValue || '#888888');
+              gradient.addColorStop(1, this.darkenColor(color.hexValue || '#888888', 10));
+
+              ctx.fillStyle = gradient;
+              ctx.fillRect(x, segmentY, segmentWidth, segmentHeight);
+
+              // Add divider between colors in same slot
+              if (colorIndex > 0) {
+                ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(leftPadding, segmentY);
+                ctx.lineTo(width - rightPadding, segmentY);
+                ctx.stroke();
+              }
+            });
+          });
+        }
+
+        // Row border
+        ctx.strokeStyle = isDark ? '#334155' : '#CBD5E1';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(leftPadding, y, width - leftPadding - rightPadding, rowHeight);
+
+        currentRow++;
+      }
+    }
+
+    // Labels
+    ctx.fillStyle = isDark ? '#94A3B8' : '#64748B';
+    ctx.font = '12px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    const labelY = startY + totalSlots * (rowHeight + rowGap) + 15;
+    ctx.fillText('Layer 0', leftPadding + 50, labelY);
+    ctx.fillText(`Layer ${stats.totalLayers}`, width - rightPadding - 50, labelY);
+
+    // Create overlay for slot view
+    this.createSlotViewOverlay(stats, startY, rowHeight, rowGap, layerWidth);
+  }
+
+  private createColorViewOverlay(
+    stats: GcodeStats,
+    startY: number,
+    rowHeight: number,
+    rowGap: number,
     layerWidth: number
   ): void {
     const overlay = document.getElementById('timelineOverlay');
@@ -672,43 +907,145 @@ export class ResultsView extends Component {
     // Clear existing segments
     overlay.innerHTML = '';
 
-    // Create clickable segments for each color range
-    stats.colorUsageRanges.forEach((range: ColorRange) => {
-      const color = stats.colors.find((c) => c.id === range.colorId);
-      if (!color) return;
+    // Create segments for combined view and each color row
+    stats.colors.forEach((color, index) => {
+      const y = startY + (index + 1) * (rowHeight + rowGap) + 10;
+      const colorRanges = stats.colorUsageRanges.filter((r) => r.colorId === color.id);
 
-      const segment = document.createElement('div');
-      segment.className = 'timeline-segment transition-all duration-200';
+      colorRanges.forEach((range) => {
+        const segment = document.createElement('div');
+        segment.className = 'timeline-segment transition-all duration-200';
 
-      // Calculate position and dimensions with minimum width for visibility
-      const calculatedLeft = range.startLayer * layerWidth;
-      const calculatedWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
-      const minWidth = 4; // Minimum 4px width for visibility and clickability
-      const actualWidth = Math.max(calculatedWidth, minWidth);
+        const leftPadding = 80;
+        const x = leftPadding + range.startLayer * layerWidth;
+        const segmentWidth = Math.max((range.endLayer - range.startLayer + 1) * layerWidth, 4);
 
-      // EXPLICITLY set absolute positioning and coordinates
-      segment.style.position = 'absolute';
-      segment.style.left = `${calculatedLeft}px`;
-      segment.style.width = `${actualWidth}px`;
-      segment.style.top = `${barY}px`; // Position to match canvas bar
-      segment.style.height = `${barHeight}px`; // Match canvas bar height
-      segment.style.cursor = 'pointer';
+        segment.style.position = 'absolute';
+        segment.style.left = `${x}px`;
+        segment.style.width = `${segmentWidth}px`;
+        segment.style.top = `${y}px`;
+        segment.style.height = `${rowHeight}px`;
+        segment.style.cursor = 'pointer';
+        segment.style.borderRadius = '2px';
 
-      // Add data attributes
-      segment.dataset.colorId = color.id;
-      segment.dataset.colorName = color.name || color.id;
-      segment.dataset.firstLayer = color.firstLayer.toString();
-      segment.dataset.lastLayer = color.lastLayer.toString();
+        // Add data attributes
+        segment.dataset.colorId = color.id;
+        segment.dataset.colorName = formatColorDisplay(color.hexValue, color.name || color.id);
+        segment.dataset.startLayer = range.startLayer.toString();
+        segment.dataset.endLayer = range.endLayer.toString();
 
-      // Add tooltip
-      segment.title = `${color.name || color.id}\nLayers ${range.startLayer}-${range.endLayer}`;
+        // Add mouse event handlers for portal tooltips
+        const bandData = {
+          colorId: color.id,
+          startLayer: range.startLayer,
+          endLayer: range.endLayer,
+          row: index + 1,
+        };
 
-      overlay.appendChild(segment);
+        segment.addEventListener('mouseenter', () => {
+          this.showTooltipInPortal(color, bandData, segment);
+        });
+
+        segment.addEventListener('mouseleave', () => {
+          this.hideTooltipInPortal();
+        });
+
+        overlay.appendChild(segment);
+      });
     });
 
-    // Re-attach event listeners after creating new elements
+    // Re-attach event listeners
     this.attachTimelineInteractions();
   }
+
+  private createSlotViewOverlay(
+    stats: GcodeStats,
+    startY: number,
+    rowHeight: number,
+    rowGap: number,
+    layerWidth: number
+  ): void {
+    const overlay = document.getElementById('timelineOverlay');
+    if (!overlay || !this.state.optimization) return;
+
+    // Clear existing segments
+    overlay.innerHTML = '';
+
+    // Create segments for each slot's colors
+    let currentRow = 0;
+    const slotMap = new Map<string, (typeof this.state.optimization.slotAssignments)[0]>();
+    this.state.optimization.slotAssignments.forEach((slot) => {
+      slotMap.set(`${slot.unit}-${slot.slot}`, slot);
+    });
+
+    for (let unit = 1; unit <= (this.state.optimization.configuration?.unitCount || 1); unit++) {
+      for (let slot = 1; slot <= 4; slot++) {
+        const slotAssignment = slotMap.get(`${unit}-${slot}`);
+        const y = startY + currentRow * (rowHeight + rowGap);
+
+        if (slotAssignment && slotAssignment.colors.length > 0) {
+          slotAssignment.colors.forEach((colorId, colorIndex) => {
+            const color = stats.colors.find((c) => c.id === colorId);
+            if (!color) return;
+
+            const colorRanges = stats.colorUsageRanges.filter((r) => r.colorId === colorId);
+            colorRanges.forEach((range) => {
+              const segment = document.createElement('div');
+              segment.className = 'timeline-segment transition-all duration-200';
+
+              const leftPadding = 80;
+              const x = leftPadding + range.startLayer * layerWidth;
+              const width = Math.max((range.endLayer - range.startLayer + 1) * layerWidth, 4);
+              const segmentY = y + (colorIndex * rowHeight) / slotAssignment.colors.length;
+              const segmentHeight = rowHeight / slotAssignment.colors.length;
+
+              segment.style.position = 'absolute';
+              segment.style.left = `${x}px`;
+              segment.style.width = `${width}px`;
+              segment.style.top = `${segmentY}px`;
+              segment.style.height = `${segmentHeight}px`;
+              segment.style.cursor = 'pointer';
+              segment.style.borderRadius = '2px';
+
+              // Add data attributes
+              segment.dataset.colorId = color.id;
+              segment.dataset.colorName = formatColorDisplay(
+                color.hexValue,
+                color.name || color.id
+              );
+              segment.dataset.startLayer = range.startLayer.toString();
+              segment.dataset.endLayer = range.endLayer.toString();
+              segment.dataset.slot = `Unit ${unit} Slot ${slot}`;
+
+              // Add mouse event handlers for portal tooltips
+              const bandData = {
+                colorId: color.id,
+                startLayer: range.startLayer,
+                endLayer: range.endLayer,
+                row: currentRow,
+              };
+
+              segment.addEventListener('mouseenter', () => {
+                this.showTooltipInPortal(color, bandData, segment);
+              });
+
+              segment.addEventListener('mouseleave', () => {
+                this.hideTooltipInPortal();
+              });
+
+              overlay.appendChild(segment);
+            });
+          });
+        }
+        currentRow++;
+      }
+    }
+
+    // Re-attach event listeners
+    this.attachTimelineInteractions();
+  }
+
+  // This method is replaced by createColorViewOverlay and createSlotViewOverlay
 
   private attachTimelineInteractions(): void {
     const timelineSegments = document.querySelectorAll('.timeline-segment');
@@ -758,6 +1095,428 @@ export class ResultsView extends Component {
         .toString(16)
         .slice(1)
     );
+  }
+
+  private darkenColor(color: string, percent: number): string {
+    const num = parseInt(color.replace('#', ''), 16);
+    const amt = Math.round(2.55 * percent);
+    const R = (num >> 16) - amt;
+    const G = ((num >> 8) & 0x00ff) - amt;
+    const B = (num & 0x0000ff) - amt;
+    return (
+      '#' +
+      (0x1000000 + (R > 0 ? R : 0) * 0x10000 + (G > 0 ? G : 0) * 0x100 + (B > 0 ? B : 0))
+        .toString(16)
+        .slice(1)
+    );
+  }
+
+  // This method is no longer needed with the new view system
+
+  private createTooltipContent(color: Color, band: ColorBand): string {
+    // Find filament usage for this color
+    const filamentEstimate = this.state.stats?.filamentEstimates?.find(
+      (est) => est.colorId === color.id
+    );
+    const weight = filamentEstimate?.weight || 0;
+
+    return `
+      <div class="p-3 bg-black/90 text-white rounded-lg shadow-xl backdrop-blur-sm border border-white/20">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-4 h-4 rounded-full" style="background-color: ${color.hexValue || '#888888'}"></div>
+          <div class="font-semibold">${formatColorDisplay(color.hexValue, color.name || color.id)}</div>
+        </div>
+        <div class="text-sm space-y-1 text-white/80">
+          <div>Layers: ${band.startLayer} - ${band.endLayer}</div>
+          <div>Total: ${band.endLayer - band.startLayer + 1} layers</div>
+          <div>Usage: ${color.usagePercentage.toFixed(1)}%</div>
+          ${weight > 0 ? `<div>Weight: ${weight.toFixed(1)}g</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private createLayerTooltipContent(layer: number): string {
+    if (!this.state.stats || !this.layerColorCache) return '';
+
+    const layerColors = this.layerColorCache.get(layer) || new Set();
+    const allColors = this.state.stats.colors;
+
+    return `
+      <div class="layer-hover-tooltip bg-black/95 text-white rounded-xl shadow-2xl backdrop-blur-md border border-white/20 p-4 max-w-sm">
+        <div class="tooltip-header mb-3">
+          <h3 class="text-lg font-bold text-white">Layer ${layer}</h3>
+          <p class="text-sm text-white/60">${layerColors.size} of ${allColors.length} colors active</p>
+        </div>
+        
+        <div class="color-grid">
+          <table class="w-full">
+            <tbody>
+              ${allColors
+                .map((color) => {
+                  const isActive = layerColors.has(color.id);
+                  const iconColor = isActive ? '#4ade80' : '#ef4444';
+                  const icon = isActive ? '✓' : '✗';
+                  const rowClass = isActive ? 'active-color-row' : 'inactive-color-row';
+
+                  return `
+                  <tr class="${rowClass} transition-all duration-200">
+                    <td class="py-1 pr-2">
+                      <div class="w-5 h-5 rounded-full shadow-sm ring-1 ring-white/20" 
+                           style="background-color: ${color.hexValue || '#888888'}"></div>
+                    </td>
+                    <td class="py-1 px-2 text-sm">
+                      <span class="${isActive ? 'text-white' : 'text-white/40'}">${formatColorDisplay(color.hexValue, color.name || color.id)}</span>
+                    </td>
+                    <td class="py-1 pl-2 text-right">
+                      <span class="status-icon" style="color: ${iconColor}; font-weight: bold;">${icon}</span>
+                    </td>
+                  </tr>
+                `;
+                })
+                .join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  }
+
+  private showTooltipInPortal(color: Color, band: ColorBand, targetElement: HTMLElement): void {
+    const portal = document.getElementById('tooltipPortal');
+    if (!portal) return;
+
+    // Clear existing tooltips
+    this.hideTooltipInPortal();
+
+    // Create tooltip element
+    const tooltip = document.createElement('div');
+    tooltip.className = 'timeline-tooltip';
+    tooltip.innerHTML = this.createTooltipContent(color, band);
+
+    // Temporarily add to portal to measure dimensions
+    tooltip.style.opacity = '0';
+    tooltip.style.visibility = 'hidden';
+    portal.appendChild(tooltip);
+
+    // Get actual dimensions
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const targetRect = targetElement.getBoundingClientRect();
+
+    // Calculate viewport boundaries with padding
+    const padding = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Determine vertical position (above or below target)
+    const spaceAbove = targetRect.top;
+    const spaceBelow = viewportHeight - targetRect.bottom;
+    const preferredSpace = tooltipRect.height + 16; // tooltip height + arrow + margin
+
+    let useTopPosition = false;
+    if (spaceBelow < preferredSpace && spaceAbove > spaceBelow) {
+      useTopPosition = true;
+    }
+
+    // Calculate horizontal position (centered on target)
+    const targetCenterX = targetRect.left + targetRect.width / 2;
+    let left = targetCenterX - tooltipRect.width / 2;
+
+    // Constrain to viewport with padding
+    if (left < padding) {
+      left = padding;
+    } else if (left + tooltipRect.width > viewportWidth - padding) {
+      left = viewportWidth - tooltipRect.width - padding;
+    }
+
+    // Calculate vertical position
+    let top;
+    if (useTopPosition) {
+      top = targetRect.top - tooltipRect.height - 8;
+      // Ensure it doesn't go above viewport
+      if (top < padding) {
+        // If there's not enough space above, try below
+        if (spaceBelow >= tooltipRect.height + 16) {
+          useTopPosition = false;
+          top = targetRect.bottom + 8;
+        } else {
+          // Force it to stay in viewport
+          top = padding;
+        }
+      }
+    } else {
+      top = targetRect.bottom + 8;
+      // Ensure it doesn't go below viewport
+      if (top + tooltipRect.height > viewportHeight - padding) {
+        // If there's not enough space below, try above
+        if (spaceAbove >= tooltipRect.height + 16) {
+          useTopPosition = true;
+          top = targetRect.top - tooltipRect.height - 8;
+        } else {
+          // Force it to stay in viewport
+          top = viewportHeight - tooltipRect.height - padding;
+        }
+      }
+    }
+
+    // Apply position and visibility
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    tooltip.style.opacity = '';
+    tooltip.style.visibility = '';
+
+    // Add positioning class for arrow direction
+    tooltip.classList.add(useTopPosition ? 'position-top' : 'position-bottom');
+
+    // Trigger show animation
+    requestAnimationFrame(() => {
+      tooltip.classList.add('visible');
+    });
+  }
+
+  private hideTooltipInPortal(): void {
+    const portal = document.getElementById('tooltipPortal');
+    if (!portal) return;
+
+    // Remove all tooltips
+    portal.innerHTML = '';
+  }
+
+  private updateLayerTooltipContent(tooltip: HTMLElement, layer: number): void {
+    tooltip.innerHTML = this.createLayerTooltipContent(layer);
+  }
+
+  private showLayerTooltipInPortal(layer: number, x: number, y: number): void {
+    const portal = document.getElementById('tooltipPortal');
+    if (!portal) return;
+
+    // Check if layer tooltip already exists
+    let tooltip = portal.querySelector('.layer-tooltip-container') as HTMLElement;
+
+    if (tooltip) {
+      // Update existing tooltip content
+      this.updateLayerTooltipContent(tooltip, layer);
+    } else {
+      // Create new tooltip element
+      tooltip = document.createElement('div');
+      tooltip.className = 'layer-tooltip-container';
+      tooltip.innerHTML = this.createLayerTooltipContent(layer);
+
+      // Temporarily add to portal to measure dimensions
+      tooltip.style.opacity = '0';
+      tooltip.style.visibility = 'hidden';
+      tooltip.style.position = 'absolute';
+      portal.appendChild(tooltip);
+
+      // Trigger show animation after positioning
+      requestAnimationFrame(() => {
+        tooltip!.classList.add('visible');
+        tooltip!.style.opacity = '';
+        tooltip!.style.visibility = '';
+      });
+    }
+
+    // Get actual dimensions
+    const tooltipRect = tooltip.getBoundingClientRect();
+
+    // Calculate viewport boundaries with padding
+    const padding = 8;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // Position tooltip near cursor but ensure it stays in viewport
+    let left = x + 10; // Offset from cursor
+    let top = y - tooltipRect.height / 2; // Center vertically on cursor
+
+    // Adjust horizontal position if needed
+    if (left + tooltipRect.width > viewportWidth - padding) {
+      left = x - tooltipRect.width - 10; // Show on left side of cursor
+    }
+    if (left < padding) {
+      left = padding;
+    }
+
+    // Adjust vertical position if needed
+    if (top < padding) {
+      top = padding;
+    } else if (top + tooltipRect.height > viewportHeight - padding) {
+      top = viewportHeight - tooltipRect.height - padding;
+    }
+
+    // Apply position
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  }
+
+  private attachTimelineHoverTracking(
+    canvas: HTMLCanvasElement,
+    stats: GcodeStats,
+    leftPadding: number,
+    rightPadding: number,
+    layerWidth: number
+  ): void {
+    const overlay = document.getElementById('timelineOverlay');
+    if (!overlay) return;
+
+    // Remove existing listeners
+    const newOverlay = overlay.cloneNode(false) as HTMLElement;
+    overlay.parentNode?.replaceChild(newOverlay, overlay);
+    newOverlay.id = 'timelineOverlay';
+
+    // Copy child elements
+    while (overlay.firstChild) {
+      newOverlay.appendChild(overlay.firstChild);
+    }
+
+    // Add mouse move handler
+    newOverlay.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Calculate which layer the mouse is over
+      const timelineX = x - leftPadding;
+
+      // Only show layer tooltip when hovering over the "All Colors" row (first row)
+      const padding = 20;
+      const rowHeight = 20;
+      const startY = padding;
+      const allColorsRowTop = startY;
+      const allColorsRowBottom = startY + rowHeight;
+      const isHoveringAllColorsRow = y >= allColorsRowTop && y <= allColorsRowBottom;
+
+      if (
+        timelineX >= 0 &&
+        timelineX <= canvas.width - leftPadding - rightPadding &&
+        isHoveringAllColorsRow
+      ) {
+        const layer = Math.floor(timelineX / layerWidth);
+
+        if (layer >= 0 && layer <= stats.totalLayers) {
+          // Debounce tooltip updates
+          if (this.currentHoveredLayer !== layer) {
+            this.currentHoveredLayer = layer;
+
+            if (this.layerTooltipUpdateTimer) {
+              clearTimeout(this.layerTooltipUpdateTimer);
+            }
+
+            this.layerTooltipUpdateTimer = window.setTimeout(() => {
+              this.showLayerTooltipInPortal(layer, e.clientX, e.clientY);
+            }, 50);
+          } else if (this.currentHoveredLayer === layer) {
+            // Update position if still on same layer
+            const portal = document.getElementById('tooltipPortal');
+            const tooltip = portal?.querySelector('.layer-tooltip-container') as HTMLElement;
+            if (tooltip) {
+              // Smooth position update
+              const tooltipRect = tooltip.getBoundingClientRect();
+              const padding = 8;
+              const viewportWidth = window.innerWidth;
+              const viewportHeight = window.innerHeight;
+
+              let left = e.clientX + 10;
+              let top = e.clientY - tooltipRect.height / 2;
+
+              if (left + tooltipRect.width > viewportWidth - padding) {
+                left = e.clientX - tooltipRect.width - 10;
+              }
+              if (left < padding) {
+                left = padding;
+              }
+
+              if (top < padding) {
+                top = padding;
+              } else if (top + tooltipRect.height > viewportHeight - padding) {
+                top = viewportHeight - tooltipRect.height - padding;
+              }
+
+              tooltip.style.left = `${left}px`;
+              tooltip.style.top = `${top}px`;
+            }
+          }
+        }
+      } else {
+        // Not hovering over "All Colors" row - clear any existing layer tooltip
+        if (this.currentHoveredLayer !== null) {
+          this.currentHoveredLayer = null;
+          if (this.layerTooltipUpdateTimer) {
+            clearTimeout(this.layerTooltipUpdateTimer);
+          }
+          // Only clear layer tooltips, not the color segment tooltips
+          const portal = document.getElementById('tooltipPortal');
+          const layerTooltip = portal?.querySelector('.layer-tooltip-container');
+          if (layerTooltip) {
+            layerTooltip.remove();
+          }
+        }
+      }
+    });
+
+    // Add mouse leave handler
+    newOverlay.addEventListener('mouseleave', () => {
+      this.currentHoveredLayer = null;
+      if (this.layerTooltipUpdateTimer) {
+        clearTimeout(this.layerTooltipUpdateTimer);
+      }
+      this.hideTooltipInPortal();
+    });
+  }
+
+  private attachTimelineToggle(): void {
+    const colorViewBtn = document.getElementById('colorViewBtn');
+    const slotViewBtn = document.getElementById('slotViewBtn');
+
+    if (!colorViewBtn || !slotViewBtn) return;
+
+    // Update button states based on current view
+    this.updateTimelineViewButtons();
+
+    // Remove any existing listeners by cloning
+    const newColorViewBtn = colorViewBtn.cloneNode(true) as HTMLElement;
+    const newSlotViewBtn = slotViewBtn.cloneNode(true) as HTMLElement;
+
+    colorViewBtn.parentNode?.replaceChild(newColorViewBtn, colorViewBtn);
+    slotViewBtn.parentNode?.replaceChild(newSlotViewBtn, slotViewBtn);
+
+    // Add event listeners
+    newColorViewBtn.addEventListener('click', () => {
+      if (this.timelineView !== 'color') {
+        this.timelineView = 'color';
+        this.updateTimelineViewButtons();
+        this.saveTimelineViewPreference();
+        this.drawColorTimeline();
+      }
+    });
+
+    newSlotViewBtn.addEventListener('click', () => {
+      if (this.timelineView !== 'slot') {
+        this.timelineView = 'slot';
+        this.updateTimelineViewButtons();
+        this.saveTimelineViewPreference();
+        this.drawColorTimeline();
+      }
+    });
+  }
+
+  private updateTimelineViewButtons(): void {
+    const colorViewBtn = document.getElementById('colorViewBtn');
+    const slotViewBtn = document.getElementById('slotViewBtn');
+
+    if (!colorViewBtn || !slotViewBtn) return;
+
+    // Update active states
+    if (this.timelineView === 'color') {
+      colorViewBtn.classList.add('timeline-view-btn-active');
+      slotViewBtn.classList.remove('timeline-view-btn-active');
+    } else {
+      slotViewBtn.classList.add('timeline-view-btn-active');
+      colorViewBtn.classList.remove('timeline-view-btn-active');
+    }
+  }
+
+  private saveTimelineViewPreference(): void {
+    appState.setPreferences({ timelineView: this.timelineView });
   }
 
   protected cleanup(): void {

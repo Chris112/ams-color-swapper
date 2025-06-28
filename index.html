@@ -150,7 +150,7 @@
           <!-- Why AMS Color Swapper Section -->
           <section
             id="whySection"
-            class="glass rounded-3xl p-8 mt-12 max-w-4xl mx-auto animate-fade-in"
+            class="glass card-pop rounded-3xl p-8 mt-12 max-w-4xl mx-auto animate-fade-in"
           >
             <h2 class="text-h2 gradient-text text-center mb-6">Why AMS Color Swapper?</h2>
 
@@ -207,7 +207,7 @@
               </div>
             </div>
 
-            <div class="glass-heavy rounded-2xl p-6">
+            <div class="glass-heavy card-pop rounded-2xl p-6">
               <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <svg
                   fill="none"
@@ -374,7 +374,10 @@
               </div>
 
               <!-- Optimization Results -->
-              <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
+              <div
+                class="glass card-stats rounded-2xl p-6 animate-scale-in"
+                style="animation-delay: 0.4s"
+              >
                 <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
                   <svg
                     fill="none"
@@ -397,7 +400,10 @@
               </div>
 
               <!-- Swap Instructions -->
-              <div class="card-glass animate-scale-in" style="animation-delay: 0.4s">
+              <div
+                class="glass card-stats rounded-2xl p-6 animate-scale-in"
+                style="animation-delay: 0.45s"
+              >
                 <h3 class="text-h3 text-white mb-4 flex items-center gap-2">
                   <svg
                     fill="none"
@@ -616,6 +622,11 @@
 
     <!-- Example Panel Container -->
     <div id="examplePanelContainer"></div>
+
+    <!-- Tooltip Portal Container -->
+    <div id="tooltipPortal" class="fixed top-0 left-0 pointer-events-none z-[10000]">
+      <!-- Timeline tooltips will be rendered here -->
+    </div>
 
     <script type="module" src="/src/app.ts"></script>
   </body>

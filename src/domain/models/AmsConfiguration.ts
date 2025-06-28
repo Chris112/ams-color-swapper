@@ -1,7 +1,7 @@
 import { AmsSlot } from './AmsSlot';
 import { Color } from './Color';
 import { ManualSwap } from '../../types';
-import { ColorOverlapAnalyzer } from '../services/ColorOverlapAnalyzer';
+import { ColorOverlapAnalyzer, SwapDetail } from '../services/ColorOverlapAnalyzer';
 
 /**
  * Domain model representing an optimized AMS configuration
@@ -23,6 +23,11 @@ export class AmsConfiguration {
   private totalSlots: number;
   private optimizationStrategy: 'legacy' | 'groups' | 'intervals' = 'intervals';
   private parserAlgorithm: ParserAlgorithm = 'optimized';
+  private lastOptimizationResult?: {
+    assignments: Map<number, Color[]>;
+    totalSwaps: number;
+    swapDetails: SwapDetail[];
+  };
 
   constructor(
     configType: 'ams' | 'toolhead' = 'ams',
@@ -120,6 +125,12 @@ export class AmsConfiguration {
    * Get manual swaps required for this configuration
    */
   getManualSwaps(): ManualSwap[] {
+    // If using optimization strategies, get swaps from the optimization result
+    if (this.optimizationStrategy !== 'legacy' && this.lastOptimizationResult) {
+      return this.getSwapsFromOptimizationResult();
+    }
+
+    // Legacy behavior for backwards compatibility
     const swaps: ManualSwap[] = [];
 
     this.slots.forEach((slot) => {
@@ -128,33 +139,137 @@ export class AmsConfiguration {
       const colors = slot.colors;
       const sortedColors = [...colors].sort((a, b) => a.firstLayer - b.firstLayer);
 
-      for (let i = 1; i < sortedColors.length; i++) {
-        const fromColor = sortedColors[i - 1];
-        const toColor = sortedColors[i];
+      // Generate swaps for all adjacent colors in shared slots
+      for (let i = 0; i < sortedColors.length - 1; i++) {
+        const fromColor = sortedColors[i];
+        const toColor = sortedColors[i + 1];
 
         // Calculate the valid range for pausing
-        // Can pause after the previous color ends and before the next color starts
-        const pauseStartLayer = fromColor.lastLayer + 1;
-        const pauseEndLayer = toColor.firstLayer - 1;
+        const pauseStart = fromColor.lastLayer;
+        const pauseEnd = toColor.firstLayer;
+
+        // Determine optimal pause layer
+        const atLayer =
+          pauseStart < pauseEnd
+            ? Math.floor((pauseStart + pauseEnd) / 2) // Non-overlapping: pause in the middle
+            : pauseEnd; // Overlapping: pause at start of overlap
 
         swaps.push({
           unit: slot.unitNumber,
           slot: slot.slotNumber,
           fromColor: fromColor.id,
           toColor: toColor.id,
-          atLayer: toColor.firstLayer,
-          pauseStartLayer: pauseStartLayer,
-          pauseEndLayer: pauseEndLayer,
+          atLayer,
+          pauseStartLayer: Math.max(0, atLayer - 1),
+          pauseEndLayer: atLayer,
           zHeight: 0, // Would be calculated from layer height
-          reason:
-            pauseEndLayer >= pauseStartLayer
-              ? `Pause between layers ${pauseStartLayer}-${pauseEndLayer} to swap colors`
-              : `Colors are adjacent - pause at layer ${toColor.firstLayer}`,
+          reason: `Swap ${fromColor.id} → ${toColor.id} in Unit ${slot.unitNumber} Slot ${slot.slotNumber}`,
+          timingOptions: {
+            earliest: Math.max(0, fromColor.lastLayer - 10),
+            latest: Math.min(toColor.firstLayer + 10, fromColor.lastLayer + 50),
+            optimal: atLayer,
+            adjacentOnly: false,
+            bufferLayers: 5,
+          },
+          swapWindow: {
+            startLayer: Math.max(0, fromColor.lastLayer - 10),
+            endLayer: Math.min(toColor.firstLayer + 10, fromColor.lastLayer + 50),
+            flexibilityScore: 80,
+            constraints: [],
+          },
+          confidence: {
+            timing: 85,
+            necessity: 100,
+            userControl: 70,
+          },
         });
       }
     });
 
+    // Sort swaps by layer to ensure they're in print order
+    swaps.sort((a, b) => a.atLayer - b.atLayer);
+
+    // Remove duplicate swaps (same colors at same layer)
+    const uniqueSwaps = swaps.filter(
+      (swap, index, self) =>
+        index ===
+        self.findIndex(
+          (s) =>
+            s.fromColor === swap.fromColor &&
+            s.toColor === swap.toColor &&
+            s.atLayer === swap.atLayer
+        )
+    );
+
+    return uniqueSwaps;
+  }
+
+  /**
+   * Get swaps from optimization result
+   */
+  private getSwapsFromOptimizationResult(): ManualSwap[] {
+    if (!this.lastOptimizationResult) return [];
+
+    const swaps: ManualSwap[] = [];
+    const { swapDetails } = this.lastOptimizationResult;
+
+    swapDetails.forEach((detail) => {
+      // Convert slot number to unit and slot
+      const unit = Math.ceil(detail.slot / this.slotsPerUnit);
+      const slotInUnit = ((detail.slot - 1) % this.slotsPerUnit) + 1;
+
+      // Calculate timing options based on swap details
+      const fromColorObj = this.getColorById(detail.fromColor);
+      const toColorObj = this.getColorById(detail.toColor);
+
+      if (!fromColorObj || !toColorObj) return;
+
+      const earliest = Math.max(0, fromColorObj.lastLayer - 10);
+      const latest = Math.min(toColorObj.firstLayer + 10, fromColorObj.lastLayer + 50);
+      const optimal = detail.atLayer;
+
+      swaps.push({
+        unit,
+        slot: slotInUnit,
+        fromColor: detail.fromColor,
+        toColor: detail.toColor,
+        atLayer: detail.atLayer,
+        pauseStartLayer: Math.max(0, detail.atLayer - 1),
+        pauseEndLayer: detail.atLayer,
+        reason: `Swap ${detail.fromColor} → ${detail.toColor} in Unit ${unit} Slot ${slotInUnit}`,
+        timingOptions: {
+          earliest,
+          latest,
+          optimal,
+          adjacentOnly: false,
+          bufferLayers: 5,
+        },
+        swapWindow: {
+          startLayer: earliest,
+          endLayer: latest,
+          flexibilityScore: ((latest - earliest) / 10) * 10, // 0-100 score
+          constraints: [],
+        },
+        confidence: {
+          timing: 0.9,
+          necessity: 1.0,
+          userControl: 0.8,
+        },
+      });
+    });
+
     return swaps;
+  }
+
+  /**
+   * Get color by ID from all slots
+   */
+  private getColorById(colorId: string): Color | undefined {
+    for (const slot of this.slots.values()) {
+      const color = slot.colors.find((c) => c.id === colorId);
+      if (color) return color;
+    }
+    return undefined;
   }
 
   /**
@@ -203,6 +318,9 @@ export class AmsConfiguration {
       this.optimizationStrategy === 'groups'
         ? ColorOverlapAnalyzer.optimizeSlotAssignments(colors, this.totalSlots)
         : ColorOverlapAnalyzer.optimizeByIntervals(colors, this.totalSlots);
+
+    // Store the optimization result
+    this.lastOptimizationResult = result;
 
     // Clear colors from all existing slots
     this.slots.forEach((slot) => slot.clear());

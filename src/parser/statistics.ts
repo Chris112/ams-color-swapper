@@ -1,7 +1,7 @@
-import { GcodeStats, ToolChange, LayerColorInfo } from '../types';
 import { Color } from '../domain/models/Color';
+import { FilamentDatabase } from '../services/FilamentDatabase';
+import { GcodeStats, LayerColorInfo, ToolChange } from '../types';
 import { extractColorInfo, extractColorRanges } from './colorExtractor';
-import { getColorName } from '../utils/colorNames';
 
 export async function calculateStatistics(
   partialStats: GcodeStats,
@@ -24,13 +24,16 @@ export async function calculateStatistics(
       ? Math.max(partialStats.totalLayers, calculatedLayers)
       : calculatedLayers;
 
-  let colors = extractColorInfo(
+  let colors = await extractColorInfo(
     colorFirstSeen,
     colorLastSeen,
     totalLayers,
     layerColorMap,
     layerDetails
   );
+
+  // Initialize FilamentDatabase for enhanced color naming (non-blocking)
+  const filamentDb = FilamentDatabase.getInstance();
 
   // For Bambu Lab printers, enhance colors with hex values
   if (partialStats.slicerInfo?.colorDefinitions) {
@@ -41,52 +44,74 @@ export async function calculateStatistics(
     for (let i = 0; i < definedColorCount; i++) {
       const toolId = `T${i}`;
       if (!usedTools.has(toolId)) {
-        colors.push(new Color({
-          id: toolId,
-          name: `Color ${i + 1} (Unused)`,
-          hexValue: partialStats.slicerInfo.colorDefinitions[i],
-          firstLayer: -1,
-          lastLayer: -1,
-          layersUsed: new Set(),
-          partialLayers: new Set(),
-          totalLayers,
-        }));
+        colors.push(
+          new Color({
+            id: toolId,
+            name: `Color ${i + 1} (Unused)`,
+            hexValue: partialStats.slicerInfo.colorDefinitions[i],
+            firstLayer: 0,
+            lastLayer: 0,
+            layersUsed: new Set(),
+            partialLayers: new Set(),
+            totalLayers,
+          })
+        );
       }
     }
 
     // Create new Color objects with hex values
-    colors = colors.map((color) => {
-      const index = parseInt(color.id.substring(1));
-      let hexValue = color.hexValue;
-      let name = color.name;
-      
-      if (index < definedColorCount) {
-        hexValue = partialStats.slicerInfo!.colorDefinitions![index];
-        // Update the name based on the hex color
-        if (hexValue) {
-          const colorName = getColorName(hexValue);
-          // Only use the color name if it's meaningful (not generic like "Reddish")
-          if (
-            !colorName.includes('-ish') &&
-            !colorName.includes('Near') &&
-            colorName !== hexValue
-          ) {
-            name = colorName;
+    colors = await Promise.all(
+      colors.map(async (color) => {
+        const index = parseInt(color.id.substring(1));
+        let hexValue = color.hexValue;
+        let name = color.name;
+
+        if (index < definedColorCount) {
+          hexValue = partialStats.slicerInfo!.colorDefinitions![index];
+          // Update the name based on the hex color using FilamentDatabase
+          if (hexValue) {
+            // Get enhanced name from FilamentDatabase (non-blocking)
+            const enhancedName = await filamentDb.getEnhancedColorName(hexValue, color.name);
+            name = enhancedName;
           }
         }
-      }
 
-      return new Color({
-        id: color.id,
-        name,
-        hexValue,
-        firstLayer: color.firstLayer,
-        lastLayer: color.lastLayer,
-        layersUsed: color.layersUsed,
-        partialLayers: color.partialLayers,
-        totalLayers,
-      });
-    });
+        return new Color({
+          id: color.id,
+          name,
+          hexValue,
+          firstLayer: color.firstLayer,
+          lastLayer: color.lastLayer,
+          layersUsed: color.layersUsed,
+          partialLayers: color.partialLayers,
+          totalLayers,
+        });
+      })
+    );
+  } else {
+    // For cases without color definitions, try to enhance names if hex values are available
+    colors = await Promise.all(
+      colors.map(async (color) => {
+        let name = color.name;
+
+        if (color.hexValue) {
+          // Get enhanced name from FilamentDatabase (non-blocking)
+          const enhancedName = await filamentDb.getEnhancedColorName(color.hexValue, color.name);
+          name = enhancedName;
+        }
+
+        return new Color({
+          id: color.id,
+          name,
+          hexValue: color.hexValue,
+          firstLayer: color.firstLayer,
+          lastLayer: color.lastLayer,
+          layersUsed: color.layersUsed,
+          partialLayers: color.partialLayers,
+          totalLayers,
+        });
+      })
+    );
   }
 
   const colorUsageRanges = extractColorRanges(layerColorMap, totalLayers);

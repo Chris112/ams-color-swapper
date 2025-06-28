@@ -10,13 +10,16 @@ export class AmsConfigurationMapper {
    */
   static toOptimizationResult(config: AmsConfiguration, _colors: Color[]): OptimizationResult {
     // Include ALL slots, even empty ones, to ensure proper display in UI
-    const slotAssignments: SlotAssignment[] = config.getAllSlots().map((slot) => ({
-      unit: slot.unitNumber,
-      slot: slot.slotNumber,
-      slotId: slot.slotId,
-      colors: slot.colorIds,
-      isPermanent: slot.isPermanent,
-    }));
+    const slotAssignments: SlotAssignment[] = config
+      .getAllSlots()
+      .filter((slot) => slot.colorIds.length > 0) // Only include slots with colors
+      .map((slot) => ({
+        unit: slot.unitNumber,
+        slot: slot.slotNumber,
+        slotId: slot.slotId,
+        colors: slot.colorIds,
+        isPermanent: slot.isPermanent,
+      }));
 
     const manualSwaps = config.getManualSwaps();
 
@@ -40,7 +43,8 @@ export class AmsConfigurationMapper {
 
     return {
       totalColors: config.getTotalColors(),
-      requiredSlots: slotAssignments.length,
+      requiredSlots: slotAssignments.length, // This now shows actual slots used, not total slots
+      totalSlots: config.getConfiguration().totalSlots, // Add total slots available
       slotAssignments,
       manualSwaps,
       estimatedTimeSaved: config.getTimeSaved(),

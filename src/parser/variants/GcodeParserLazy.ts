@@ -1,4 +1,5 @@
-import { GcodeStats, ToolChange } from '../../types';
+import { GcodeStats, ToolChange, LayerColorInfo } from '../../types';
+import { Color } from '../../domain/models/Color';
 import { Logger } from '../../utils/logger';
 import { BrowserFileReader } from '../../utils/fileReader';
 
@@ -105,8 +106,11 @@ export class GcodeParserLazy {
       // Check for tool changes (quick check)
       if (trimmed[0] === 'T' && trimmed.length >= 2) {
         const secondChar = trimmed[1];
-        if (secondChar >= '0' && secondChar <= '7') {
-          tools.add(trimmed.substring(0, 2));
+        if (secondChar >= '0' && secondChar <= '9') {
+          const toolCmd = trimmed.split(' ')[0].toUpperCase();
+          if (toolCmd.match(/^T\d+$/)) {
+            tools.add(toolCmd);
+          }
         }
       }
 
@@ -133,7 +137,7 @@ export class GcodeParserLazy {
         ) {
           const parts = trimmed.split('=');
           if (parts.length > 1) {
-            colorDefs = parts[1].split(';');
+            colorDefs = parts[1].split(';').map((c) => c.trim());
           }
         }
 
@@ -166,6 +170,7 @@ export class GcodeParserLazy {
       slicerInfo?: { software: string; version: string };
     }
   ): Promise<GcodeStats> {
+    const startTime = Date.now();
     const stats: Partial<GcodeStats> = {
       fileName: file.name,
       fileSize: file.size,
@@ -187,13 +192,15 @@ export class GcodeParserLazy {
     let currentZ = 0;
     let currentTool = 'T0';
     const toolChanges: ToolChange[] = [];
-    const layerColorMap: Map<number, string> = new Map();
+    const layerColorMap: Map<number, string[]> = new Map();
+    const layerDetails: Map<number, LayerColorInfo> = new Map();
     const colorFirstSeen: Map<string, number> = new Map();
     const colorLastSeen: Map<string, number> = new Map();
+    let layerToolChanges: ToolChange[] = [];
     let lineNumber = 0;
 
     // Initialize
-    layerColorMap.set(0, currentTool);
+    layerColorMap.set(0, [currentTool]);
     colorFirstSeen.set(currentTool, 0);
     colorLastSeen.set(currentTool, 0);
 
@@ -219,15 +226,38 @@ export class GcodeParserLazy {
           if (layerMatch) {
             const newLayer = parseInt(layerMatch[1]);
             if (newLayer !== currentLayer) {
+              // Finalize previous layer
+              if (layerToolChanges.length > 0 || currentLayer === 0) {
+                this.finalizeLayer(
+                  currentLayer,
+                  layerColorMap,
+                  layerDetails,
+                  layerToolChanges,
+                  currentTool
+                );
+              }
+
+              // Start new layer
               currentLayer = newLayer;
               if (newLayer > maxLayerSeen) {
                 maxLayerSeen = newLayer;
               }
-              layerColorMap.set(currentLayer, currentTool);
+
+              // Initialize new layer with current tool
+              const layerColors = layerColorMap.get(currentLayer) || [];
+              if (!layerColors.includes(currentTool)) {
+                layerColors.push(currentTool);
+              }
+              layerColorMap.set(currentLayer, layerColors);
+
+              // Track color usage
               if (!colorFirstSeen.has(currentTool)) {
                 colorFirstSeen.set(currentTool, currentLayer);
               }
               colorLastSeen.set(currentTool, currentLayer);
+
+              // Reset layer tool changes
+              layerToolChanges = [];
             }
           }
         }
@@ -293,20 +323,36 @@ export class GcodeParserLazy {
 
         // Tool changes
         else if (
-          command.length === 2 &&
+          command.length >= 2 &&
           command[0] === 'T' &&
           command[1] >= '0' &&
-          command[1] <= '7'
+          command[1] <= '9'
         ) {
           if (command !== currentTool) {
-            toolChanges.push({
+            const toolChange: ToolChange = {
               fromTool: currentTool,
               toTool: command,
               layer: currentLayer,
               lineNumber: lineNumber,
               zHeight: currentZ,
-            });
+            };
+
+            toolChanges.push(toolChange);
+            layerToolChanges.push(toolChange);
             currentTool = command;
+
+            // Add color to current layer's array
+            const layerColors = layerColorMap.get(currentLayer) || [];
+            if (!layerColors.includes(command)) {
+              layerColors.push(command);
+            }
+            layerColorMap.set(currentLayer, layerColors);
+
+            // Track color usage
+            if (!colorFirstSeen.has(command)) {
+              colorFirstSeen.set(command, currentLayer);
+            }
+            colorLastSeen.set(command, currentLayer);
           }
         }
 
@@ -333,10 +379,150 @@ export class GcodeParserLazy {
       this.onProgress(85, 'Calculating statistics...');
     }
 
-    // This parser variant is not compatible with the new multicolor system
-    throw new Error(
-      'GcodeParserLazy is not compatible with the new multicolor system. ' +
-      'Please use the standard GcodeParser instead.'
-    );
+    // Finalize last layer
+    if (layerToolChanges.length > 0 || currentLayer > 0) {
+      this.finalizeLayer(currentLayer, layerColorMap, layerDetails, layerToolChanges, currentTool);
+    }
+
+    stats.totalLayers = maxLayerSeen + 1;
+    stats.totalHeight = currentZ;
+    stats.toolChanges = toolChanges;
+    stats.layerColorMap = layerColorMap;
+    stats.layerDetails = Array.from(layerDetails.values()).sort((a, b) => a.layer - b.layer);
+
+    // Calculate colors and usage ranges
+    const uniqueColors = new Set<string>();
+    layerColorMap.forEach((colors) => {
+      colors.forEach((color) => uniqueColors.add(color));
+    });
+
+    stats.colors = Array.from(uniqueColors)
+      .sort((a, b) => a.localeCompare(b)) // Sort colors by ID
+      .map((colorId) => {
+        // Build set of layers where this color is used
+        const layersUsed = new Set<number>();
+        layerColorMap.forEach((colors, layer) => {
+          if (colors.includes(colorId)) {
+            layersUsed.add(layer);
+          }
+        });
+
+        return new Color({
+          id: colorId,
+          name: colorId,
+          hexValue: this.getColorHex(colorId, quickScanResult.colorDefs),
+          firstLayer: colorFirstSeen.get(colorId)!,
+          lastLayer: colorLastSeen.get(colorId)!,
+          layersUsed: layersUsed,
+          totalLayers: stats.totalLayers,
+        });
+      });
+
+    stats.colorUsageRanges = this.calculateColorRanges(layerColorMap);
+
+    // Calculate parse time
+    stats.parseTime = Date.now() - startTime;
+
+    if (this.onProgress) {
+      this.onProgress(100, 'Parse complete!');
+    }
+
+    this.logger.info(`Full parse completed in ${stats.parseTime}ms`);
+    return stats as GcodeStats;
+  }
+
+  private finalizeLayer(
+    layer: number,
+    layerColorMap: Map<number, string[]>,
+    layerDetails: Map<number, LayerColorInfo>,
+    layerToolChanges: ToolChange[],
+    currentTool: string
+  ): void {
+    const layerColors = layerColorMap.get(layer) || [currentTool];
+
+    // Ensure layer has at least the current tool
+    if (layerColors.length === 0) {
+      layerColors.push(currentTool);
+      layerColorMap.set(layer, layerColors);
+    }
+
+    // Calculate primary color (most used - for now, we'll use the first color)
+    // In a more sophisticated implementation, we'd track actual usage
+    const primaryColor = layerColors[0];
+
+    layerDetails.set(layer, {
+      layer,
+      colors: [...layerColors],
+      primaryColor,
+      toolChangeCount: layerToolChanges.length,
+      toolChangesInLayer: [...layerToolChanges],
+    });
+  }
+
+  private getColorHex(colorId: string, colorDefs?: string[]): string {
+    if (!colorDefs) return '#808080'; // Default gray
+
+    const toolIndex = parseInt(colorId.substring(1));
+    if (toolIndex >= 0 && toolIndex < colorDefs.length) {
+      const color = colorDefs[toolIndex];
+      // Ensure color is valid hex format
+      if (color && color.length > 0) {
+        // Remove any # prefix if present
+        const cleanColor = color.startsWith('#') ? color.substring(1) : color;
+        // Validate hex format (6 characters, 0-9 A-F)
+        if (/^[0-9A-Fa-f]{6}$/.test(cleanColor)) {
+          return `#${cleanColor.toUpperCase()}`;
+        }
+      }
+    }
+
+    return '#808080';
+  }
+
+  private calculateColorRanges(layerColorMap: Map<number, string[]>): any[] {
+    const colorRanges: any[] = [];
+    const colorLayerMap = new Map<string, number[]>();
+
+    // Build map of which layers each color appears in
+    layerColorMap.forEach((colors, layer) => {
+      colors.forEach((color) => {
+        if (!colorLayerMap.has(color)) {
+          colorLayerMap.set(color, []);
+        }
+        colorLayerMap.get(color)!.push(layer);
+      });
+    });
+
+    // Calculate ranges for each color
+    colorLayerMap.forEach((layers, colorId) => {
+      layers.sort((a, b) => a - b);
+
+      let start = layers[0];
+      let end = start;
+
+      for (let i = 1; i < layers.length; i++) {
+        if (layers[i] === end + 1) {
+          end = layers[i];
+        } else {
+          colorRanges.push({
+            colorId,
+            startLayer: start,
+            endLayer: end,
+            continuous: true,
+          });
+          start = layers[i];
+          end = start;
+        }
+      }
+
+      colorRanges.push({
+        colorId,
+        startLayer: start,
+        endLayer: end,
+        continuous: true,
+      });
+    });
+
+    return colorRanges;
   }
 }
