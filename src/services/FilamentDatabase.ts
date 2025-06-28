@@ -6,6 +6,7 @@
 import { FilamentDatabaseStorage, StoredFilament, SyncStatus } from './FilamentDatabaseStorage';
 import { getColorName } from '../utils/colorNames';
 import { FilamentSyncController } from './FilamentSyncController';
+import { Logger } from '../utils/logger';
 
 export interface FilamentMatch {
   filament: StoredFilament;
@@ -41,6 +42,7 @@ export class FilamentDatabase {
   private pendingSyncRequest: { force: boolean } | null = null;
   private syncCallbacks = new Set<(progress: SyncProgress) => void>();
   private syncController: FilamentSyncController;
+  private logger = new Logger('FilamentDatabase');
 
   public static getInstance(): FilamentDatabase {
     if (!FilamentDatabase.instance) {
@@ -60,9 +62,9 @@ export class FilamentDatabase {
     try {
       await this.storage.initialize();
       this.isStorageReady = true;
-      console.log('FilamentDatabase storage initialized');
+      this.logger.info('Storage initialized');
     } catch (error) {
-      console.error('Failed to initialize FilamentDatabase storage:', error);
+      this.logger.error('Failed to initialize storage', error);
     }
   }
 
@@ -77,27 +79,27 @@ export class FilamentDatabase {
       };
 
       this.worker.onerror = (error) => {
-        console.error('FilamentDatabase worker error:', error);
+        this.logger.error('Worker error', error);
       };
 
-      console.log('FilamentDatabase worker initialized');
+      this.logger.info('Worker initialized');
     } catch (error) {
-      console.error('Failed to initialize FilamentDatabase worker:', error);
+      this.logger.error('Failed to initialize worker', error);
     }
   }
 
   private handleWorkerMessage(message: any): void {
-    console.log('[FilamentDB] Received worker message:', message.type, message.payload);
+    this.logger.debug('Received worker message', { type: message.type, payload: message.payload });
 
     switch (message.type) {
       case 'WORKER_READY':
-        console.log('[FilamentDB] Worker is ready');
+        this.logger.info('Worker is ready');
         this.isWorkerReady = true;
         this.processPendingSyncRequest();
         break;
 
       case 'SYNC_PROGRESS':
-        console.log('[FilamentDB] Sync progress update:', message.payload);
+        this.logger.debug('Sync progress update', message.payload);
         // Update sync controller progress
         this.syncController.updateProgress(
           message.payload.syncedPages || 0,
@@ -114,13 +116,13 @@ export class FilamentDatabase {
         break;
 
       case 'SYNC_COMPLETE':
-        console.log('[FilamentDB] Sync completed:', message.payload);
+        this.logger.info('Sync completed', message.payload);
         // Update sync controller
         const isCancelled = message.payload.cancelled || false;
 
         // If sync was cancelled, clear the partial data
         if (isCancelled) {
-          console.log('[FilamentDB] Sync was cancelled, clearing partial data');
+          this.logger.info('Sync was cancelled, clearing partial data');
           // Clear the database to avoid showing misleading "ready" status
           this.clearCache();
         }
@@ -137,7 +139,7 @@ export class FilamentDatabase {
         break;
 
       case 'SYNC_ERROR':
-        console.error('[FilamentDB] Sync error received:', message.payload);
+        this.logger.error('Sync error received', message.payload);
         // Update sync controller
         this.syncController.handleSyncComplete(false, message.payload.error);
         // Also notify legacy listeners
@@ -152,7 +154,7 @@ export class FilamentDatabase {
         break;
 
       case 'DATA_CLEARED':
-        console.log('[FilamentDB] Data cleared:', message.payload);
+        this.logger.info('Data cleared', message.payload);
         // Reset storage ready state since data was cleared
         this.isStorageReady = false;
         // Re-initialize storage
@@ -169,7 +171,7 @@ export class FilamentDatabase {
         break;
 
       default:
-        console.warn('[FilamentDB] Unknown worker message type:', message.type);
+        this.logger.warn('Unknown worker message type', { type: message.type });
     }
   }
 
@@ -178,14 +180,14 @@ export class FilamentDatabase {
       try {
         callback(progress);
       } catch (error) {
-        console.error('Error in sync progress callback:', error);
+        this.logger.error('Error in sync progress callback', error);
       }
     });
   }
 
   private processPendingSyncRequest(): void {
     if (this.pendingSyncRequest && this.isWorkerReady) {
-      console.log('[FilamentDB] Processing pending sync request:', this.pendingSyncRequest);
+      this.logger.debug('Processing pending sync request', this.pendingSyncRequest);
       this.startSyncInternal(this.pendingSyncRequest.force);
       this.pendingSyncRequest = null;
     }
@@ -212,7 +214,7 @@ export class FilamentDatabase {
       // No match found in database
       return this.getFallbackColorName(hexColor, fallbackName);
     } catch (error) {
-      console.warn('Failed to get enhanced color name:', error);
+      this.logger.warn('Failed to get enhanced color name', error);
       return this.getFallbackColorName(hexColor, fallbackName);
     }
   }
@@ -243,7 +245,7 @@ export class FilamentDatabase {
 
       return null;
     } catch (error) {
-      console.warn('Failed to find filament match:', error);
+      this.logger.warn('Failed to find filament match', error);
       return null;
     }
   }
@@ -259,7 +261,7 @@ export class FilamentDatabase {
     try {
       return await this.storage.getAllFilamentsByManufacturer(manufacturer);
     } catch (error) {
-      console.warn('Failed to get filaments by manufacturer:', error);
+      this.logger.warn('Failed to get filaments by manufacturer', error);
       return [];
     }
   }
@@ -268,15 +270,15 @@ export class FilamentDatabase {
    * Start background synchronization
    */
   public startSync(force: boolean = false): void {
-    console.log('[FilamentDB] Starting sync, force:', force);
+    this.logger.info('Starting sync', { force });
 
     if (!this.worker) {
-      console.warn('[FilamentDB] Worker not available for sync');
+      this.logger.warn('Worker not available for sync');
       return;
     }
 
     if (!this.isWorkerReady) {
-      console.log('[FilamentDB] Worker not ready, queueing sync request');
+      this.logger.debug('Worker not ready, queueing sync request');
       this.pendingSyncRequest = { force };
       return;
     }
@@ -291,7 +293,7 @@ export class FilamentDatabase {
       type: 'START_SYNC',
       payload: { force },
     };
-    console.log('[FilamentDB] Sending message to worker:', message);
+    this.logger.debug('Sending message to worker', message);
 
     this.worker.postMessage(message);
   }
@@ -318,7 +320,7 @@ export class FilamentDatabase {
     try {
       return await this.storage.getSyncStatus();
     } catch (error) {
-      console.warn('Failed to get sync status:', error);
+      this.logger.warn('Failed to get sync status', error);
       return null;
     }
   }
@@ -350,7 +352,7 @@ export class FilamentDatabase {
         estimatedSizeBytes: stats.estimatedSizeBytes,
       };
     } catch (error) {
-      console.warn('Failed to get database stats:', error);
+      this.logger.warn('Failed to get database stats', error);
       return {
         totalFilaments: 0,
         totalGroups: 0,
@@ -389,15 +391,15 @@ export class FilamentDatabase {
    */
   public async forceClearSyncState(): Promise<void> {
     if (!this.isStorageReady) {
-      console.warn('[FilamentDB] Storage not ready, cannot clear sync state');
+      this.logger.warn('Storage not ready, cannot clear sync state');
       return;
     }
 
     try {
       await this.storage.updateSyncStatus({ is_syncing: false });
-      console.log('[FilamentDB] Force cleared sync state');
+      this.logger.info('Force cleared sync state');
     } catch (error) {
-      console.error('[FilamentDB] Failed to clear sync state:', error);
+      this.logger.error('Failed to clear sync state', error);
     }
   }
 
@@ -416,7 +418,7 @@ export class FilamentDatabase {
       const response = await fetch('https://filamentcolors.xyz/api/version/');
 
       if (!response.ok) {
-        console.warn('Failed to fetch version info, falling back to time-based check');
+        this.logger.warn('Failed to fetch version info, falling back to time-based check');
         // Fall back to time-based check (24 hours)
         const dayInMs = 24 * 60 * 60 * 1000;
         const now = Date.now();
@@ -427,24 +429,26 @@ export class FilamentDatabase {
 
       // Compare database versions
       if (syncStatus.db_version !== versionInfo.db_version) {
-        console.log(
-          `Database version changed: ${syncStatus.db_version} -> ${versionInfo.db_version}`
-        );
+        this.logger.info('Database version changed', {
+          from: syncStatus.db_version,
+          to: versionInfo.db_version,
+        });
         return true;
       }
 
       // Compare last modified timestamps
       if (syncStatus.db_last_modified !== versionInfo.db_last_modified) {
-        console.log(
-          `Database modified: ${syncStatus.db_last_modified} -> ${versionInfo.db_last_modified}`
-        );
+        this.logger.info('Database modified', {
+          from: syncStatus.db_last_modified,
+          to: versionInfo.db_last_modified,
+        });
         return true;
       }
 
       // Database hasn't changed
       return false;
     } catch (error) {
-      console.warn('Error checking version info:', error);
+      this.logger.warn('Error checking version info', error);
       // Fall back to time-based check (24 hours) on error
       const dayInMs = 24 * 60 * 60 * 1000;
       const now = Date.now();
@@ -461,7 +465,7 @@ export class FilamentDatabase {
       const stats = await this.getStats();
 
       if (stats.totalFilaments === 0) {
-        console.log('Filament database is empty, starting initial sync...');
+        this.logger.info('Database is empty, starting initial sync');
         this.startSync();
         return;
       }
@@ -470,13 +474,13 @@ export class FilamentDatabase {
       const needsUpdate = await this.needsUpdate();
 
       if (needsUpdate) {
-        console.log('Filament database is outdated, starting sync...');
+        this.logger.info('Database is outdated, starting sync');
         this.startSync();
       } else {
-        console.log('Filament database is up to date');
+        this.logger.info('Database is up to date');
       }
     } catch (error) {
-      console.error('Error during autoSync:', error);
+      this.logger.error('Error during autoSync', error);
       // On error, attempt sync anyway
       this.startSync();
     }
