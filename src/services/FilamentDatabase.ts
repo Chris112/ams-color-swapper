@@ -208,13 +208,13 @@ export class FilamentDatabase {
       const filament = await this.storage.findBestFilamentMatch(hexColor);
 
       if (filament) {
-        return `${filament.manufacturer_name} ${filament.color_name}`;
+        const enhancedName = `${filament.manufacturer_name} ${filament.color_name}`;
+        return enhancedName;
       }
 
       // No match found in database
       return this.getFallbackColorName(hexColor, fallbackName);
     } catch (error) {
-      this.logger.warn('Failed to get enhanced color name', error);
       return this.getFallbackColorName(hexColor, fallbackName);
     }
   }
@@ -501,6 +501,33 @@ export class FilamentDatabase {
 
     // Return the provided fallback or generic name
     return fallbackName || basicColorName;
+  }
+
+  /**
+   * Debug method to check if a specific color exists in the database
+   */
+  public async debugColorLookup(hexColor: string): Promise<void> {
+    // Check static color names first
+    const staticName = getColorName(hexColor);
+    if (staticName !== hexColor) {
+      console.log(`✅ ${hexColor} → Static match: ${staticName}`);
+    } else {
+      console.log(`❌ ${hexColor} → No match in static colors`);
+    }
+
+    // Check FilamentDatabase
+    if (!this.isStorageReady) {
+      console.log(`❌ ${hexColor} → FilamentDatabase not ready`);
+      return;
+    }
+
+    const stats = await this.getStats();
+    const directResult = await this.storage.findBestFilamentMatch(hexColor);
+    if (directResult) {
+      console.log(`✅ ${hexColor} → Match in ${stats.totalFilaments} API colors: ${directResult.manufacturer_name} ${directResult.color_name}`);
+    } else {
+      console.log(`❌ ${hexColor} → No match in ${stats.totalFilaments} API colors`);
+    }
   }
 
   /**

@@ -2,6 +2,9 @@ import { Color } from '../domain/models/Color';
 import { FilamentDatabase } from '../services/FilamentDatabase';
 import { GcodeStats, LayerColorInfo, ToolChange } from '../types';
 import { extractColorInfo, extractColorRanges } from './colorExtractor';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger('Statistics');
 
 export async function calculateStatistics(
   partialStats: GcodeStats,

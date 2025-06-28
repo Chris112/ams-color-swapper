@@ -103,12 +103,12 @@ export class GcodeParserLazy {
       // Skip empty lines
       if (!trimmed) continue;
 
-      // Check for tool changes (quick check)
+      // Check for tool changes (quick check) - only T0 through T7
       if (trimmed[0] === 'T' && trimmed.length >= 2) {
         const secondChar = trimmed[1];
-        if (secondChar >= '0' && secondChar <= '9') {
+        if (secondChar >= '0' && secondChar <= '7') {
           const toolCmd = trimmed.split(' ')[0].toUpperCase();
-          if (toolCmd.match(/^T\d+$/)) {
+          if (toolCmd.match(/^T[0-7]$/)) {
             tools.add(toolCmd);
           }
         }
@@ -191,6 +191,7 @@ export class GcodeParserLazy {
     let maxLayerSeen = 0;
     let currentZ = 0;
     let currentTool = 'T0';
+    const activeTools = new Set<string>(['T0']); // Track all tools that have been used
     const toolChanges: ToolChange[] = [];
     const layerColorMap: Map<number, string[]> = new Map();
     const layerDetails: Map<number, LayerColorInfo> = new Map();
@@ -243,20 +244,17 @@ export class GcodeParserLazy {
                 maxLayerSeen = newLayer;
               }
 
-              // Initialize new layer with current tool
+              // Initialize new layer with ALL active tools (color persistence)
               const layerColors = layerColorMap.get(currentLayer) || [];
-              if (!layerColors.includes(currentTool)) {
-                layerColors.push(currentTool);
+              for (const tool of activeTools) {
+                if (!layerColors.includes(tool)) {
+                  layerColors.push(tool);
+                }
+                // Update color last seen
+                colorLastSeen.set(tool, currentLayer);
               }
               layerColorMap.set(currentLayer, layerColors);
 
-              // Track color usage
-              if (!colorFirstSeen.has(currentTool)) {
-                colorFirstSeen.set(currentTool, currentLayer);
-              }
-              colorLastSeen.set(currentTool, currentLayer);
-
-              // Reset layer tool changes
               layerToolChanges = [];
             }
           }
@@ -321,12 +319,12 @@ export class GcodeParserLazy {
           }
         }
 
-        // Tool changes
+        // Tool changes - only T0 through T7
         else if (
-          command.length >= 2 &&
+          command.length === 2 &&
           command[0] === 'T' &&
           command[1] >= '0' &&
-          command[1] <= '9'
+          command[1] <= '7'
         ) {
           if (command !== currentTool) {
             const toolChange: ToolChange = {
@@ -340,6 +338,9 @@ export class GcodeParserLazy {
             toolChanges.push(toolChange);
             layerToolChanges.push(toolChange);
             currentTool = command;
+
+            // Track this tool as active (used in the print)
+            activeTools.add(command);
 
             // Add color to current layer's array
             const layerColors = layerColorMap.get(currentLayer) || [];

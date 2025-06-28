@@ -8,6 +8,7 @@ export class GcodeParserBuffer {
   private maxLayerSeen: number = 0;
   private currentZ: number = 0;
   private currentTool: string = 'T0';
+  private activeTools: Set<string> = new Set(['T0']); // Track all tools that have been used
   private toolChanges: ToolChange[] = [];
   private layerColorMap: Map<number, string[]> = new Map();
   private colorFirstSeen: Map<string, number> = new Map();
@@ -274,9 +275,17 @@ export class GcodeParserBuffer {
           this.maxLayerSeen = newLayer;
         }
         this.initializeLayer(this.currentLayer);
-        this.addColorToLayer(this.currentLayer, this.currentTool);
-        this.updateColorSeen(this.currentTool, this.currentLayer);
-        this.logger.silly(`Layer ${this.currentLayer} - Starting tool: ${this.currentTool}`);
+
+        // Add ALL active tools to this layer (they all contribute to the layer)
+        // This ensures colors persist across layers even without explicit tool changes
+        for (const tool of this.activeTools) {
+          this.addColorToLayer(this.currentLayer, tool);
+          this.updateColorSeen(tool, this.currentLayer);
+        }
+
+        this.logger.silly(
+          `Layer ${this.currentLayer} - Active tools: ${Array.from(this.activeTools).join(', ')}, Current: ${this.currentTool}`
+        );
         return;
       }
     }
@@ -437,6 +446,9 @@ export class GcodeParserBuffer {
       this.logger.silly(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
 
       this.currentTool = tool;
+
+      // Track this tool as active (used in the print)
+      this.activeTools.add(tool);
 
       // Add the new tool to the current layer's color list
       this.addColorToLayer(this.currentLayer, tool);

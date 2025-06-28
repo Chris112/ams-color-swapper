@@ -9,6 +9,7 @@ export class GcodeParserOptimized {
   private currentLayer: number = 0;
   private currentZ: number = 0;
   private currentTool: string = 'T0';
+  private activeTools: Set<string> = new Set(['T0']); // Track all tools that have been used
   private toolChanges: ToolChange[] = [];
   private layerColorMap: Map<number, string[]> = new Map();
   private layerDetails: Map<number, LayerColorInfo> = new Map();
@@ -218,9 +219,14 @@ export class GcodeParserOptimized {
           this.maxLayerSeen = newLayer;
         }
 
-        // Initialize new layer with current tool
-        this.layerColorMap.set(this.currentLayer, [this.currentTool]);
-        this.updateColorSeen(this.currentTool, this.currentLayer);
+        // Initialize new layer with ALL active tools (color persistence)
+        const layerColors = Array.from(this.activeTools);
+        this.layerColorMap.set(this.currentLayer, layerColors);
+
+        // Update color seen for all active tools
+        for (const tool of this.activeTools) {
+          this.updateColorSeen(tool, this.currentLayer);
+        }
 
         // Reset layer tool changes for new layer
         this.layerToolChanges = [];
@@ -228,14 +234,14 @@ export class GcodeParserOptimized {
         // Initialize layer details
         this.layerDetails.set(this.currentLayer, {
           layer: this.currentLayer,
-          colors: [this.currentTool],
+          colors: layerColors,
           primaryColor: this.currentTool,
           toolChangeCount: 0,
           toolChangesInLayer: [],
         });
 
         this.logger.silly(
-          `Layer ${this.currentLayer} - Tool: ${this.currentTool}, Max: ${this.maxLayerSeen}`
+          `Layer ${this.currentLayer} - Active tools: ${Array.from(this.activeTools).join(', ')}, Current: ${this.currentTool}`
         );
         return; // Exit early if we found a layer change
       }
@@ -492,6 +498,9 @@ export class GcodeParserOptimized {
 
       this.currentTool = tool;
 
+      // Track this tool as active (used in the print)
+      this.activeTools.add(tool);
+
       // Add new color to current layer if not already present
       const layerColors = this.layerColorMap.get(this.currentLayer) || [];
       if (!layerColors.includes(tool)) {
@@ -607,7 +616,9 @@ export class GcodeParserOptimized {
     if (this.stats.slicerInfo?.colorDefinitions) {
       const toolIndex = parseInt(colorId.substring(1));
       if (toolIndex < this.stats.slicerInfo.colorDefinitions.length) {
-        return this.stats.slicerInfo.colorDefinitions[toolIndex];
+        const color = this.stats.slicerInfo.colorDefinitions[toolIndex].trim();
+        // Ensure color has # prefix
+        return color.startsWith('#') ? color : `#${color}`;
       }
     }
 
