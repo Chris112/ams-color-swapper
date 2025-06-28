@@ -257,7 +257,7 @@ describe('CacheRepository', () => {
         totalHeight: 200,
         colors: [],
         toolChanges: [],
-        layerColorMap: new Map([[0, 'T0']]),
+        layerColorMap: new Map([[0, ['T0']]]),
         colorUsageRanges: [],
         parserWarnings: [],
         parseTime: 500,

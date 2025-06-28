@@ -1,4 +1,4 @@
-import { GcodeStats, ToolChange } from '../types';
+import { GcodeStats, ToolChange, LayerColorInfo } from '../types';
 import { Logger } from '../utils/logger';
 import { BrowserFileReader } from '../utils/fileReader';
 import { calculateStatistics } from './statistics';
@@ -10,9 +10,11 @@ export class GcodeParser {
   private currentZ: number = 0;
   private currentTool: string = 'T0';
   private toolChanges: ToolChange[] = [];
-  private layerColorMap: Map<number, string> = new Map();
+  private layerColorMap: Map<number, string[]> = new Map();
   private colorFirstSeen: Map<string, number> = new Map();
   private colorLastSeen: Map<string, number> = new Map();
+  private layerDetails: Map<number, LayerColorInfo> = new Map();
+  private layerToolChanges: ToolChange[] = []; // Tool changes in current layer
   private lineNumber: number = 0;
   private startTime: number = 0;
   private onProgress?: (progress: number, message: string) => void;
@@ -25,6 +27,7 @@ export class GcodeParser {
       layerColorMap: new Map(),
       parserWarnings: [],
       colors: [],
+      layerDetails: [],
     };
   }
 
@@ -42,7 +45,8 @@ export class GcodeParser {
     this.stats.totalHeight = 0;
 
     // Initialize layer 0 with the default tool
-    this.layerColorMap.set(0, this.currentTool);
+    this.initializeLayer(0);
+    this.addColorToLayer(0, this.currentTool);
     this.updateColorSeen(this.currentTool, 0);
 
     // Estimate total lines for progress tracking (approximately 24 bytes per line)
@@ -69,12 +73,18 @@ export class GcodeParser {
       this.onProgress(85, 'Analyzing colors and calculating statistics...');
     }
 
+    // Finalize the last layer
+    if (this.currentLayer >= 0) {
+      this.updateLayerDetails(this.currentLayer);
+    }
+
     const completeStats = await calculateStatistics(
       this.stats as GcodeStats,
       this.toolChanges,
       this.layerColorMap,
       this.colorFirstSeen,
       this.colorLastSeen,
+      Array.from(this.layerDetails.values()),
       parseTime
     );
 
@@ -94,16 +104,18 @@ export class GcodeParser {
     // Ensure we have at least basic data
     if (!completeStats.colors || completeStats.colors.length === 0) {
       // Add default color if none found
+      const { Color } = await import('../domain/models/Color');
       completeStats.colors = [
-        {
+        new Color({
           id: 'T0',
           name: 'Default Color',
-          hexColor: '#888888',
+          hexValue: '#888888',
           firstLayer: 0,
           lastLayer: completeStats.totalLayers - 1,
-          layerCount: completeStats.totalLayers,
-          usagePercentage: 100,
-        },
+          layersUsed: new Set(Array.from({ length: completeStats.totalLayers }, (_, i) => i)),
+          partialLayers: new Set(),
+          totalLayers: completeStats.totalLayers,
+        }),
       ];
     }
 
@@ -126,7 +138,7 @@ export class GcodeParser {
       this.logger.info(`Color ${index + 1}`, {
         id: color.id,
         name: color.name,
-        hex: color.hexColor,
+        hex: color.hexValue,
         usage: `${color.usagePercentage?.toFixed(2)}%`,
         layers: `${color.firstLayer}-${color.lastLayer}`,
         layerCount: color.layerCount,
@@ -245,10 +257,18 @@ export class GcodeParser {
     if (layerMatch) {
       const newLayer = parseInt(layerMatch[1]);
       if (newLayer !== this.currentLayer) {
+        // Finalize previous layer details
+        if (this.currentLayer >= 0) {
+          this.updateLayerDetails(this.currentLayer);
+        }
+
+        // Start new layer
         this.currentLayer = newLayer;
-        this.layerColorMap.set(this.currentLayer, this.currentTool);
+        this.layerToolChanges = []; // Reset tool changes for new layer
+        this.initializeLayer(this.currentLayer);
+        this.addColorToLayer(this.currentLayer, this.currentTool);
         this.updateColorSeen(this.currentTool, this.currentLayer);
-        this.logger.silly(`Layer ${this.currentLayer} - Tool: ${this.currentTool}`);
+        this.logger.silly(`Layer ${this.currentLayer} - Starting tool: ${this.currentTool}`);
       }
     }
 
@@ -446,11 +466,14 @@ export class GcodeParser {
       };
 
       this.toolChanges.push(change);
+      this.layerToolChanges.push(change);
       this.logger.silly(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
 
       this.currentTool = tool;
-      // Don't update the layer color map here - wait for the layer change
-      // This ensures we track which tool is active when the layer actually starts printing
+
+      // Add the new tool to the current layer's color list
+      this.addColorToLayer(this.currentLayer, tool);
+      this.updateColorSeen(tool, this.currentLayer);
     }
   }
 
@@ -459,5 +482,44 @@ export class GcodeParser {
       this.colorFirstSeen.set(tool, layer);
     }
     this.colorLastSeen.set(tool, layer);
+  }
+
+  private initializeLayer(layer: number) {
+    if (!this.layerColorMap.has(layer)) {
+      this.layerColorMap.set(layer, []);
+    }
+    if (!this.layerDetails.has(layer)) {
+      this.layerDetails.set(layer, {
+        layer,
+        colors: [],
+        primaryColor: this.currentTool,
+        toolChangeCount: 0,
+        toolChangesInLayer: [],
+      });
+    }
+  }
+
+  private addColorToLayer(layer: number, tool: string) {
+    const colors = this.layerColorMap.get(layer) || [];
+    if (!colors.includes(tool)) {
+      colors.push(tool);
+      this.layerColorMap.set(layer, colors);
+
+      const layerInfo = this.layerDetails.get(layer);
+      if (layerInfo) {
+        layerInfo.colors = [...colors];
+        layerInfo.primaryColor = colors[0]; // First color is primary for now
+      }
+    }
+  }
+
+  private updateLayerDetails(layer: number) {
+    const layerInfo = this.layerDetails.get(layer);
+    if (layerInfo) {
+      layerInfo.toolChangesInLayer = [...this.layerToolChanges];
+      layerInfo.toolChangeCount = this.layerToolChanges.length;
+      // Primary color is the most recent tool (last one used in layer)
+      layerInfo.primaryColor = this.currentTool;
+    }
   }
 }

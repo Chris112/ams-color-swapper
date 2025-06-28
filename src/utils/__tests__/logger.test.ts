@@ -37,7 +37,9 @@ describe('Logger', () => {
 
     it('should log info messages with correct format', () => {
       logger.info('test message', { data: 'value' });
-      expect(console.log).toHaveBeenCalledWith('[INFO] [TestComponent] test message', { data: 'value' });
+      expect(console.log).toHaveBeenCalledWith('[INFO] [TestComponent] test message', {
+        data: 'value',
+      });
     });
 
     it('should log error messages with correct format', () => {
@@ -53,13 +55,17 @@ describe('Logger', () => {
 
     it('should log debug messages with correct format', () => {
       logger.debug('debug message', { debug: true });
-      expect(console.debug).toHaveBeenCalledWith('[DEBUG] [TestComponent] debug message', { debug: true });
+      expect(console.debug).toHaveBeenCalledWith('[DEBUG] [TestComponent] debug message', {
+        debug: true,
+      });
     });
 
     it('should log silly messages as debug with correct format', () => {
       logger.setLogLevel('silly'); // Need to set log level to silly to see silly messages
       logger.silly('silly message', { silly: true });
-      expect(console.debug).toHaveBeenCalledWith('[SILLY] [TestComponent] silly message', { silly: true });
+      expect(console.debug).toHaveBeenCalledWith('[SILLY] [TestComponent] silly message', {
+        silly: true,
+      });
     });
   });
 
@@ -95,7 +101,7 @@ describe('Logger', () => {
 
     it('should respect log levels - only error and warn when level is warn', () => {
       logger.setLogLevel('warn');
-      
+
       logger.silly('silly message');
       logger.debug('debug message');
       logger.info('info message');
@@ -110,7 +116,7 @@ describe('Logger', () => {
 
     it('should log all levels when level is silly', () => {
       logger.setLogLevel('silly');
-      
+
       logger.silly('silly message');
       logger.debug('debug message');
       logger.info('info message');
@@ -170,9 +176,9 @@ describe('Logger', () => {
     it('should clear logs', () => {
       logger.info('message 1');
       logger.warn('message 2');
-      
+
       expect(logger.getLogs()).toHaveLength(2);
-      
+
       logger.clearLogs();
       expect(logger.getLogs()).toHaveLength(0);
     });
@@ -180,10 +186,10 @@ describe('Logger', () => {
     it('should store logs even in production mode', () => {
       vi.stubEnv('MODE', 'production');
       const prodLogger = new Logger('TestComponent');
-      
+
       prodLogger.info('message 1');
       prodLogger.error('message 2');
-      
+
       const logs = prodLogger.getLogs();
       expect(logs).toHaveLength(2);
       expect(console.log).not.toHaveBeenCalled();
@@ -226,10 +232,10 @@ describe('Logger', () => {
 
     it('should return current log level', () => {
       expect(logger.getLogLevel()).toBe('debug'); // default
-      
+
       logger.setLogLevel('error');
       expect(logger.getLogLevel()).toBe('error');
-      
+
       logger.setLogLevel('silly');
       expect(logger.getLogLevel()).toBe('silly');
     });

@@ -91,13 +91,35 @@ G1 X150 Y150 E5.0`;
     });
 
     it('should map colors to layers', () => {
-      // The parser tracks which tool is active when a layer starts
-      // Tool changes happen within layers, so the layer color is the tool active at layer start
-      expect(stats.layerColorMap.get(0)).toBe('T0');
-      expect(stats.layerColorMap.get(1)).toBe('T0'); // T0 is still active when layer 1 starts
-      expect(stats.layerColorMap.get(2)).toBe('T1'); // T1 is active when layer 2 starts
-      expect(stats.layerColorMap.get(3)).toBe('T2'); // T2 is active when layer 3 starts
-      expect(stats.layerColorMap.get(4)).toBe('T3'); // T3 is active when layer 4 starts
+      // The parser tracks all tools used in each layer
+      // Tool changes happen within layers, so layers can have multiple colors
+      expect(stats.layerColorMap.get(0)).toContain('T0');
+      expect(stats.layerColorMap.get(1)).toContain('T0'); // T0 is active when layer 1 starts
+      expect(stats.layerColorMap.get(1)).toContain('T1'); // T1 is used in layer 1 after tool change
+      expect(stats.layerColorMap.get(2)).toContain('T2'); // T2 is used in layer 2
+      expect(stats.layerColorMap.get(3)).toContain('T3'); // T3 is used in layer 3
+      expect(stats.layerColorMap.get(4)).toContain('T0'); // T0 is used in layer 4
+    });
+
+    it('should track multiple colors per layer', () => {
+      // Layer 1 should have both T0 and T1 since there's a tool change within the layer
+      const layer1Colors = stats.layerColorMap.get(1);
+      expect(layer1Colors).toBeDefined();
+      expect(layer1Colors?.length).toBeGreaterThan(1);
+      expect(layer1Colors).toContain('T0');
+      expect(layer1Colors).toContain('T1');
+    });
+
+    it('should provide layer details with tool changes', () => {
+      // Layer details should track tool changes within layers
+      expect(stats.layerDetails).toBeDefined();
+      expect(stats.layerDetails?.length).toBeGreaterThan(0);
+
+      // Find layer 1 which has a tool change
+      const layer1Detail = stats.layerDetails?.find((ld) => ld.layer === 1);
+      expect(layer1Detail).toBeDefined();
+      expect(layer1Detail?.toolChangeCount).toBeGreaterThan(0);
+      expect(layer1Detail?.colors.length).toBeGreaterThan(1);
     });
   });
 });

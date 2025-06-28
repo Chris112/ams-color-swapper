@@ -1,7 +1,6 @@
 import { GcodeStats, ToolChange } from '../../types';
 import { Logger } from '../../utils/logger';
 import { BrowserFileReader } from '../../utils/fileReader';
-import { calculateStatistics } from '../statistics';
 
 // State machine states
 enum ParserState {
@@ -103,50 +102,17 @@ export class GcodeParserFSM {
       this.onProgress(85, 'Analyzing colors and calculating statistics...');
     }
 
-    // Set total layers based on maxLayerSeen
-    this.stats.totalLayers = this.maxLayerSeen + 1;
-
-    const completeStats = await calculateStatistics(
-      this.stats as GcodeStats,
-      this.toolChanges,
-      this.layerColorMap,
-      this.colorFirstSeen,
-      this.colorLastSeen,
-      parseTime
+    // This parser variant is not compatible with the new multicolor system
+    throw new Error(
+      'GcodeParserFSM is not compatible with the new multicolor system. ' +
+      'Please use the standard GcodeParser instead.'
     );
-
-    if (!this.stats.rawContent) {
-      if (this.onProgress) {
-        this.onProgress(90, 'Loading content for geometry parsing...');
-      }
-      this.stats.rawContent = await file.text();
-      completeStats.rawContent = this.stats.rawContent;
-    }
-
-    if (!completeStats.colors || completeStats.colors.length === 0) {
-      completeStats.colors = [
-        {
-          id: 'T0',
-          name: 'Default Color',
-          hexColor: '#888888',
-          firstLayer: 0,
-          lastLayer: completeStats.totalLayers - 1,
-          layerCount: completeStats.totalLayers,
-          usagePercentage: 100,
-        },
-      ];
-    }
-
-    this.logger.info('FSM parsing complete', {
-      parseTime: `${parseTime}ms`,
-      totalLayers: completeStats.totalLayers,
-      uniqueColors: completeStats.colors.length,
-    });
-
-    return completeStats;
   }
 
-  private async processFileWithFSM(reader: BrowserFileReader, estimatedLines: number): Promise<void> {
+  private async processFileWithFSM(
+    reader: BrowserFileReader,
+    estimatedLines: number
+  ): Promise<void> {
     const progressInterval = Math.max(Math.floor(estimatedLines / 100), 1000);
 
     for await (const line of reader.readLines()) {

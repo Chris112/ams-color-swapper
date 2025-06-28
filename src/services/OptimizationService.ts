@@ -57,7 +57,7 @@ export class OptimizationService {
       result = {
         totalColors: print.colors.length,
         requiredSlots: saResult.assignments.size,
-        manualSwaps: saResult.swapDetails.map(swap => ({
+        manualSwaps: saResult.swapDetails.map((swap) => ({
           unit: Math.ceil(swap.slot / 4),
           slot: ((swap.slot - 1) % 4) + 1,
           fromColor: swap.fromColor,
@@ -66,7 +66,7 @@ export class OptimizationService {
           pauseStartLayer: swap.atLayer,
           pauseEndLayer: swap.atLayer,
           zHeight: 0,
-          reason: `Swap at layer ${swap.atLayer}`
+          reason: `Swap at layer ${swap.atLayer}`,
         })),
         estimatedTimeSaved: 0, // SA doesn't calculate this directly, need to derive or estimate
         slotAssignments: slotAssignments,

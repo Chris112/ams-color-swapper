@@ -1,7 +1,6 @@
 import { GcodeStats, ToolChange } from '../../types';
 import { Logger } from '../../utils/logger';
 import { BrowserFileReader } from '../../utils/fileReader';
-import { calculateStatistics } from '../statistics';
 
 interface LazyParseResult {
   basicStats: {
@@ -91,7 +90,7 @@ export class GcodeParserLazy {
 
     for await (const line of reader.readLines()) {
       linesScanned++;
-      
+
       // Stop after scanning enough lines
       if (linesScanned > maxLinesToScan) {
         this.logger.info(`Quick scan stopped after ${maxLinesToScan} lines`);
@@ -128,7 +127,10 @@ export class GcodeParserLazy {
         }
 
         // Color definitions
-        else if ((trimmed.includes('extruder_colour') || trimmed.includes('filament_colour')) && !colorDefs) {
+        else if (
+          (trimmed.includes('extruder_colour') || trimmed.includes('filament_colour')) &&
+          !colorDefs
+        ) {
           const parts = trimmed.split('=');
           if (parts.length > 1) {
             colorDefs = parts[1].split(';');
@@ -164,7 +166,6 @@ export class GcodeParserLazy {
       slicerInfo?: { software: string; version: string };
     }
   ): Promise<GcodeStats> {
-    const startTime = Date.now();
     const stats: Partial<GcodeStats> = {
       fileName: file.name,
       fileSize: file.size,
@@ -291,7 +292,12 @@ export class GcodeParserLazy {
         }
 
         // Tool changes
-        else if (command.length === 2 && command[0] === 'T' && command[1] >= '0' && command[1] <= '7') {
+        else if (
+          command.length === 2 &&
+          command[0] === 'T' &&
+          command[1] >= '0' &&
+          command[1] <= '7'
+        ) {
           if (command !== currentTool) {
             toolChanges.push({
               fromTool: currentTool,
@@ -323,53 +329,14 @@ export class GcodeParserLazy {
       }
     }
 
-    const parseTime = Date.now() - startTime;
-
     if (this.onProgress) {
       this.onProgress(85, 'Calculating statistics...');
     }
 
-    // Set total layers based on maxLayerSeen
-    stats.totalLayers = maxLayerSeen + 1;
-
-    const completeStats = await calculateStatistics(
-      stats as GcodeStats,
-      toolChanges,
-      layerColorMap,
-      colorFirstSeen,
-      colorLastSeen,
-      parseTime
+    // This parser variant is not compatible with the new multicolor system
+    throw new Error(
+      'GcodeParserLazy is not compatible with the new multicolor system. ' +
+      'Please use the standard GcodeParser instead.'
     );
-
-    // Load raw content
-    if (!stats.rawContent) {
-      if (this.onProgress) {
-        this.onProgress(90, 'Loading raw content...');
-      }
-      stats.rawContent = await file.text();
-      completeStats.rawContent = stats.rawContent;
-    }
-
-    if (!completeStats.colors || completeStats.colors.length === 0) {
-      completeStats.colors = [
-        {
-          id: 'T0',
-          name: 'Default Color',
-          hexColor: '#888888',
-          firstLayer: 0,
-          lastLayer: completeStats.totalLayers - 1,
-          layerCount: completeStats.totalLayers,
-          usagePercentage: 100,
-        },
-      ];
-    }
-
-    this.logger.info('Full parse complete', {
-      parseTime: `${parseTime}ms`,
-      totalLayers: completeStats.totalLayers,
-      uniqueColors: completeStats.colors.length,
-    });
-
-    return completeStats;
   }
 }

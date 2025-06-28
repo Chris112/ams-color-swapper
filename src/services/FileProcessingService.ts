@@ -12,19 +12,13 @@ export interface FileProcessingOptions {
 }
 
 export class FileProcessingService {
-  constructor(
-    private logger: Logger
-  ) {}
+  constructor(private logger: Logger) {}
 
   async processFile(
     file: File,
     options: FileProcessingOptions = {}
   ): Promise<Result<{ stats: GcodeStats; fromCache: boolean }>> {
-    const { 
-      useWebWorker = true, 
-      onProgress = () => {},
-      parserAlgorithm = 'optimized'
-    } = options;
+    const { useWebWorker = true, onProgress = () => {}, parserAlgorithm = 'optimized' } = options;
 
     try {
       // Note: Cache checking is now handled at the command level with full configuration context

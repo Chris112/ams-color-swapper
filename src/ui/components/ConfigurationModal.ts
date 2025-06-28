@@ -56,7 +56,7 @@ export class ConfigurationModal extends Component {
     if (this.algorithmSelect) {
       this.optimizationAlgorithm = this.algorithmSelect.value;
     }
-    
+
     // Load saved parser algorithm value
     if (this.parserSelect) {
       this.parserAlgorithm = this.parserSelect.value as ParserAlgorithm;
@@ -610,7 +610,6 @@ export class ConfigurationModal extends Component {
       setTimeout(() => toast.remove(), 300);
     }, 3000);
   }
-
 
   public getConfiguration(): SystemConfiguration {
     return {

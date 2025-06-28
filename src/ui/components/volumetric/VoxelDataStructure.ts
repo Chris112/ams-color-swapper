@@ -1,6 +1,7 @@
 import { Vector3, Color } from 'three';
-import { GcodeStats, ColorInfo } from '../../../types';
+import { GcodeStats } from '../../../types';
 import { VoxelData, VolumetricData } from './types';
+import { Color as DomainColor } from '../../../domain/models/Color';
 
 export class VoxelDataStructure {
   private voxels: Map<string, VoxelData> = new Map();
@@ -32,8 +33,8 @@ export class VoxelDataStructure {
     const colorDefs = this.stats.slicerInfo?.colorDefinitions || [];
     const statsColors = this.stats.colors || [];
 
-    statsColors.forEach((colorInfo: ColorInfo, index: number) => {
-      const hexColor = colorInfo.hexColor || colorDefs[index] || '#888888';
+    statsColors.forEach((colorInfo: DomainColor, index: number) => {
+      const hexColor = colorInfo.hexValue || colorDefs[index] || '#888888';
       this.colors.push(new Color(hexColor));
     });
 
@@ -72,7 +73,9 @@ export class VoxelDataStructure {
       });
     } else if (layerColorMap.size > 0) {
       // Using layerColorMap for voxel generation
-      layerColorMap.forEach((toolId, layer) => {
+      layerColorMap.forEach((toolIds, layer) => {
+        // Use the first tool for now (primary color)
+        const toolId = Array.isArray(toolIds) ? toolIds[0] : toolIds;
         const colorIndex = this.getColorIndexForTool(toolId);
         const y = layer * layerHeight;
         this.generateLayerVoxels(layer, y, colorIndex, centerX, centerZ);

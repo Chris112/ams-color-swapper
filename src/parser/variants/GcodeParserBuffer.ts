@@ -1,6 +1,5 @@
 import { GcodeStats, ToolChange } from '../../types';
 import { Logger } from '../../utils/logger';
-import { calculateStatistics } from '../statistics';
 
 export class GcodeParserBuffer {
   private logger: Logger;
@@ -81,49 +80,11 @@ export class GcodeParserBuffer {
       this.onProgress(85, 'Analyzing colors and calculating statistics...');
     }
 
-    // Set total layers based on maxLayerSeen
-    this.stats.totalLayers = this.maxLayerSeen + 1;
-
-    const completeStats = await calculateStatistics(
-      this.stats as GcodeStats,
-      this.toolChanges,
-      this.layerColorMap,
-      this.colorFirstSeen,
-      this.colorLastSeen,
-      parseTime
+    // This parser variant is not compatible with the new multicolor system
+    throw new Error(
+      'GcodeParserBuffer is not compatible with the new multicolor system. ' +
+      'Please use the standard GcodeParser instead.'
     );
-
-    // For compatibility, convert buffer back to string
-    if (!this.stats.rawContent) {
-      if (this.onProgress) {
-        this.onProgress(90, 'Converting buffer for geometry parsing...');
-      }
-      const decoder = new TextDecoder();
-      this.stats.rawContent = decoder.decode(buffer);
-      completeStats.rawContent = this.stats.rawContent;
-    }
-
-    if (!completeStats.colors || completeStats.colors.length === 0) {
-      completeStats.colors = [
-        {
-          id: 'T0',
-          name: 'Default Color',
-          hexColor: '#888888',
-          firstLayer: 0,
-          lastLayer: completeStats.totalLayers - 1,
-          layerCount: completeStats.totalLayers,
-          usagePercentage: 100,
-        },
-      ];
-    }
-
-    this.logger.info('Buffer parsing complete', {
-      parseTime: `${parseTime}ms`,
-      totalLayers: completeStats.totalLayers,
-      uniqueColors: completeStats.colors.length,
-    });
-
-    return completeStats;
   }
 
   private async processBuffer(buffer: Uint8Array, estimatedLines: number): Promise<void> {
@@ -154,7 +115,7 @@ export class GcodeParserBuffer {
           );
 
           // Yield to prevent blocking
-          await new Promise(resolve => setTimeout(resolve, 0));
+          await new Promise((resolve) => setTimeout(resolve, 0));
         }
       }
 
@@ -179,8 +140,11 @@ export class GcodeParserBuffer {
     if (start >= end) return;
 
     // Skip whitespace at start
-    while (start < end && (buffer[start] === GcodeParserBuffer.ASCII.SPACE || 
-                           buffer[start] === GcodeParserBuffer.ASCII.TAB)) {
+    while (
+      start < end &&
+      (buffer[start] === GcodeParserBuffer.ASCII.SPACE ||
+        buffer[start] === GcodeParserBuffer.ASCII.TAB)
+    ) {
       start++;
     }
 
@@ -197,21 +161,29 @@ export class GcodeParserBuffer {
     const secondChar = start + 1 < end ? buffer[start + 1] : 0;
 
     // G0/G1 moves
-    if (firstChar === GcodeParserBuffer.ASCII.G && 
-        (secondChar === GcodeParserBuffer.ASCII.ZERO || secondChar === GcodeParserBuffer.ASCII.ONE)) {
+    if (
+      firstChar === GcodeParserBuffer.ASCII.G &&
+      (secondChar === GcodeParserBuffer.ASCII.ZERO || secondChar === GcodeParserBuffer.ASCII.ONE)
+    ) {
       this.parseMove(buffer, start, end);
     }
     // Tool changes T0-T7
-    else if (firstChar === GcodeParserBuffer.ASCII.T && 
-             secondChar >= GcodeParserBuffer.ASCII.ZERO && 
-             secondChar <= GcodeParserBuffer.ASCII.SEVEN) {
+    else if (
+      firstChar === GcodeParserBuffer.ASCII.T &&
+      secondChar >= GcodeParserBuffer.ASCII.ZERO &&
+      secondChar <= GcodeParserBuffer.ASCII.SEVEN
+    ) {
       this.parseToolChange(`T${String.fromCharCode(secondChar)}`);
     }
     // M600 filament change
-    else if (firstChar === GcodeParserBuffer.ASCII.M && 
-             secondChar === GcodeParserBuffer.ASCII.SIX &&
-             start + 2 < end && buffer[start + 2] === GcodeParserBuffer.ASCII.ZERO &&
-             start + 3 < end && buffer[start + 3] === GcodeParserBuffer.ASCII.ZERO) {
+    else if (
+      firstChar === GcodeParserBuffer.ASCII.M &&
+      secondChar === GcodeParserBuffer.ASCII.SIX &&
+      start + 2 < end &&
+      buffer[start + 2] === GcodeParserBuffer.ASCII.ZERO &&
+      start + 3 < end &&
+      buffer[start + 3] === GcodeParserBuffer.ASCII.ZERO
+    ) {
       this.parseFilamentChange();
     }
   }
@@ -366,24 +338,28 @@ export class GcodeParserBuffer {
         // Extract Z value
         let valueStart = i + 1;
         let valueEnd = valueStart;
-        
+
         // Skip optional sign
-        if (valueEnd < end && (buffer[valueEnd] === 45 || buffer[valueEnd] === 43)) { // - or +
+        if (valueEnd < end && (buffer[valueEnd] === 45 || buffer[valueEnd] === 43)) {
+          // - or +
           valueEnd++;
         }
-        
+
         // Find end of number
-        while (valueEnd < end && 
-               ((buffer[valueEnd] >= 48 && buffer[valueEnd] <= 57) || // 0-9
-                buffer[valueEnd] === 46)) { // .
+        while (
+          valueEnd < end &&
+          ((buffer[valueEnd] >= 48 && buffer[valueEnd] <= 57) || // 0-9
+            buffer[valueEnd] === 46)
+        ) {
+          // .
           valueEnd++;
         }
-        
+
         if (valueEnd > valueStart) {
           const decoder = new TextDecoder();
           const zStr = decoder.decode(buffer.slice(valueStart, valueEnd));
           const newZ = parseFloat(zStr);
-          
+
           if (!isNaN(newZ) && newZ > this.currentZ) {
             this.currentZ = newZ;
             if (!this.stats.totalHeight || newZ > this.stats.totalHeight) {

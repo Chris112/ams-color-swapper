@@ -123,12 +123,7 @@ export class ResultsView extends Component {
 
   private addMicroInteractions(): void {
     // Add ripple effect to buttons
-    [
-      this.exportBtn,
-      this.exportGcodeBtn,
-      this.newFileBtn,
-      this.clearCacheBtn,
-    ].forEach((btn) => {
+    [this.exportBtn, this.exportGcodeBtn, this.newFileBtn, this.clearCacheBtn].forEach((btn) => {
       if (btn) {
         addRippleEffect(btn);
         addGlowHover(btn, 'purple');
@@ -633,9 +628,9 @@ export class ResultsView extends Component {
 
       // Create gradient
       const gradient = ctx.createLinearGradient(x, barY, x, barY + barHeight);
-      gradient.addColorStop(0, color.hexColor || '#888888');
-      gradient.addColorStop(0.5, this.lightenColor(color.hexColor || '#888888', 20));
-      gradient.addColorStop(1, color.hexColor || '#888888');
+      gradient.addColorStop(0, color.hexValue || '#888888');
+      gradient.addColorStop(0.5, this.lightenColor(color.hexValue || '#888888', 20));
+      gradient.addColorStop(1, color.hexValue || '#888888');
 
       ctx.fillStyle = gradient;
       ctx.fillRect(x, barY, width, barHeight);
@@ -644,7 +639,7 @@ export class ResultsView extends Component {
       ctx.save();
       ctx.globalAlpha = 0.15; // Reduced opacity for subtlety
       ctx.shadowBlur = 8;
-      ctx.shadowColor = color.hexColor || '#888888';
+      ctx.shadowColor = color.hexValue || '#888888';
       ctx.fillRect(x, barY, width, barHeight);
       ctx.restore();
     });

@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: Code Quality Requirements
+
+**NEVER implement backwards compatible solutions** - Always refactor properly for clean, maintainable code.
+
+**ALWAYS use strongly typed solutions** - TypeScript strict mode is enforced. All data structures must have comprehensive type definitions. No `any` types allowed.
+
 ## ⚠️ CRITICAL: Tailwind CSS v4 Usage
 
 **This project uses Tailwind CSS v4 - DO NOT use v3 syntax!**

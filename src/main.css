@@ -65,8 +65,14 @@ select option {
 }
 
 /* Disable all transitions and animations on select and its children */
-select, select *, select:before, select:after,
-option, option *, option:before, option:after {
+select,
+select *,
+select:before,
+select:after,
+option,
+option *,
+option:before,
+option:after {
   transition: none !important;
   animation: none !important;
   transform: none !important;
@@ -324,14 +330,23 @@ option, option *, option:before, option:after {
 }
 
 /* Smooth transitions - only on elements that need them */
-button, a, .card-glass, .btn-gradient, .btn-glass, .glass, .modal-content {
+button,
+a,
+.card-glass,
+.btn-gradient,
+.btn-glass,
+.glass,
+.modal-content {
   transition-property: transform, opacity, box-shadow;
   transition-duration: 300ms;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Explicitly disable transitions on form elements */
-select, input, textarea, option {
+select,
+input,
+textarea,
+option {
   transition: none !important;
 }
 

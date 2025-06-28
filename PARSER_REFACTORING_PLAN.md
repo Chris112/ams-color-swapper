@@ -3,12 +3,14 @@
 ## Overview
 
 This plan addresses two key issues:
+
 1. **Multiple parser implementations** (8 variants) with duplicated code
 2. **Inaccurate timeline visualization** for multi-color prints where multiple colors are used within single layers
 
 ## Current State
 
 ### Parser Architecture
+
 - **Factory Pattern**: Already implemented in `parserFactory.ts`
 - **Parser Types**: `ParserAlgorithm` type defined in `AmsConfiguration.ts`
 - **Common Interface**: `IGcodeParser` with `parse(file: File): Promise<any>`
@@ -23,9 +25,11 @@ This plan addresses two key issues:
   - Lazy (`GcodeParserLazy`)
 
 ### Current Color Tracking Limitation
+
 All parsers use the same data structure:
+
 ```typescript
-layerColorMap: Map<number, string>  // Only ONE color per layer
+layerColorMap: Map<number, string>; // Only ONE color per layer
 ```
 
 This causes the timeline to show misleading visualizations where one color appears to dominate when in reality multiple colors swap within layers.
@@ -35,6 +39,7 @@ This causes the timeline to show misleading visualizations where one color appea
 ### Phase 1: Create Abstract Base Parser Class
 
 #### 1.1 Base Class Definition
+
 Create `src/parser/BaseGcodeParser.ts`:
 
 ```typescript
@@ -57,7 +62,7 @@ export abstract class BaseGcodeParser implements IGcodeParser {
   // NEW: Enhanced color tracking
   protected layerColorSegments: Map<number, ColorSegment[]> = new Map();
   protected currentLayerStartLine: number = 0;
-  
+
   // Legacy support (computed from segments)
   protected get layerColorMap(): Map<number, string> {
     const map = new Map<number, string>();
@@ -94,7 +99,7 @@ export abstract class BaseGcodeParser implements IGcodeParser {
     this.stats.fileSize = file.size;
     this.stats.totalLayers = 1;
     this.stats.totalHeight = 0;
-    
+
     // Initialize layer 0
     this.recordColorSegment(this.currentTool, 0, 0);
     this.updateColorSeen(this.currentTool, 0);
@@ -104,18 +109,18 @@ export abstract class BaseGcodeParser implements IGcodeParser {
     if (newLayer !== this.currentLayer) {
       // Close the current segment if any
       this.closeCurrentSegment();
-      
+
       this.currentLayer = newLayer;
       this.currentLayerStartLine = this.lineNumber;
-      
+
       if (newLayer > this.maxLayerSeen) {
         this.maxLayerSeen = newLayer;
       }
-      
+
       // Start new segment for current tool
       this.recordColorSegment(this.currentTool, this.currentLayer, this.lineNumber);
       this.updateColorSeen(this.currentTool, this.currentLayer);
-      
+
       this.logger.silly(`Layer ${this.currentLayer} - Tool: ${this.currentTool}`);
     }
   }
@@ -124,7 +129,7 @@ export abstract class BaseGcodeParser implements IGcodeParser {
     if (newTool !== this.currentTool) {
       // Close current segment
       this.closeCurrentSegment();
-      
+
       const change: ToolChange = {
         fromTool: this.currentTool,
         toTool: newTool,
@@ -134,10 +139,12 @@ export abstract class BaseGcodeParser implements IGcodeParser {
       };
 
       this.toolChanges.push(change);
-      this.logger.silly(`Tool change: ${this.currentTool} → ${newTool} at layer ${this.currentLayer}`);
+      this.logger.silly(
+        `Tool change: ${this.currentTool} → ${newTool} at layer ${this.currentLayer}`
+      );
 
       this.currentTool = newTool;
-      
+
       // Start new segment
       this.recordColorSegment(this.currentTool, this.currentLayer, this.lineNumber);
       this.updateColorSeen(this.currentTool, this.currentLayer);
@@ -150,7 +157,7 @@ export abstract class BaseGcodeParser implements IGcodeParser {
       segments = [];
       this.layerColorSegments.set(layer, segments);
     }
-    
+
     segments.push({
       tool,
       startLine,
@@ -179,13 +186,13 @@ export abstract class BaseGcodeParser implements IGcodeParser {
   protected async finalizeParsing(): Promise<GcodeStats> {
     // Close any open segments
     this.closeCurrentSegment();
-    
+
     const parseTime = Date.now() - this.startTime;
     this.logger.info(`Parse completed in ${parseTime}ms`);
 
     // Update stats
     this.stats.totalLayers = this.maxLayerSeen + 1;
-    
+
     // Calculate segment progress within layers
     this.calculateSegmentProgress();
 
@@ -205,12 +212,12 @@ export abstract class BaseGcodeParser implements IGcodeParser {
   private calculateSegmentProgress(): void {
     this.layerColorSegments.forEach((segments, layer) => {
       if (segments.length === 0) return;
-      
+
       const layerStartLine = segments[0].startLine;
       const layerEndLine = segments[segments.length - 1].endLine || this.lineNumber;
       const layerLines = layerEndLine - layerStartLine;
-      
-      segments.forEach(segment => {
+
+      segments.forEach((segment) => {
         const segmentStart = segment.startLine - layerStartLine;
         const segmentEnd = (segment.endLine || layerEndLine) - layerStartLine;
         segment.estimatedProgress = segmentStart / layerLines;
@@ -221,6 +228,7 @@ export abstract class BaseGcodeParser implements IGcodeParser {
 ```
 
 #### 1.2 Update Type Definitions
+
 Add to `src/types/index.ts`:
 
 ```typescript
@@ -245,14 +253,14 @@ Each parser variant will be simplified to extend the base class. Example for `Gc
 export class GcodeParserOptimized extends BaseGcodeParser {
   async parse(file: File): Promise<GcodeStats> {
     this.initializeParsing(file);
-    
+
     if (this.onProgress) {
       this.onProgress(5, 'Reading file...');
     }
 
     const reader = new BrowserFileReader(file);
     await this.processLines(reader, estimatedLines);
-    
+
     return this.finalizeParsing();
   }
 
@@ -276,13 +284,14 @@ export class GcodeParserOptimized extends BaseGcodeParser {
 ### Phase 3: Update Timeline Visualization
 
 #### 3.1 Enhanced Timeline Rendering
+
 Update `ResultsView.ts` to use the new color segment data:
 
 ```typescript
 private drawEnhancedTimeline(): void {
   const canvas = document.getElementById('colorTimeline') as HTMLCanvasElement;
   const stats = this.state.stats;
-  
+
   if (!stats.layerColorSegments) {
     // Fallback to old rendering
     this.drawColorTimeline();
@@ -291,18 +300,18 @@ private drawEnhancedTimeline(): void {
 
   // Clear canvas
   const ctx = canvas.getContext('2d');
-  
+
   // For each layer, draw multiple color segments
   const layerWidth = canvas.width / stats.totalLayers;
-  
+
   stats.layerColorSegments.forEach((segments, layer) => {
     const x = layer * layerWidth;
-    
+
     segments.forEach((segment, index) => {
       const color = stats.colors.find(c => c.id === segment.tool);
       const segmentHeight = barHeight / segments.length; // Stack vertically
       const y = barY + (index * segmentHeight);
-      
+
       // Draw segment
       ctx.fillStyle = color?.hexColor || '#888';
       ctx.fillRect(x, y, layerWidth, segmentHeight);
@@ -337,7 +346,7 @@ export async function calculateStatistics(
     // Track color swap frequency
     // Identify high-swap layers
   }
-  
+
   // ... existing logic ...
 }
 ```

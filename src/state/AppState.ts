@@ -162,7 +162,7 @@ export class AppState {
       // Setup HMR disposal handler
       this.setupHMRPersistence();
     } catch (error) {
-      console.warn('Failed to initialize HMR persistence:', error);
+      console.warn('Failed to initialize HMR persistences:', error);
     }
   }
 
