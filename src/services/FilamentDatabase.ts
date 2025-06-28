@@ -524,7 +524,9 @@ export class FilamentDatabase {
     const stats = await this.getStats();
     const directResult = await this.storage.findBestFilamentMatch(hexColor);
     if (directResult) {
-      console.log(`✅ ${hexColor} → Match in ${stats.totalFilaments} API colors: ${directResult.manufacturer_name} ${directResult.color_name}`);
+      console.log(
+        `✅ ${hexColor} → Match in ${stats.totalFilaments} API colors: ${directResult.manufacturer_name} ${directResult.color_name}`
+      );
     } else {
       console.log(`❌ ${hexColor} → No match in ${stats.totalFilaments} API colors`);
     }

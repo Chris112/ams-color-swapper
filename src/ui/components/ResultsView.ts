@@ -9,6 +9,7 @@ import {
   colorStatsTemplate,
   optimizationTemplate,
   swapInstructionsTemplate,
+  constraintValidationTemplate,
 } from '../templates';
 import {
   animateNumber,
@@ -83,6 +84,7 @@ export class ResultsView extends Component {
       // Updating results view components
       this.updateFileName();
       this.updateFileStats();
+      this.updateConstraintValidation();
       this.updateColorStats();
       // Filament usage now integrated into color stats
       // this.updateFilamentUsage();
@@ -174,6 +176,71 @@ export class ResultsView extends Component {
         add3DTiltEffect(card as HTMLElement, 5);
       });
     }
+  }
+
+  private updateConstraintValidation(): void {
+    if (!this.state.stats?.constraintValidation) return;
+
+    const container = document.getElementById('constraintValidation');
+    if (container) {
+      container.innerHTML = constraintValidationTemplate(
+        this.state.stats.constraintValidation,
+        this.state.stats
+      );
+      this.attachConstraintValidationHandlers();
+    } else {
+      // If no dedicated container, add after file stats
+      const fileStatsContainer = document.getElementById('fileStats');
+      if (fileStatsContainer && this.state.stats.constraintValidation.hasViolations) {
+        const constraintDiv = document.createElement('div');
+        constraintDiv.id = 'constraintValidation';
+        constraintDiv.innerHTML = constraintValidationTemplate(
+          this.state.stats.constraintValidation,
+          this.state.stats
+        );
+
+        // Insert after file stats
+        fileStatsContainer.parentNode?.insertBefore(constraintDiv, fileStatsContainer.nextSibling);
+        this.attachConstraintValidationHandlers();
+      }
+    }
+  }
+
+  private attachConstraintValidationHandlers(): void {
+    // Add global functions for constraint validation interaction
+    (window as any).toggleConstraintDetails = (button: HTMLElement) => {
+      const content = button.parentElement?.nextElementSibling;
+      const isExpanded = button.classList.contains('expanded');
+
+      if (content) {
+        if (isExpanded) {
+          content.classList.remove('expanded');
+          button.classList.remove('expanded');
+        } else {
+          content.classList.add('expanded');
+          button.classList.add('expanded');
+        }
+      }
+    };
+
+    (window as any).copyToClipboard = async (button: HTMLElement, text: string) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.style.background = 'rgba(34, 197, 94, 0.2)';
+
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = '';
+        }, 2000);
+      } catch (err) {
+        button.textContent = 'Failed';
+        setTimeout(() => {
+          button.textContent = 'Copy';
+        }, 2000);
+      }
+    };
   }
 
   private updateColorStats(): void {
@@ -703,6 +770,9 @@ export class ResultsView extends Component {
     } else {
       this.drawSlotView(ctx, stats, canvas.width, canvas.height);
     }
+
+    // Draw constraint violation indicators
+    this.drawConstraintIndicators(canvas, stats, canvas.width, canvas.height);
   }
 
   private drawColorView(
@@ -1517,6 +1587,53 @@ export class ResultsView extends Component {
 
   private saveTimelineViewPreference(): void {
     appState.setPreferences({ timelineView: this.timelineView });
+  }
+
+  private drawConstraintIndicators(
+    canvas: HTMLCanvasElement,
+    stats: GcodeStats,
+    width: number,
+    height: number
+  ): void {
+    const overlay = document.getElementById('timelineOverlay');
+    if (!overlay) return;
+
+    // Clear any existing constraint indicators
+    const existingIndicators = overlay.querySelectorAll('.constraint-violation-indicator');
+    existingIndicators.forEach(indicator => indicator.remove());
+
+    // If no violations, we're done
+    if (!stats.constraintValidation?.hasViolations) return;
+
+    const leftPadding = 80;
+    const rightPadding = 20;
+    const layerWidth = (width - leftPadding - rightPadding) / stats.totalLayers;
+
+    // Create constraint violation indicators
+    stats.constraintValidation.violations.forEach((range) => {
+      const startX = leftPadding + range.startLayer * layerWidth;
+      const endX = leftPadding + (range.endLayer + 1) * layerWidth;
+      const violationWidth = endX - startX;
+
+      // Determine violation type (critical vs suboptimal)
+      const hasCritical = range.affectedLayers.some((l) => l.violationType === 'impossible');
+      const violationType = hasCritical ? 'critical' : 'suboptimal';
+
+      // Create violation indicator element
+      const indicator = document.createElement('div');
+      indicator.className = `constraint-violation-indicator ${violationType === 'suboptimal' ? 'suboptimal' : ''}`;
+      indicator.style.left = `${startX}px`;
+      indicator.style.width = `${violationWidth}px`;
+      indicator.style.top = '0';
+      indicator.style.height = '100%';
+      indicator.style.zIndex = '15';
+      indicator.style.pointerEvents = 'none';
+
+      // Add tooltip data
+      indicator.title = `${violationType === 'critical' ? 'IMPOSSIBLE' : 'SUBOPTIMAL'}: Layers ${range.startLayer}-${range.endLayer} require ${range.maxColorsRequired} colors but only ${range.availableSlots} slots available`;
+
+      overlay.appendChild(indicator);
+    });
   }
 
   protected cleanup(): void {

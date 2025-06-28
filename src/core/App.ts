@@ -10,6 +10,8 @@ import { Logger } from '../utils/logger';
 import { Component } from './Component';
 import { parserWorkerService } from '../services/ParserWorkerService';
 import { gcodeCache } from '../services/GcodeCache';
+import { ColorMergeService, MergeHistoryEntry } from '../services/ColorMergeService';
+import { ColorMergePanel } from '../ui/components/ColorMergePanel';
 
 // Factory Floor Components
 import { FactoryFloorScene } from '../ui/components/factory/FactoryFloorScene';
@@ -40,6 +42,7 @@ export class App {
   private fileProcessingService: FileProcessingService;
   private optimizationService: OptimizationService;
   private exportService: ExportService;
+  private colorMergeService: ColorMergeService;
 
   // Repositories
   private cacheRepository: ICacheRepository;
@@ -56,6 +59,7 @@ export class App {
 
   // UI Components
   private resultsView: ResultsView | null = null;
+  private colorMergePanel: ColorMergePanel | null = null;
 
   constructor() {
     this.logger = new Logger();
@@ -70,6 +74,8 @@ export class App {
     this.optimizationService = new OptimizationService();
 
     this.exportService = new ExportService(this.fileRepository, this.optimizationService);
+
+    this.colorMergeService = new ColorMergeService();
 
     // Initialize command executor
     this.commandExecutor = new CommandExecutor(this.logger);
@@ -115,10 +121,12 @@ export class App {
   private initializeComponents(): void {
     // Initialize main components (not the configuration modal yet)
     this.resultsView = new ResultsView();
+    this.colorMergePanel = new ColorMergePanel();
     this.components = [
       new FileUploader(),
       this.resultsView,
       new FilamentSyncStatus('body'), // Add sync status indicator
+      this.colorMergePanel,
     ];
 
     // Initialize configuration modal
@@ -219,6 +227,21 @@ export class App {
     eventBus.on('CLEAR_FACTORY' as any, () => {
       if (this.factoryFloorService) {
         this.factoryFloorService.clearFactory();
+      }
+    });
+
+    // State changes - re-attach merge button listener
+    appState.subscribe((state) => {
+      if (state.view === 'results' && state.stats) {
+        // Wait for DOM update
+        setTimeout(() => {
+          const mergeBtn = document.getElementById('openMergePanelBtn');
+          if (mergeBtn && this.colorMergePanel) {
+            mergeBtn.addEventListener('click', () => {
+              this.colorMergePanel!.show();
+            });
+          }
+        }, 100);
       }
     });
   }
@@ -624,6 +647,106 @@ export class App {
       syncStatus,
       storageReady: (filamentDb as any).isStorageReady,
     });
+  }
+
+  /**
+   * Merge colors together
+   */
+  public async mergeColors(targetColorId: string, sourceColorId: string): Promise<void> {
+    const state = appState.getState();
+    if (!state.stats || !state.optimization) {
+      console.error('No stats or optimization available for merge');
+      return;
+    }
+
+    // Show loading state
+    appState.setLoading(true, 'Merging colors...');
+
+    try {
+      // Perform the merge
+      const mergeResult = this.colorMergeService.mergeColors(
+        state.stats,
+        targetColorId,
+        [sourceColorId]
+      );
+
+      if (!mergeResult) {
+        throw new Error('Failed to merge colors');
+      }
+
+      // Re-run optimization with merged stats
+      const newOptimization = this.optimizationService.generateOptimization(
+        mergeResult.mergedStats,
+        state.configuration
+      );
+
+      // Update app state with merged results
+      appState.setMergedStats(mergeResult.mergedStats, newOptimization, mergeResult.mergeHistory);
+
+      // Show success notification
+      this.showMergeNotification(mergeResult.mergeHistory);
+
+      // Log the new constraint state
+      if (mergeResult.mergedStats.constraintValidation) {
+        const cv = mergeResult.mergedStats.constraintValidation;
+        if (!cv.hasViolations) {
+          this.logger.info('All constraint violations resolved after merge!');
+        } else {
+          this.logger.info(`Remaining violations after merge: ${cv.summary.impossibleLayerCount} impossible layers`);
+        }
+      }
+
+      // The view will automatically update through state listeners
+
+      appState.setLoading(false);
+    } catch (error) {
+      console.error('Error merging colors:', error);
+      appState.setError(`Failed to merge colors: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      appState.setLoading(false);
+    }
+  }
+
+  private showMergeNotification(mergeHistory: MergeHistoryEntry): void {
+    const state = appState.getState();
+    const hasViolations = state.stats?.constraintValidation?.hasViolations || false;
+    const violationCount = state.stats?.constraintValidation?.summary.impossibleLayerCount || 0;
+
+    // Create and show a notification
+    const notification = document.createElement('div');
+    notification.className = 'fixed top-4 right-4 z-50 glass rounded-lg p-4 animate-fade-in max-w-md';
+    notification.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-white font-semibold">Colors Merged Successfully</div>
+          <div class="text-white/70 text-sm">
+            ${mergeHistory.sourceColorIds.length} color${mergeHistory.sourceColorIds.length > 1 ? 's' : ''} merged, 
+            ${mergeHistory.freedSlots.length} slot${mergeHistory.freedSlots.length > 1 ? 's' : ''} freed
+          </div>
+          ${!hasViolations ? `
+            <div class="text-green-400 text-sm mt-1 font-medium">
+              ✓ All constraint violations resolved!
+            </div>
+          ` : `
+            <div class="text-amber-400 text-sm mt-1">
+              ${violationCount} layer${violationCount !== 1 ? 's' : ''} still need attention
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    // Remove notification after 4 seconds (slightly longer to read the extra info)
+    setTimeout(() => {
+      notification.classList.add('animate-fade-out');
+      setTimeout(() => notification.remove(), 300);
+    }, 4000);
   }
 
   public destroy(): void {

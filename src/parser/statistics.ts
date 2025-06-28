@@ -1,5 +1,6 @@
 import { Color } from '../domain/models/Color';
 import { FilamentDatabase } from '../services/FilamentDatabase';
+import { ColorDeduplicationService } from '../services/ColorDeduplicationService';
 import { GcodeStats, LayerColorInfo, ToolChange } from '../types';
 import { extractColorInfo, extractColorRanges } from './colorExtractor';
 import { Logger } from '../utils/logger';
@@ -117,21 +118,55 @@ export async function calculateStatistics(
     );
   }
 
-  const colorUsageRanges = extractColorRanges(layerColorMap, totalLayers);
+  // Apply color deduplication
+  const deduplicationService = new ColorDeduplicationService();
+  const deduplicationResult = deduplicationService.deduplicateColors(colors);
+
+  // Update tool changes and layer color map with deduplicated mappings
+  const updatedToolChanges = deduplicationService.updateToolChanges(
+    toolChanges,
+    deduplicationResult.colorMapping
+  );
+
+  const updatedLayerColorMap = deduplicationService.updateLayerColorMap(
+    layerColorMap,
+    deduplicationResult.colorMapping
+  );
+
+  // Extract color ranges with updated map
+  const colorUsageRanges = extractColorRanges(updatedLayerColorMap, totalLayers);
 
   // Filter out unused colors (test requirement: only show used colors)
-  const usedColors = colors.filter((color) => color.layerCount > 0);
+  const usedColors = deduplicationResult.deduplicatedColors.filter((color) => color.layerCount > 0);
 
   const stats: GcodeStats = {
     ...partialStats,
     totalLayers,
     colors: usedColors,
-    toolChanges,
-    layerColorMap,
+    toolChanges: updatedToolChanges,
+    layerColorMap: updatedLayerColorMap,
     colorUsageRanges,
     layerDetails,
     parseTime,
+    deduplicationInfo:
+      deduplicationResult.duplicatesFound.length > 0
+        ? {
+            duplicatesFound: deduplicationResult.duplicatesFound,
+            freedSlots: deduplicationResult.freedSlots,
+            colorMapping: deduplicationResult.colorMapping,
+          }
+        : undefined,
   };
+
+  // Log deduplication results
+  if (deduplicationResult.duplicatesFound.length > 0) {
+    logger.info(`Color deduplication freed ${deduplicationResult.freedSlots.length} slots`);
+    deduplicationResult.duplicatesFound.forEach((dup) => {
+      logger.info(
+        `Merged ${dup.originalTools.join(', ')} (${dup.hexCode}) -> ${dup.assignedTo}: ${dup.colorName}`
+      );
+    });
+  }
 
   return stats;
 }
