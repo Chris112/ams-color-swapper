@@ -1,4 +1,5 @@
-import { GcodeStats, OptimizationResult, ManualSwap, ColorInfo, FilamentUsage } from '../../types';
+import { GcodeStats, OptimizationResult, ManualSwap, FilamentUsage } from '../../types';
+import { Color } from '../../domain/models/Color';
 import { formatColorDisplay } from '../../utils/colorNames';
 
 // File statistics template
@@ -42,7 +43,7 @@ export const fileStatsTemplate = (stats: GcodeStats): string => {
 
 // Color statistics template
 export const colorStatsTemplate = (
-  colors: ColorInfo[],
+  colors: Color[],
   filamentEstimates?: FilamentUsage[]
 ): string => {
   const totalLayers = Math.max(...colors.map((c) => c.lastLayer)) + 1;
@@ -87,8 +88,8 @@ export const colorStatsTemplate = (
             <div class="flex items-center gap-4 mb-4">
               <div class="relative">
                 <div class="w-16 h-16 rounded-2xl shadow-lg interactive-swatch ring-2 ring-white/20" 
-                     style="background-color: ${color.hexColor || '#888888'}"
-                     data-hex="${color.hexColor || '#888888'}"
+                     style="background-color: ${color.hexValue || '#888888'}"
+                     data-hex="${color.hexValue || '#888888'}"
                      title="Click to copy color code">
                   <div class="absolute inset-0 rounded-full bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
                     <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +103,7 @@ export const colorStatsTemplate = (
               </div>
               <div class="flex-1">
                 <div class="font-bold text-lg text-white mb-2 flex items-center gap-2">
-                  ${color.name || formatColorDisplay(color.hexColor, color.id)}
+                  ${color.name || formatColorDisplay(color.hexValue, color.id)}
                   <span class="text-sm px-3 py-1 bg-gradient-to-r from-vibrant-purple/20 to-vibrant-pink/20 rounded-full text-white/80 font-medium">
                     ${color.usagePercentage.toFixed(1)}%
                   </span>
@@ -125,7 +126,7 @@ export const colorStatsTemplate = (
             <div class="mt-4 mb-4">
               <div class="relative h-4 bg-black/30 rounded-full overflow-hidden shadow-inner">
                 <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out hover:brightness-110"
-                     style="width: ${color.usagePercentage}%; background: linear-gradient(90deg, ${color.hexColor || '#888888'}, ${color.hexColor || '#888888'}CC)">
+                     style="width: ${color.usagePercentage}%; background: linear-gradient(90deg, ${color.hexValue || '#888888'}, ${color.hexValue || '#888888'}CC)">
                   <div class="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 rounded-full"></div>
                 </div>
               </div>
@@ -137,7 +138,7 @@ export const colorStatsTemplate = (
                 <div class="grid grid-cols-2 gap-4 text-sm">
                   <div class="flex justify-between bg-black/20 rounded-lg p-2">
                     <span class="text-white/60">Hex Color:</span>
-                    <span class="text-vibrant-cyan font-mono font-bold">${color.hexColor || '#888888'}</span>
+                    <span class="text-vibrant-cyan font-mono font-bold">${color.hexValue || '#888888'}</span>
                   </div>
                   <div class="flex justify-between bg-black/20 rounded-lg p-2">
                     <span class="text-white/60">Layer Count:</span>
@@ -231,8 +232,8 @@ export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats)
                           const color = stats.colors.find((c) => c.id === colorId);
                           return color
                             ? `<span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
-                        <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexColor || '#888888'}"></span>
-                        <span class="text-white/80">${color.name || formatColorDisplay(color.hexColor, color.id)}</span>
+                        <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexValue || '#888888'}"></span>
+                        <span class="text-white/80">${color.name || formatColorDisplay(color.hexValue, color.id)}</span>
                       </span>`
                             : '';
                         })
@@ -268,8 +269,8 @@ export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats)
                       const color = stats.colors.find((c) => c.id === colorId);
                       return color
                         ? `<span class="inline-flex items-center gap-2 px-3 py-1.5 glass rounded-full text-sm group hover:scale-105 transition-transform">
-                      <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexColor || '#888888'}"></span>
-                      <span class="text-white/80">${color.name || formatColorDisplay(color.hexColor, color.id)}</span>
+                      <span class="w-4 h-4 rounded-full shadow-sm" style="background-color: ${color.hexValue || '#888888'}"></span>
+                      <span class="text-white/80">${color.name || formatColorDisplay(color.hexValue, color.id)}</span>
                     </span>`
                         : '';
                     })
@@ -297,7 +298,7 @@ export const optimizationTemplate = (opt: OptimizationResult, stats: GcodeStats)
 };
 
 // Filament usage visualization template
-export const filamentUsageTemplate = (filamentEstimates: any[], colors: ColorInfo[]): string => {
+export const filamentUsageTemplate = (filamentEstimates: any[], colors: Color[]): string => {
   if (!filamentEstimates || filamentEstimates.length === 0) {
     return '';
   }
@@ -323,8 +324,8 @@ export const filamentUsageTemplate = (filamentEstimates: any[], colors: ColorInf
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-3">
             <div class="w-6 h-6 rounded-full shadow-lg ring-2 ring-white/20" 
-                 style="background-color: ${color?.hexColor || '#888888'}"></div>
-            <span class="font-semibold text-white">${color?.name || formatColorDisplay(color?.hexColor, estimate.colorId)}</span>
+                 style="background-color: ${color?.hexValue || '#888888'}"></div>
+            <span class="font-semibold text-white">${color?.name || formatColorDisplay(color?.hexValue, estimate.colorId)}</span>
           </div>
           <div class="text-right">
             <div class="text-xl font-bold text-white">${weight.toFixed(1)}g</div>
@@ -333,7 +334,7 @@ export const filamentUsageTemplate = (filamentEstimates: any[], colors: ColorInf
         </div>
         <div class="relative h-6 bg-white/10 rounded-full overflow-hidden">
           <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-1000 ease-out hover:brightness-110"
-               style="width: ${barWidth}%; background: linear-gradient(90deg, ${color?.hexColor || '#888888'}CC, ${color?.hexColor || '#888888'}FF)">
+               style="width: ${barWidth}%; background: linear-gradient(90deg, ${color?.hexValue || '#888888'}CC, ${color?.hexValue || '#888888'}FF)">
             <div class="absolute inset-0 bg-gradient-to-r from-transparent to-white/20 rounded-full"></div>
           </div>
         </div>
@@ -372,10 +373,10 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats)
     `;
   }
 
-  const getContrastColor = (hexColor: string): string => {
-    const r = parseInt(hexColor.substring(1, 3), 16);
-    const g = parseInt(hexColor.substring(3, 5), 16);
-    const b = parseInt(hexColor.substring(5, 7), 16);
+  const getContrastColor = (hexValue: string): string => {
+    const r = parseInt(hexValue.substring(1, 3), 16);
+    const g = parseInt(hexValue.substring(3, 5), 16);
+    const b = parseInt(hexValue.substring(5, 7), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
     return luminance > 0.5 ? '#000000' : '#ffffff';
   };
@@ -406,11 +407,11 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats)
         
         <div class="flex items-center justify-between gap-6">
           <div class="flex items-center gap-3">
-            <div class="color-swatch shadow-glow-pink" style="background-color: ${fromColor?.hexColor || '#888'}; color: ${getContrastColor(fromColor?.hexColor || '#888')}">
+            <div class="color-swatch shadow-glow-pink" style="background-color: ${fromColor?.hexValue || '#888'}; color: ${getContrastColor(fromColor?.hexValue || '#888')}">
               <span class="font-bold text-lg">${fromColor?.id.substring(1) || '?'}</span>
             </div>
             <div>
-              <div class="font-semibold text-white">${fromColor?.name || formatColorDisplay(fromColor?.hexColor, fromColor?.id || swap.fromColor)}</div>
+              <div class="font-semibold text-white">${fromColor?.name || formatColorDisplay(fromColor?.hexValue, fromColor?.id || swap.fromColor)}</div>
               <div class="text-white/50 text-sm">Remove</div>
             </div>
           </div>
@@ -421,11 +422,11 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats)
           </svg>
           
           <div class="flex items-center gap-3">
-            <div class="color-swatch shadow-glow-green" style="background-color: ${toColor?.hexColor || '#888'}; color: ${getContrastColor(toColor?.hexColor || '#888')}">
+            <div class="color-swatch shadow-glow-green" style="background-color: ${toColor?.hexValue || '#888'}; color: ${getContrastColor(toColor?.hexValue || '#888')}">
               <span class="font-bold text-lg">${toColor?.id.substring(1) || '?'}</span>
             </div>
             <div>
-              <div class="font-semibold text-white">${toColor?.name || formatColorDisplay(toColor?.hexColor, toColor?.id || swap.toColor)}</div>
+              <div class="font-semibold text-white">${toColor?.name || formatColorDisplay(toColor?.hexValue, toColor?.id || swap.toColor)}</div>
               <div class="text-vibrant-green font-medium">Insert → Unit ${swap.unit} Slot ${swap.slot}</div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { GcodeStats, ColorInfo } from '../types';
+import { GcodeStats } from '../types';
+import { Color } from '../domain/models/Color';
 
 export interface GcodePath {
   points: THREE.Vector3[];
@@ -144,11 +145,11 @@ export class GcodeToGeometryConverter {
     return this.generateGeometry(stats);
   }
 
-  private setupColors(colorInfos: ColorInfo[]): void {
+  private setupColors(colorInfos: Color[]): void {
     this.colors.clear();
     colorInfos.forEach((color, index) => {
       const toolIndex = parseInt(color.id.replace('T', '')) || index;
-      this.colors.set(toolIndex, color.hexColor || this.generateColorFromIndex(index));
+      this.colors.set(toolIndex, color.hexValue || this.generateColorFromIndex(index));
     });
 
     // Ensure we have at least one color

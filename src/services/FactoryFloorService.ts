@@ -154,7 +154,7 @@ export class FactoryFloorService {
         metadata: {
           filename,
           layers: stats.totalLayers,
-          colors: stats.colors.map((c) => c.hexColor || '#ffffff'),
+          colors: stats.colors.map((c) => c.hexValue || '#ffffff'),
           printTime: stats.printTime,
         },
       };
@@ -480,7 +480,7 @@ export class FactoryFloorStats {
 
     prints.forEach((print) => {
       print.stats.colors.forEach((color) => {
-        const colorKey = color.hexColor || color.name || 'Unknown';
+        const colorKey = color.hexValue || color.name || 'Unknown';
         colorCounts.set(colorKey, (colorCounts.get(colorKey) || 0) + 1);
       });
     });

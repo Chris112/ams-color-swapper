@@ -172,7 +172,6 @@ export class App {
       this.handleReset();
     });
 
-
     // Clear cache event
     eventBus.on(AppEvents.CLEAR_CACHE, async () => {
       await this.handleClearCache();
@@ -224,8 +223,7 @@ export class App {
       'modalOptimizationAlgorithm'
     ) as HTMLSelectElement;
     const selectedAlgorithm =
-      (modalAlgorithmSelect?.value as OptimizationAlgorithm) ||
-      OptimizationAlgorithm.Greedy;
+      (modalAlgorithmSelect?.value as OptimizationAlgorithm) || OptimizationAlgorithm.Greedy;
 
     // Create and execute analyze command
     const command = new AnalyzeFileCommand(

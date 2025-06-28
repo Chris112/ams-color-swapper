@@ -44,7 +44,7 @@ function parseChunk(chunk: string, chunkIndex: number): WorkerResult {
   const tools = new Set<string>(['T0']);
   const toolChanges: WorkerResult['data']['toolChanges'] = [];
   const layerColorMap: Array<[number, string]> = [];
-  
+
   let currentLayer = 0;
   let currentTool = 'T0';
   let maxZ = 0;
@@ -96,7 +96,10 @@ function parseChunk(chunk: string, chunkIndex: number): WorkerResult {
       }
 
       // Color definitions
-      else if ((trimmed.includes('extruder_colour') || trimmed.includes('filament_colour')) && !colorDefs) {
+      else if (
+        (trimmed.includes('extruder_colour') || trimmed.includes('filament_colour')) &&
+        !colorDefs
+      ) {
         const parts = trimmed.split('=');
         if (parts.length > 1) {
           colorDefs = parts[1].split(';');
@@ -146,7 +149,12 @@ function parseChunk(chunk: string, chunkIndex: number): WorkerResult {
       }
 
       // Tool changes
-      else if (command.length === 2 && command[0] === 'T' && command[1] >= '0' && command[1] <= '7') {
+      else if (
+        command.length === 2 &&
+        command[0] === 'T' &&
+        command[1] >= '0' &&
+        command[1] <= '7'
+      ) {
         tools.add(command);
         if (command !== currentTool) {
           toolChanges.push({

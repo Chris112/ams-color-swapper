@@ -66,7 +66,7 @@ export class ExportService {
         [
           color.id,
           color.name || 'Unknown',
-          color.hexColor || '',
+          color.hexValue || '',
           color.firstLayer.toString(),
           color.lastLayer.toString(),
           color.layerCount.toString(),
@@ -164,10 +164,10 @@ export class ExportService {
           modifiedLines.push(`; Z Height: ${swap.zHeight.toFixed(2)}mm`);
           modifiedLines.push('; ----------------------------------------');
           modifiedLines.push(
-            `; REMOVE: ${swap.fromColor} - ${fromColor?.name || 'Unknown'} (${fromColor?.hexColor || 'N/A'})`
+            `; REMOVE: ${swap.fromColor} - ${fromColor?.name || 'Unknown'} (${fromColor?.hexValue || 'N/A'})`
           );
           modifiedLines.push(
-            `; INSERT: ${swap.toColor} - ${toColor?.name || 'Unknown'} (${toColor?.hexColor || 'N/A'}) → Slot ${swap.slot}`
+            `; INSERT: ${swap.toColor} - ${toColor?.name || 'Unknown'} (${toColor?.hexValue || 'N/A'}) → Slot ${swap.slot}`
           );
           modifiedLines.push('; ----------------------------------------');
           modifiedLines.push(`; Reason: ${swap.reason}`);

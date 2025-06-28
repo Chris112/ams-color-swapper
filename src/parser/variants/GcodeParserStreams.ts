@@ -1,6 +1,5 @@
 import { GcodeStats, ToolChange } from '../../types';
 import { Logger } from '../../utils/logger';
-import { calculateStatistics } from '../statistics';
 
 export class GcodeParserStreams {
   private logger: Logger;
@@ -52,10 +51,10 @@ export class GcodeParserStreams {
     const stream = file.stream();
     const reader = stream.getReader();
     const decoder = new TextDecoder();
-    
+
     // Transform stream to process lines
     const lineStream = this.createLineStream(reader, decoder, estimatedLines);
-    
+
     if (this.onProgress) {
       this.onProgress(20, 'Processing G-code stream...');
     }
@@ -73,49 +72,14 @@ export class GcodeParserStreams {
     // Set total layers based on maxLayerSeen
     this.stats.totalLayers = this.maxLayerSeen + 1;
 
-    const completeStats = await calculateStatistics(
-      this.stats as GcodeStats,
-      this.toolChanges,
-      this.layerColorMap,
-      this.colorFirstSeen,
-      this.colorLastSeen,
-      parseTime
+    // This parser needs to be updated to properly track multicolor layers
+    throw new Error(
+      'GcodeParserStreams is not compatible with the new multicolor system. ' +
+      'Please use the standard GcodeParser instead.'
     );
-
-    // For compatibility, still load raw content (but this defeats streaming purpose)
-    if (!this.stats.rawContent) {
-      if (this.onProgress) {
-        this.onProgress(90, 'Loading content for geometry parsing...');
-      }
-      this.stats.rawContent = await file.text();
-      completeStats.rawContent = this.stats.rawContent;
-    }
-
-    // Ensure we have at least basic data
-    if (!completeStats.colors || completeStats.colors.length === 0) {
-      completeStats.colors = [
-        {
-          id: 'T0',
-          name: 'Default Color',
-          hexColor: '#888888',
-          firstLayer: 0,
-          lastLayer: completeStats.totalLayers - 1,
-          layerCount: completeStats.totalLayers,
-          usagePercentage: 100,
-        },
-      ];
-    }
-
-    this.logger.info('Stream parsing complete', {
-      parseTime: `${parseTime}ms`,
-      totalLayers: completeStats.totalLayers,
-      uniqueColors: completeStats.colors.length,
-    });
-
-    return completeStats;
   }
 
-  private async* createLineStream(
+  private async *createLineStream(
     reader: ReadableStreamDefaultReader<Uint8Array>,
     decoder: TextDecoder,
     estimatedLines: number
@@ -125,7 +89,7 @@ export class GcodeParserStreams {
 
     while (true) {
       const { done, value } = await reader.read();
-      
+
       if (done) {
         // Process any remaining data in buffer
         if (buffer) {
@@ -136,15 +100,15 @@ export class GcodeParserStreams {
 
       // Decode chunk and add to buffer
       buffer += decoder.decode(value, { stream: true });
-      
+
       // Extract complete lines from buffer
       let newlineIndex;
       while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
         const line = buffer.slice(0, newlineIndex);
         buffer = buffer.slice(newlineIndex + 1);
-        
+
         this.lineNumber++;
-        
+
         // Report progress
         if (this.onProgress && this.lineNumber % progressInterval === 0) {
           const progressPercent = (this.lineNumber / estimatedLines) * 60;
@@ -155,7 +119,7 @@ export class GcodeParserStreams {
             `Streaming: ${percentage}% (${this.lineNumber.toLocaleString()} lines)`
           );
         }
-        
+
         yield line.trim();
       }
     }

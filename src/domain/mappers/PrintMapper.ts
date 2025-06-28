@@ -1,5 +1,5 @@
 import { GcodeStats } from '../../types';
-import { Print, Color, ToolChange } from '../models';
+import { Print, ToolChange } from '../models';
 
 /**
  * Maps between infrastructure types and domain models
@@ -9,15 +9,8 @@ export class PrintMapper {
    * Convert GcodeStats to Print domain model
    */
   static toDomain(stats: GcodeStats): Print {
-    const colors = stats.colors.map((c) =>
-      Color.fromData({
-        id: c.id,
-        name: c.name,
-        hexColor: c.hexColor,
-        firstLayer: c.firstLayer,
-        lastLayer: c.lastLayer,
-      })
-    );
+    // Colors are already Color objects from the parser
+    const colors = stats.colors;
 
     const toolChanges = stats.toolChanges.map((tc) =>
       ToolChange.fromData({
@@ -36,6 +29,8 @@ export class PrintMapper {
       stats.totalHeight,
       colors,
       toolChanges,
+      stats.layerColorMap,
+      stats.layerDetails || [],
       stats.slicerInfo
         ? {
             software: stats.slicerInfo.software,
@@ -52,21 +47,27 @@ export class PrintMapper {
    * Convert Print domain model to GcodeStats
    */
   static toInfrastructure(print: Print): GcodeStats {
-    const layerColorMap = new Map<number, string>();
-    const colorUsageRanges = print.colors.map((color) => ({
-      colorId: color.id,
-      startLayer: color.firstLayer,
-      endLayer: color.lastLayer,
-      continuous: true,
-    }));
-
-    // Build layer color map
-    for (let layer = 1; layer <= print.totalLayers; layer++) {
-      const color = print.getColorAtLayer(layer);
-      if (color) {
-        layerColorMap.set(layer, color.id);
+    // Generate color usage ranges from Color objects
+    const colorUsageRanges = print.colors.map((color) => {
+      // Find continuous ranges from layersUsed set
+      const layers = Array.from(color.layersUsed).sort((a, b) => a - b);
+      if (layers.length === 0) {
+        return {
+          colorId: color.id,
+          startLayer: color.firstLayer,
+          endLayer: color.lastLayer,
+          continuous: false,
+        };
       }
-    }
+      
+      // For now, return the full range (can be improved to find actual continuous ranges)
+      return {
+        colorId: color.id,
+        startLayer: Math.min(...layers),
+        endLayer: Math.max(...layers),
+        continuous: layers.length === (Math.max(...layers) - Math.min(...layers) + 1),
+      };
+    });
 
     return {
       fileName: print.fileName,
@@ -82,15 +83,7 @@ export class PrintMapper {
             profile: print.slicer.profile,
           }
         : undefined,
-      colors: print.colors.map((color) => ({
-        id: color.id,
-        name: color.name,
-        hexColor: color.hexValue,
-        firstLayer: color.firstLayer,
-        lastLayer: color.lastLayer,
-        layerCount: color.layerCount,
-        usagePercentage: (color.layerCount / print.totalLayers) * 100,
-      })),
+      colors: print.colors,
       toolChanges: print.toolChanges.map((tc) => ({
         fromTool: tc.fromTool,
         toTool: tc.toTool,
@@ -98,8 +91,9 @@ export class PrintMapper {
         lineNumber: tc.lineNumber,
         zHeight: tc.zHeight,
       })),
-      layerColorMap,
+      layerColorMap: print.layerColorMap,
       colorUsageRanges,
+      layerDetails: print.layerDetails,
       filamentUsageStats: print.filamentUsageStats,
       parserWarnings: [],
       parseTime: 0,

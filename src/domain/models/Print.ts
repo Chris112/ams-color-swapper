@@ -1,6 +1,7 @@
 import { Color } from './Color';
 import { ToolChange } from './ToolChange';
 import { Slicer, FilamentUsageStats } from './Slicer';
+import { LayerColorInfo } from '../../types';
 
 /**
  * Domain model representing a 3D print job
@@ -13,6 +14,8 @@ export class Print {
     public readonly totalHeight: number,
     public readonly colors: Color[],
     public readonly toolChanges: ToolChange[],
+    public readonly layerColorMap: Map<number, string[]>,
+    public readonly layerDetails: LayerColorInfo[],
     public readonly slicer?: Slicer,
     public readonly estimatedTime?: number,
     public readonly filamentUsageStats?: FilamentUsageStats
@@ -29,10 +32,24 @@ export class Print {
   }
 
   /**
-   * Get color at specific layer
+   * Get all colors used at a specific layer
    */
-  getColorAtLayer(layer: number): Color | undefined {
-    return this.colors.find((color) => color.isUsedInLayer(layer));
+  getColorsAtLayer(layer: number): Color[] {
+    return this.colors.filter((color) => color.isUsedInLayer(layer));
+  }
+
+  /**
+   * Get primary color at specific layer
+   */
+  getPrimaryColorAtLayer(layer: number): Color | undefined {
+    return this.colors.find((color) => color.isPrimaryInLayer(layer));
+  }
+
+  /**
+   * Get layer details for a specific layer
+   */
+  getLayerDetails(layer: number): LayerColorInfo | undefined {
+    return this.layerDetails.find((ld) => ld.layer === layer);
   }
 
   /**

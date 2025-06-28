@@ -38,16 +38,18 @@ class MockFile {
       start(controller) {
         controller.enqueue(buffer);
         controller.close();
-      }
+      },
     });
   }
 
   // Add arrayBuffer() method for Buffer parser
   arrayBuffer(): Promise<ArrayBuffer> {
-    return Promise.resolve(this.buffer.buffer.slice(
-      this.buffer.byteOffset,
-      this.buffer.byteOffset + this.buffer.byteLength
-    ));
+    return Promise.resolve(
+      this.buffer.buffer.slice(
+        this.buffer.byteOffset,
+        this.buffer.byteOffset + this.buffer.byteLength
+      )
+    );
   }
 }
 
@@ -65,11 +67,11 @@ describe('GcodeParser Performance Comparison', () => {
   // First, verify all parsers produce similar results
   it('ensures all parsers produce the same result', async () => {
     const file = mockFile as unknown as File;
-    
+
     // Get reference result from original parser
     const originalParser = new GcodeParser(silentLogger);
     const originalResult = await originalParser.parse(file);
-    
+
     // Test all variants
     const parsers = [
       { name: 'Optimized', parser: new GcodeParserOptimized(silentLogger) },
@@ -83,7 +85,7 @@ describe('GcodeParser Performance Comparison', () => {
 
     for (const { name, parser } of parsers) {
       const result = await parser.parse(file);
-      
+
       // Compare key properties (excluding parseTime and rawContent)
       expect(result.fileName).toBe(originalResult.fileName);
       expect(result.fileSize).toBe(originalResult.fileSize);
@@ -91,7 +93,7 @@ describe('GcodeParser Performance Comparison', () => {
       expect(result.totalHeight).toBeCloseTo(originalResult.totalHeight || 0, 2);
       expect(result.colors.length).toBe(originalResult.colors.length);
       expect(result.toolChanges?.length).toBe(originalResult.toolChanges?.length);
-      
+
       console.log(`✓ ${name} parser produces correct results`);
     }
   });

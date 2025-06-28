@@ -15,10 +15,11 @@ export interface GcodeStats {
   printTime?: string;
   printCost?: number;
 
-  colors: ColorInfo[];
+  colors: Color[];
   toolChanges: ToolChange[];
-  layerColorMap: Map<number, string>;
+  layerColorMap: Map<number, string[]>;
   colorUsageRanges: ColorRange[];
+  layerDetails?: LayerColorInfo[];
 
   filamentEstimates?: FilamentUsage[];
   filamentUsageStats?: {
@@ -31,16 +32,6 @@ export interface GcodeStats {
 
   parserWarnings: string[];
   parseTime: number;
-}
-
-export interface ColorInfo {
-  id: string;
-  name?: string;
-  hexColor?: string;
-  firstLayer: number;
-  lastLayer: number;
-  layerCount: number;
-  usagePercentage: number;
 }
 
 export interface ColorRange {
@@ -65,6 +56,15 @@ export interface FilamentUsage {
   cost?: number;
 }
 
+export interface LayerColorInfo {
+  layer: number;
+  colors: string[];
+  primaryColor: string; // Most used color in layer
+  toolChangeCount: number;
+  toolChangesInLayer: ToolChange[];
+}
+
+import { Color } from '../domain/models/Color';
 import type { ParserAlgorithm } from '../domain/models/AmsConfiguration';
 
 export interface SystemConfiguration {

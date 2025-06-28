@@ -1,7 +1,6 @@
 import { GcodeStats, ToolChange } from '../types';
 import { Logger } from '../utils/logger';
 import { BrowserFileReader } from '../utils/fileReader';
-import { calculateStatistics } from './statistics';
 
 export class GcodeParserOptimized {
   private logger: Logger;
@@ -72,80 +71,16 @@ export class GcodeParserOptimized {
 
     // Update stats with the maximum layer seen
     this.stats.totalLayers = this.maxLayerSeen + 1; // +1 because layers are 0-indexed
-    this.logger.silly(`Setting totalLayers to ${this.stats.totalLayers} (maxLayerSeen: ${this.maxLayerSeen})`);
-
-    const completeStats = await calculateStatistics(
-      this.stats as GcodeStats,
-      this.toolChanges,
-      this.layerColorMap,
-      this.colorFirstSeen,
-      this.colorLastSeen,
-      parseTime
+    this.logger.silly(
+      `Setting totalLayers to ${this.stats.totalLayers} (maxLayerSeen: ${this.maxLayerSeen})`
     );
 
-    if (this.onProgress) {
-      this.onProgress(95, 'Finalizing analysis...');
-    }
-
-    // Load raw content for geometry parsing if needed
-    if (!this.stats.rawContent) {
-      if (this.onProgress) {
-        this.onProgress(90, 'Loading content for geometry parsing...');
-      }
-      this.stats.rawContent = await file.text();
-      completeStats.rawContent = this.stats.rawContent;
-    }
-
-    // Ensure we have at least basic data
-    if (!completeStats.colors || completeStats.colors.length === 0) {
-      // Add default color if none found
-      completeStats.colors = [
-        {
-          id: 'T0',
-          name: 'Default Color',
-          hexColor: '#888888',
-          firstLayer: 0,
-          lastLayer: completeStats.totalLayers - 1,
-          layerCount: completeStats.totalLayers,
-          usagePercentage: 100,
-        },
-      ];
-    }
-
-    // Log analysis summary
-    this.logger.info('G-code Analysis Summary', {
-      fileName: file.name,
-      parseTime: `${parseTime}ms`,
-      totalLayers: completeStats.totalLayers,
-      totalHeight: `${completeStats.totalHeight}mm`,
-      uniqueColors: completeStats.colors.length,
-      toolChanges: completeStats.toolChanges?.length || 0,
-      filamentUsage: completeStats.filamentUsageStats?.total
-        ? `${completeStats.filamentUsageStats.total.toFixed(2)}mm`
-        : 'N/A',
-      printTime: completeStats.printTime || 'N/A',
-    });
-
-    // Log color details
-    completeStats.colors.forEach((color, index) => {
-      this.logger.info(`Color ${index + 1}`, {
-        id: color.id,
-        name: color.name,
-        hex: color.hexColor,
-        usage: `${color.usagePercentage?.toFixed(2)}%`,
-        layers: `${color.firstLayer}-${color.lastLayer}`,
-        layerCount: color.layerCount,
-      });
-    });
-
-    // Log optimization potential
-    if (completeStats.colors.length > 4) {
-      this.logger.info(
-        `Optimization needed: ${completeStats.colors.length} colors detected, but AMS only has 4 slots`
-      );
-    }
-
-    return completeStats;
+    // This parser needs to be updated to properly track multicolor layers
+    // For now, throw an error to indicate it's not compatible
+    throw new Error(
+      'GcodeParserOptimized is not compatible with the new multicolor system. ' +
+      'Please use the standard GcodeParser instead.'
+    );
   }
 
   private async processLines(reader: BrowserFileReader, totalLines: number): Promise<void> {
@@ -249,7 +184,9 @@ export class GcodeParserOptimized {
         }
         this.layerColorMap.set(this.currentLayer, this.currentTool);
         this.updateColorSeen(this.currentTool, this.currentLayer);
-        this.logger.silly(`Layer ${this.currentLayer} - Tool: ${this.currentTool}, Max: ${this.maxLayerSeen}`);
+        this.logger.silly(
+          `Layer ${this.currentLayer} - Tool: ${this.currentTool}, Max: ${this.maxLayerSeen}`
+        );
         return; // Exit early if we found a layer change
       }
     }

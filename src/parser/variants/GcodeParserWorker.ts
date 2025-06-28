@@ -1,6 +1,5 @@
-import { GcodeStats, ToolChange } from '../../types';
+import { GcodeStats } from '../../types';
 import { Logger } from '../../utils/logger';
-import { calculateStatistics } from '../statistics';
 
 export class GcodeParserWorker {
   private logger: Logger;
@@ -17,7 +16,9 @@ export class GcodeParserWorker {
 
   async parse(file: File): Promise<GcodeStats> {
     const startTime = Date.now();
-    this.logger.info(`Starting worker-based G-code parse for ${file.name} with ${this.workerCount} workers`);
+    this.logger.info(
+      `Starting worker-based G-code parse for ${file.name} with ${this.workerCount} workers`
+    );
 
     if (this.onProgress) {
       this.onProgress(5, 'Preparing workers...');
@@ -36,7 +37,7 @@ export class GcodeParserWorker {
       // Read file content
       const content = await file.text();
       const chunks = this.splitIntoChunks(content, this.workerCount);
-      
+
       if (this.onProgress) {
         this.onProgress(20, `Processing with ${this.workerCount} workers...`);
       }
@@ -55,7 +56,7 @@ export class GcodeParserWorker {
       stats.totalHeight = mergedData.maxZ;
       stats.slicerInfo = mergedData.slicerInfo;
       stats.printTime = mergedData.printTime;
-      
+
       if (mergedData.estimatedPrintTime) {
         stats.estimatedPrintTime = mergedData.estimatedPrintTime;
       }
@@ -93,50 +94,11 @@ export class GcodeParserWorker {
         this.onProgress(85, 'Analyzing colors and calculating statistics...');
       }
 
-      // Convert tool changes to proper format
-      const toolChanges: ToolChange[] = mergedData.toolChanges.map(tc => ({
-        ...tc,
-        zHeight: 0, // Would need to track this properly
-      }));
-
-      // Ensure stats has the correct total layers before calculating statistics
-      stats.totalLayers = Math.max(...Array.from(mergedData.layers), 0) + 1;
-
-      const completeStats = await calculateStatistics(
-        stats as GcodeStats,
-        toolChanges,
-        mergedData.layerColorMap,
-        mergedData.colorFirstSeen,
-        mergedData.colorLastSeen,
-        parseTime
+      // This parser variant is not compatible with the new multicolor system
+      throw new Error(
+        'GcodeParserWorker is not compatible with the new multicolor system. ' +
+        'Please use the standard GcodeParser instead.'
       );
-
-      // Store raw content
-      stats.rawContent = content;
-      completeStats.rawContent = content;
-
-      if (!completeStats.colors || completeStats.colors.length === 0) {
-        completeStats.colors = [
-          {
-            id: 'T0',
-            name: 'Default Color',
-            hexColor: '#888888',
-            firstLayer: 0,
-            lastLayer: completeStats.totalLayers - 1,
-            layerCount: completeStats.totalLayers,
-            usagePercentage: 100,
-          },
-        ];
-      }
-
-      this.logger.info('Worker parsing complete', {
-        parseTime: `${parseTime}ms`,
-        totalLayers: completeStats.totalLayers,
-        uniqueColors: completeStats.colors.length,
-        workersUsed: this.workerCount,
-      });
-
-      return completeStats;
     } catch (error) {
       this.logger.error('Worker parsing failed', error);
       throw error;
@@ -168,14 +130,18 @@ export class GcodeParserWorker {
     return results;
   }
 
-  private async simulateWorkerProcessing(chunk: string, chunkIndex: number, totalChunks: number): Promise<any> {
+  private async simulateWorkerProcessing(
+    chunk: string,
+    chunkIndex: number,
+    totalChunks: number
+  ): Promise<any> {
     // Simulate worker processing by parsing the chunk
     const lines = chunk.split('\n');
     const layers = new Set<number>();
     const tools = new Set<string>(['T0']);
     const toolChanges: any[] = [];
     const layerColorMap: Array<[number, string]> = [];
-    
+
     let currentLayer = 0;
     let currentTool = 'T0';
     let maxZ = 0;
@@ -204,7 +170,10 @@ export class GcodeParserWorker {
               layerColorMap.push([currentLayer, currentTool]);
             }
           }
-        } else if ((trimmed.includes('extruder_colour') || trimmed.includes('filament_colour')) && !colorDefs) {
+        } else if (
+          (trimmed.includes('extruder_colour') || trimmed.includes('filament_colour')) &&
+          !colorDefs
+        ) {
           const parts = trimmed.split('=');
           if (parts.length > 1) {
             colorDefs = parts[1].split(';');
@@ -225,7 +194,12 @@ export class GcodeParserWorker {
               maxZ = z;
             }
           }
-        } else if (command.length === 2 && command[0] === 'T' && command[1] >= '0' && command[1] <= '7') {
+        } else if (
+          command.length === 2 &&
+          command[0] === 'T' &&
+          command[1] >= '0' &&
+          command[1] <= '7'
+        ) {
           tools.add(command);
           if (command !== currentTool) {
             toolChanges.push({
@@ -331,7 +305,8 @@ export class GcodeParserWorker {
         // Calculate estimated time in seconds
         const match = result.printTime.match(/(\d+)h\s*(\d+)m\s*(\d+)s/);
         if (match) {
-          merged.estimatedPrintTime = parseInt(match[1]) * 3600 + parseInt(match[2]) * 60 + parseInt(match[3]);
+          merged.estimatedPrintTime =
+            parseInt(match[1]) * 3600 + parseInt(match[2]) * 60 + parseInt(match[3]);
         }
       }
       if (!merged.filamentWeights && result.filamentWeights) {
@@ -341,7 +316,7 @@ export class GcodeParserWorker {
       // Merge layer color maps
       result.layerColorMap.forEach(([layer, tool]: [number, string]) => {
         merged.layerColorMap.set(layer, tool);
-        
+
         // Update color first/last seen
         if (!merged.colorFirstSeen.has(tool)) {
           merged.colorFirstSeen.set(tool, layer);

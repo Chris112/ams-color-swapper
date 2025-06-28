@@ -1,6 +1,6 @@
 import { describe, it, expect, bench } from 'vitest';
 import { OptimizationService, OptimizationAlgorithm } from '@/services/OptimizationService';
-import { GcodeStats, ColorInfo } from '../../../types';
+import { GcodeStats } from '../../../types';
 import { Color } from '../../models/Color';
 
 // Helper function to create a mock GcodeStats object for benchmarking
@@ -8,7 +8,7 @@ function createMockGcodeStats(
   numColors: number,
   overlapPattern: 'none' | 'some' | 'all'
 ): GcodeStats {
-  const colorInfos: ColorInfo[] = [];
+  const colors: Color[] = [];
   const totalLayers = 1000;
   const layerStep = Math.floor(totalLayers / numColors);
 
@@ -28,24 +28,24 @@ function createMockGcodeStats(
       lastLayer = totalLayers - 1;
     }
 
+    // Create layers used set
+    const layersUsed = new Set<number>();
+    for (let layer = firstLayer; layer <= lastLayer; layer++) {
+      layersUsed.add(layer);
+    }
+
     const color = new Color({
       id: `T${i}`,
       name: `Color ${i}`,
       hexValue: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
       firstLayer: firstLayer,
       lastLayer: lastLayer,
+      layersUsed: layersUsed,
+      partialLayers: new Set(),
+      totalLayers: totalLayers,
     });
 
-    // Convert to ColorInfo
-    colorInfos.push({
-      id: color.id,
-      name: color.name,
-      hexColor: color.hexValue,
-      firstLayer: color.firstLayer,
-      lastLayer: color.lastLayer,
-      layerCount: color.layerCount,
-      usagePercentage: (color.layerCount / totalLayers) * 100,
-    });
+    colors.push(color);
   }
 
   return {
@@ -57,7 +57,7 @@ function createMockGcodeStats(
     parseTime: 0,
     layerColorMap: new Map(),
     colorUsageRanges: [],
-    colors: colorInfos,
+    colors: colors,
     parserWarnings: [],
     slicerInfo: { software: 'MockSlicer', version: '1.0' },
     printTime: '0h 0m 0s',
