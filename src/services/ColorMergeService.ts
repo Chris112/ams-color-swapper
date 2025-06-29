@@ -1,6 +1,7 @@
 import { Color } from '../domain/models/Color';
 import { GcodeStats } from '../types/gcode';
 import { Logger } from '../utils/logger';
+import { getFromMap } from '../utils/typeGuards';
 
 const logger = new Logger('ColorMergeService');
 
@@ -136,7 +137,7 @@ export class ColorMergeService {
       if (!colorRangeMap.has(range.colorId)) {
         colorRangeMap.set(range.colorId, []);
       }
-      colorRangeMap.get(range.colorId)!.push(range);
+      getFromMap(colorRangeMap, range.colorId, `Color range array not found for color: ${range.colorId}`).push(range);
     });
 
     colorRangeMap.forEach((ranges, colorId) => {

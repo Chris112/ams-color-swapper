@@ -18,6 +18,12 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // Safari compatibility: more conservative browser targets
+    target: ['es2018', 'safari12'],
+    // Polyfill for better Safari support
+    modulePreload: {
+      polyfill: true,
+    },
   },
   server: {
     port: 4000,

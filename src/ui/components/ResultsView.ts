@@ -4,6 +4,7 @@ import { AppStateData } from '../../state/AppState';
 import { appState } from '../../state/AppState';
 import { GcodeStats } from '../../types/gcode';
 import { Color } from '../../domain/models/Color';
+import { requireElement, getById, queryElement, queryElements } from '../../utils/domHelpers';
 import {
   fileStatsTemplate,
   colorStatsTemplate,
@@ -19,6 +20,7 @@ import {
   addGlowHover,
 } from '../../utils/animations';
 import { formatColorDisplay } from '../../utils/colorNames';
+import { formatDisplayRange, toDisplayLayer } from '../../utils/layerHelpers';
 import { VolumetricHologram } from './VolumetricHologram';
 
 interface ColorBand {
@@ -44,19 +46,22 @@ export class ResultsView extends Component {
   constructor() {
     super('#resultsSection');
 
-    const exportBtn = this.element.querySelector('#exportBtn');
-    const exportGcodeBtn = this.element.querySelector('#exportGcodeBtn') as HTMLElement | null;
-    const newFileBtn = this.element.querySelector('#newFileBtn');
-    const clearCacheBtn = this.element.querySelector('#clearCacheBtn');
-
-    if (!exportBtn || !newFileBtn || !clearCacheBtn) {
-      throw new Error('ResultsView: Required buttons not found in DOM');
-    }
-
-    this.exportBtn = exportBtn as HTMLElement;
-    this.exportGcodeBtn = exportGcodeBtn;
-    this.newFileBtn = newFileBtn as HTMLElement;
-    this.clearCacheBtn = clearCacheBtn as HTMLElement;
+    this.exportBtn = requireElement<HTMLElement>(
+      this.element,
+      '#exportBtn',
+      'ResultsView exportBtn'
+    );
+    this.exportGcodeBtn = queryElement<HTMLElement>(this.element, '#exportGcodeBtn');
+    this.newFileBtn = requireElement<HTMLElement>(
+      this.element,
+      '#newFileBtn',
+      'ResultsView newFileBtn'
+    );
+    this.clearCacheBtn = requireElement<HTMLElement>(
+      this.element,
+      '#clearCacheBtn',
+      'ResultsView clearCacheBtn'
+    );
 
     // Initialize timeline view from persistent state
     this.timelineView = appState.getState().preferences.timelineView;
@@ -131,7 +136,7 @@ export class ResultsView extends Component {
   }
 
   private updateFileName(): void {
-    const fileNameElement = document.getElementById('fileName');
+    const fileNameElement = getById('fileName');
     if (fileNameElement && this.state.stats) {
       fileNameElement.textContent = this.state.stats.fileName;
       // Add typewriter effect for file name
@@ -154,7 +159,7 @@ export class ResultsView extends Component {
   }
 
   private updateFileStats(): void {
-    const container = document.getElementById('fileStats');
+    const container = getById('fileStats');
     if (container && this.state.stats) {
       container.innerHTML = fileStatsTemplate(this.state.stats);
 
@@ -163,17 +168,19 @@ export class ResultsView extends Component {
       statValues.forEach((el) => {
         const text = el.textContent || '';
         const match = text.match(/^(\d+)(.*)/);
-        if (match) {
+        if (match && el instanceof HTMLElement) {
           const num = parseInt(match[1]);
           const suffix = match[2] || '';
-          animateNumber(el as HTMLElement, num, 800, (value) => Math.round(value) + suffix);
+          animateNumber(el, num, 800, (value) => Math.round(value) + suffix);
         }
       });
 
       // Add 3D tilt to stat cards
       const cards = container.querySelectorAll('.glass');
       cards.forEach((card) => {
-        add3DTiltEffect(card as HTMLElement, 5);
+        if (card instanceof HTMLElement) {
+          add3DTiltEffect(card, 5);
+        }
       });
     }
   }
@@ -181,7 +188,7 @@ export class ResultsView extends Component {
   private updateConstraintValidation(): void {
     if (!this.state.stats?.constraintValidation) return;
 
-    const container = document.getElementById('constraintValidation');
+    const container = getById('constraintValidation');
     if (container) {
       container.innerHTML = constraintValidationTemplate(
         this.state.stats.constraintValidation,
@@ -190,7 +197,7 @@ export class ResultsView extends Component {
       this.attachConstraintValidationHandlers();
     } else {
       // If no dedicated container, add after file stats
-      const fileStatsContainer = document.getElementById('fileStats');
+      const fileStatsContainer = getById('fileStats');
       if (fileStatsContainer && this.state.stats.constraintValidation.hasViolations) {
         const constraintDiv = document.createElement('div');
         constraintDiv.id = 'constraintValidation';
@@ -244,7 +251,7 @@ export class ResultsView extends Component {
   }
 
   private updateColorStats(): void {
-    const container = document.getElementById('colorStats');
+    const container = getById('colorStats');
     if (container && this.state.stats) {
       container.innerHTML = colorStatsTemplate(
         this.state.stats.colors,
@@ -260,7 +267,7 @@ export class ResultsView extends Component {
 
   private attachColorInteractions(): void {
     // Interactive color swatches - copy hex code
-    const interactiveSwatches = document.querySelectorAll('.interactive-swatch');
+    const interactiveSwatches = queryElements<HTMLElement>(document, '.interactive-swatch');
     interactiveSwatches.forEach((swatch) => {
       const el = swatch as HTMLElement;
 
@@ -288,8 +295,11 @@ export class ResultsView extends Component {
   }
 
   private highlightColor(colorId: string, temporary: boolean = false): void {
-    // Highlight all elements with this color
-    const timelineSegments = document.querySelectorAll(`[data-color-id="${colorId}"]`);
+    // Highlight only timeline segments, not color cards
+    const timelineSegments = queryElements<HTMLElement>(
+      document,
+      `.timeline-segment[data-color-id="${colorId}"]`
+    );
     timelineSegments.forEach((segment) => {
       const el = segment as HTMLElement;
       el.style.filter = 'brightness(1.3) saturate(1.5)';
@@ -306,7 +316,7 @@ export class ResultsView extends Component {
   }
 
   private clearHighlights(): void {
-    const highlightedElements = document.querySelectorAll('.timeline-segment');
+    const highlightedElements = queryElements<HTMLElement>(document, '.timeline-segment');
     highlightedElements.forEach((el) => {
       const element = el as HTMLElement;
       if (!element.classList.contains('highlighted')) {
@@ -343,7 +353,7 @@ export class ResultsView extends Component {
           </div>
           <div>
             <span class="text-white/60">Layer Range:</span>
-            <span class="ml-2">${firstLayer} - ${lastLayer}</span>
+            <span class="ml-2">${formatDisplayRange(firstLayer, lastLayer)}</span>
           </div>
           <div>
             <span class="text-white/60">Total Layers:</span>
@@ -385,8 +395,8 @@ export class ResultsView extends Component {
   }
 
   private focusTimelineSegment(colorId: string): void {
-    const timeline = document.getElementById('colorTimeline');
-    const segment = document.querySelector(`[data-color-id="${colorId}"]`) as HTMLElement;
+    const timeline = getById('colorTimeline');
+    const segment = queryElement<HTMLElement>(document, `[data-color-id="${colorId}"]`);
 
     if (timeline && segment) {
       // Clear other highlights
@@ -424,9 +434,12 @@ export class ResultsView extends Component {
   }
 
   private updateOptimization(): void {
-    const container = document.getElementById('optimizationResults');
+    const container = getById('optimizationResults');
     if (container && this.state.optimization) {
-      container.innerHTML = optimizationTemplate(this.state.optimization);
+      container.innerHTML = optimizationTemplate(
+        this.state.optimization,
+        this.state.stats || undefined
+      );
 
       // Animate optimization numbers
       const numbers = container.querySelectorAll('.text-4xl');
@@ -446,11 +459,12 @@ export class ResultsView extends Component {
   }
 
   private updateSwapInstructions(): void {
-    const container = document.getElementById('swapInstructions');
+    const container = getById('swapInstructions');
     if (container && this.state.optimization && this.state.stats) {
       container.innerHTML = swapInstructionsTemplate(
         this.state.optimization.manualSwaps,
-        this.state.stats
+        this.state.stats,
+        this.state.optimization
       );
 
       // Stagger animation for swap cards
@@ -495,13 +509,16 @@ export class ResultsView extends Component {
 
   private attachSwapInteractionHandlers(): void {
     // Progress checkboxes
-    const progressCheckboxes = document.querySelectorAll('.swap-progress');
+    const progressCheckboxes = queryElements<HTMLInputElement>(document, '.swap-progress');
     progressCheckboxes.forEach((checkbox) => {
       checkbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
         const swapIndex = target.dataset.swapIndex;
         if (swapIndex) {
-          const swapCard = document.querySelector(`.swap-card[data-swap-index="${swapIndex}"]`);
+          const swapCard = queryElement<HTMLElement>(
+            document,
+            `.swap-card[data-swap-index="${swapIndex}"]`
+          );
           if (swapCard) {
             if (target.checked) {
               swapCard.classList.add('completed');
@@ -521,7 +538,7 @@ export class ResultsView extends Component {
     // Removed copy individual swap and focus layer buttons per user request
 
     // Copy all swaps button
-    const copyAllBtn = document.querySelector('.copy-all-swaps');
+    const copyAllBtn = queryElement<HTMLElement>(document, '.copy-all-swaps');
     if (copyAllBtn) {
       copyAllBtn.addEventListener('click', () => {
         this.copyAllSwapsToClipboard();
@@ -529,7 +546,7 @@ export class ResultsView extends Component {
     }
 
     // Expand/collapse all swaps
-    const expandAllBtn = document.querySelector('.expand-all-swaps');
+    const expandAllBtn = queryElement<HTMLElement>(document, '.expand-all-swaps');
     if (expandAllBtn) {
       expandAllBtn.addEventListener('click', () => {
         this.toggleAllSwapDetails();
@@ -538,7 +555,10 @@ export class ResultsView extends Component {
   }
 
   private scrollToSwapCard(swapIndex: number): void {
-    const swapCard = document.querySelector(`.swap-card[data-swap-index="${swapIndex}"]`);
+    const swapCard = queryElement<HTMLElement>(
+      document,
+      `.swap-card[data-swap-index="${swapIndex}"]`
+    );
     if (swapCard) {
       swapCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
       // Add highlight effect
@@ -550,11 +570,11 @@ export class ResultsView extends Component {
   }
 
   private updateProgressCount(): void {
-    const total = document.querySelectorAll('.swap-progress').length;
-    const completed = document.querySelectorAll('.swap-progress:checked').length;
+    const total = queryElements<HTMLInputElement>(document, '.swap-progress').length;
+    const completed = queryElements<HTMLInputElement>(document, '.swap-progress:checked').length;
 
     // Update progress display if exists
-    const progressDisplay = document.querySelector('.swap-progress-display');
+    const progressDisplay = queryElement<HTMLElement>(document, '.swap-progress-display');
     if (progressDisplay) {
       progressDisplay.textContent = `${completed} of ${total} completed`;
     }
@@ -588,14 +608,14 @@ export class ResultsView extends Component {
   }
 
   private toggleAllSwapDetails(): void {
-    const allDetails = document.querySelectorAll('.swap-card details');
-    const anyOpen = Array.from(allDetails).some((details) => (details as HTMLDetailsElement).open);
+    const allDetails = queryElements<HTMLDetailsElement>(document, '.swap-card details');
+    const anyOpen = Array.from(allDetails).some((details) => details.open);
 
     allDetails.forEach((details) => {
       (details as HTMLDetailsElement).open = !anyOpen;
     });
 
-    const expandBtn = document.querySelector('.expand-all-swaps');
+    const expandBtn = queryElement<HTMLElement>(document, '.expand-all-swaps');
     if (expandBtn) {
       expandBtn.textContent = anyOpen ? 'Expand All' : 'Collapse All';
     }
@@ -624,7 +644,7 @@ export class ResultsView extends Component {
 
     if (!this.state.stats) return;
 
-    const container = document.getElementById('hologramContainer');
+    const container = getById('hologramContainer');
     if (!container) return;
 
     // Clean up existing hologram
@@ -692,7 +712,7 @@ export class ResultsView extends Component {
   }
 
   private drawColorTimeline(): void {
-    const canvas = document.getElementById('colorTimeline') as HTMLCanvasElement;
+    const canvas = getById<HTMLCanvasElement>('colorTimeline');
     if (!canvas || !this.state.stats) return;
 
     const ctx = canvas.getContext('2d');
@@ -802,8 +822,11 @@ export class ResultsView extends Component {
       const color = stats.colors.find((c) => c.id === range.colorId);
       if (!color) return;
 
-      const x = leftPadding + range.startLayer * layerWidth;
-      const segmentWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
+      // Convert internal layers to display positioning
+      const displayStartLayer = toDisplayLayer(range.startLayer);
+      const displayEndLayer = toDisplayLayer(range.endLayer);
+      const x = leftPadding + (displayStartLayer - 1) * layerWidth; // -1 because layer 1 starts at position 0
+      const segmentWidth = (displayEndLayer - displayStartLayer + 1) * layerWidth;
 
       ctx.fillStyle = color.hexValue || '#888888';
       ctx.fillRect(x, startY, segmentWidth, rowHeight);
@@ -833,8 +856,11 @@ export class ResultsView extends Component {
       // Draw color segments for this specific color
       const colorRanges = stats.colorUsageRanges.filter((r) => r.colorId === color.id);
       colorRanges.forEach((range) => {
-        const x = leftPadding + range.startLayer * layerWidth;
-        const segmentWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
+        // Convert internal layers to display positioning  
+        const displayStartLayer = toDisplayLayer(range.startLayer);
+        const displayEndLayer = toDisplayLayer(range.endLayer);
+        const x = leftPadding + (displayStartLayer - 1) * layerWidth; // -1 because layer 1 starts at position 0
+        const segmentWidth = (displayEndLayer - displayStartLayer + 1) * layerWidth;
 
         // Gradient for depth
         const gradient = ctx.createLinearGradient(x, y, x, y + rowHeight);
@@ -857,7 +883,7 @@ export class ResultsView extends Component {
     ctx.font = '12px Inter, sans-serif';
     ctx.textAlign = 'center';
     const labelY = startY + (stats.colors.length + 1) * (rowHeight + rowGap) + 25;
-    ctx.fillText('Layer 0', leftPadding + 50, labelY);
+    ctx.fillText('Layer 1', leftPadding + 50, labelY);
     ctx.fillText(`Layer ${stats.totalLayers}`, width - rightPadding - 50, labelY);
 
     // Create overlay for color view
@@ -893,8 +919,11 @@ export class ResultsView extends Component {
 
     // Draw each slot row
     let currentRow = 0;
-    for (let unit = 1; unit <= (this.state.optimization.configuration?.unitCount || 1); unit++) {
-      for (let slot = 1; slot <= 4; slot++) {
+    const unitCount = this.state.optimization.configuration?.unitCount || 1;
+    const slotsPerUnit = Math.ceil(this.state.optimization.totalSlots / unitCount);
+    
+    for (let unit = 1; unit <= unitCount; unit++) {
+      for (let slot = 1; slot <= slotsPerUnit; slot++) {
         const slotAssignment = slotMap.get(`${unit}-${slot}`);
         const y = startY + currentRow * (rowHeight + rowGap);
 
@@ -916,8 +945,11 @@ export class ResultsView extends Component {
 
             const colorRanges = stats.colorUsageRanges.filter((r) => r.colorId === colorId);
             colorRanges.forEach((range) => {
-              const x = leftPadding + range.startLayer * layerWidth;
-              const segmentWidth = (range.endLayer - range.startLayer + 1) * layerWidth;
+              // Convert internal layers to display positioning
+              const displayStartLayer = toDisplayLayer(range.startLayer);
+              const displayEndLayer = toDisplayLayer(range.endLayer);  
+              const x = leftPadding + (displayStartLayer - 1) * layerWidth; // -1 because layer 1 starts at position 0
+              const segmentWidth = (displayEndLayer - displayStartLayer + 1) * layerWidth;
               const segmentY = y + (colorIndex * rowHeight) / slotAssignment.colors.length;
               const segmentHeight = rowHeight / slotAssignment.colors.length;
 
@@ -957,7 +989,7 @@ export class ResultsView extends Component {
     ctx.font = '12px Inter, sans-serif';
     ctx.textAlign = 'center';
     const labelY = startY + totalSlots * (rowHeight + rowGap) + 15;
-    ctx.fillText('Layer 0', leftPadding + 50, labelY);
+    ctx.fillText('Layer 1', leftPadding + 50, labelY);
     ctx.fillText(`Layer ${stats.totalLayers}`, width - rightPadding - 50, labelY);
 
     // Create overlay for slot view
@@ -971,7 +1003,7 @@ export class ResultsView extends Component {
     rowGap: number,
     layerWidth: number
   ): void {
-    const overlay = document.getElementById('timelineOverlay');
+    const overlay = getById('timelineOverlay');
     if (!overlay) return;
 
     // Clear existing segments
@@ -987,8 +1019,11 @@ export class ResultsView extends Component {
         segment.className = 'timeline-segment transition-all duration-200';
 
         const leftPadding = 80;
-        const x = leftPadding + range.startLayer * layerWidth;
-        const segmentWidth = Math.max((range.endLayer - range.startLayer + 1) * layerWidth, 4);
+        // Convert internal layers to display positioning
+        const displayStartLayer = toDisplayLayer(range.startLayer);
+        const displayEndLayer = toDisplayLayer(range.endLayer);
+        const x = leftPadding + (displayStartLayer - 1) * layerWidth; // -1 because layer 1 starts at position 0
+        const segmentWidth = Math.max((displayEndLayer - displayStartLayer + 1) * layerWidth, 4);
 
         segment.style.position = 'absolute';
         segment.style.left = `${x}px`;
@@ -1035,7 +1070,7 @@ export class ResultsView extends Component {
     rowGap: number,
     layerWidth: number
   ): void {
-    const overlay = document.getElementById('timelineOverlay');
+    const overlay = getById('timelineOverlay');
     if (!overlay || !this.state.optimization) return;
 
     // Clear existing segments
@@ -1048,8 +1083,11 @@ export class ResultsView extends Component {
       slotMap.set(`${slot.unit}-${slot.slot}`, slot);
     });
 
-    for (let unit = 1; unit <= (this.state.optimization.configuration?.unitCount || 1); unit++) {
-      for (let slot = 1; slot <= 4; slot++) {
+    const unitCount = this.state.optimization.configuration?.unitCount || 1;
+    const slotsPerUnit = Math.ceil(this.state.optimization.totalSlots / unitCount);
+    
+    for (let unit = 1; unit <= unitCount; unit++) {
+      for (let slot = 1; slot <= slotsPerUnit; slot++) {
         const slotAssignment = slotMap.get(`${unit}-${slot}`);
         const y = startY + currentRow * (rowHeight + rowGap);
 
@@ -1064,8 +1102,11 @@ export class ResultsView extends Component {
               segment.className = 'timeline-segment transition-all duration-200';
 
               const leftPadding = 80;
-              const x = leftPadding + range.startLayer * layerWidth;
-              const width = Math.max((range.endLayer - range.startLayer + 1) * layerWidth, 4);
+              // Convert internal layers to display positioning
+              const displayStartLayer = toDisplayLayer(range.startLayer);
+              const displayEndLayer = toDisplayLayer(range.endLayer);
+              const x = leftPadding + (displayStartLayer - 1) * layerWidth; // -1 because layer 1 starts at position 0
+              const width = Math.max((displayEndLayer - displayStartLayer + 1) * layerWidth, 4);
               const segmentY = y + (colorIndex * rowHeight) / slotAssignment.colors.length;
               const segmentHeight = rowHeight / slotAssignment.colors.length;
 
@@ -1118,7 +1159,7 @@ export class ResultsView extends Component {
   // This method is replaced by createColorViewOverlay and createSlotViewOverlay
 
   private attachTimelineInteractions(): void {
-    const timelineSegments = document.querySelectorAll('.timeline-segment');
+    const timelineSegments = queryElements<HTMLElement>(document, '.timeline-segment');
 
     timelineSegments.forEach((segment) => {
       const el = segment as HTMLElement;
@@ -1197,7 +1238,7 @@ export class ResultsView extends Component {
           <div class="font-semibold">${formatColorDisplay(color.hexValue, color.name || color.id)}</div>
         </div>
         <div class="text-sm space-y-1 text-white/80">
-          <div>Layers: ${band.startLayer} - ${band.endLayer}</div>
+          <div>Layers: ${band.startLayer + 1} - ${band.endLayer + 1}</div>
           <div>Total: ${band.endLayer - band.startLayer + 1} layers</div>
           <div>Usage: ${color.usagePercentage.toFixed(1)}%</div>
           ${weight > 0 ? `<div>Weight: ${weight.toFixed(1)}g</div>` : ''}
@@ -1215,7 +1256,7 @@ export class ResultsView extends Component {
     return `
       <div class="layer-hover-tooltip bg-black/95 text-white rounded-xl shadow-2xl backdrop-blur-md border border-white/20 p-4 max-w-sm">
         <div class="tooltip-header mb-3">
-          <h3 class="text-lg font-bold text-white">Layer ${layer}</h3>
+          <h3 class="text-lg font-bold text-white">Layer ${layer + 1}</h3>
           <p class="text-sm text-white/60">${layerColors.size} of ${allColors.length} colors active</p>
         </div>
         
@@ -1253,7 +1294,7 @@ export class ResultsView extends Component {
   }
 
   private showTooltipInPortal(color: Color, band: ColorBand, targetElement: HTMLElement): void {
-    const portal = document.getElementById('tooltipPortal');
+    const portal = getById('tooltipPortal');
     if (!portal) return;
 
     // Clear existing tooltips
@@ -1345,7 +1386,7 @@ export class ResultsView extends Component {
   }
 
   private hideTooltipInPortal(): void {
-    const portal = document.getElementById('tooltipPortal');
+    const portal = getById('tooltipPortal');
     if (!portal) return;
 
     // Remove all tooltips
@@ -1357,7 +1398,7 @@ export class ResultsView extends Component {
   }
 
   private showLayerTooltipInPortal(layer: number, x: number, y: number): void {
-    const portal = document.getElementById('tooltipPortal');
+    const portal = getById('tooltipPortal');
     if (!portal) return;
 
     // Check if layer tooltip already exists
@@ -1425,7 +1466,7 @@ export class ResultsView extends Component {
     rightPadding: number,
     layerWidth: number
   ): void {
-    const overlay = document.getElementById('timelineOverlay');
+    const overlay = getById('timelineOverlay');
     if (!overlay) return;
 
     // Remove existing listeners
@@ -1476,7 +1517,7 @@ export class ResultsView extends Component {
             }, 50);
           } else if (this.currentHoveredLayer === layer) {
             // Update position if still on same layer
-            const portal = document.getElementById('tooltipPortal');
+            const portal = getById('tooltipPortal');
             const tooltip = portal?.querySelector('.layer-tooltip-container') as HTMLElement;
             if (tooltip) {
               // Smooth position update
@@ -1514,7 +1555,7 @@ export class ResultsView extends Component {
             clearTimeout(this.layerTooltipUpdateTimer);
           }
           // Only clear layer tooltips, not the color segment tooltips
-          const portal = document.getElementById('tooltipPortal');
+          const portal = getById('tooltipPortal');
           const layerTooltip = portal?.querySelector('.layer-tooltip-container');
           if (layerTooltip) {
             layerTooltip.remove();
@@ -1534,8 +1575,8 @@ export class ResultsView extends Component {
   }
 
   private attachTimelineToggle(): void {
-    const colorViewBtn = document.getElementById('colorViewBtn');
-    const slotViewBtn = document.getElementById('slotViewBtn');
+    const colorViewBtn = getById('colorViewBtn');
+    const slotViewBtn = getById('slotViewBtn');
 
     if (!colorViewBtn || !slotViewBtn) return;
 
@@ -1570,8 +1611,8 @@ export class ResultsView extends Component {
   }
 
   private updateTimelineViewButtons(): void {
-    const colorViewBtn = document.getElementById('colorViewBtn');
-    const slotViewBtn = document.getElementById('slotViewBtn');
+    const colorViewBtn = getById('colorViewBtn');
+    const slotViewBtn = getById('slotViewBtn');
 
     if (!colorViewBtn || !slotViewBtn) return;
 
@@ -1595,7 +1636,7 @@ export class ResultsView extends Component {
     width: number,
     height: number
   ): void {
-    const overlay = document.getElementById('timelineOverlay');
+    const overlay = getById('timelineOverlay');
     if (!overlay) return;
 
     // Clear any existing constraint indicators
@@ -1630,7 +1671,7 @@ export class ResultsView extends Component {
       indicator.style.pointerEvents = 'none';
 
       // Add tooltip data
-      indicator.title = `${violationType === 'critical' ? 'IMPOSSIBLE' : 'SUBOPTIMAL'}: Layers ${range.startLayer}-${range.endLayer} require ${range.maxColorsRequired} colors but only ${range.availableSlots} slots available`;
+      indicator.title = `${violationType === 'critical' ? 'IMPOSSIBLE' : 'SUBOPTIMAL'}: Layers ${range.startLayer + 1}-${range.endLayer + 1} require ${range.maxColorsRequired} colors but only ${range.availableSlots} slots available`;
 
       overlay.appendChild(indicator);
     });

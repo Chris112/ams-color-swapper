@@ -1,5 +1,6 @@
 import { appState, AppStateData } from '../state/AppState';
 import { eventBus, AppEventKey, AppEventMap } from './EventEmitter';
+import { requireElement } from '../utils/domHelpers';
 
 export abstract class Component {
   protected element: HTMLElement;
@@ -8,11 +9,12 @@ export abstract class Component {
   private initialized = false;
 
   constructor(protected selector: string) {
-    const el = document.querySelector(selector);
-    if (!el) {
-      throw new Error(`Element not found: ${selector}`);
-    }
-    this.element = el as HTMLElement;
+    // Use type-safe DOM helper to find element
+    this.element = requireElement<HTMLElement>(
+      document,
+      selector,
+      `Component selector '${selector}'`
+    );
     this.state = appState.getState();
 
     // Subscribe to state changes

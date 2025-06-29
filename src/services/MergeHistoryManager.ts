@@ -66,7 +66,10 @@ export class MergeHistoryManager {
    */
   public addInitialState(stats: GcodeStats, optimization: OptimizationResult): void {
     if (!this.stateMachine.canPerformAction(TimelineAction.INITIALIZE)) {
-      console.warn('Cannot initialize timeline in current state');
+      console.warn(
+        'Cannot initialize timeline in current state:',
+        this.stateMachine.getCurrentState()
+      );
       return;
     }
 
@@ -112,7 +115,10 @@ export class MergeHistoryManager {
     mergeInfo: StateSnapshot['mergeInfo']
   ): void {
     if (!this.stateMachine.canPerformAction(TimelineAction.ADD_MERGE)) {
-      console.warn('Cannot add merge state in current timeline state');
+      console.warn(
+        'Cannot add merge state in current timeline state:',
+        this.stateMachine.getCurrentState()
+      );
       return;
     }
 
@@ -276,16 +282,26 @@ export class MergeHistoryManager {
     this.stateMachine.performAction(TimelineAction.RESET);
 
     if (this.snapshots.length > 0) {
+      // Keep only the initial snapshot
+      const initialSnapshot = this.snapshots[0];
+      this.snapshots = [initialSnapshot];
       this.currentIndex = 0;
-      const snapshot = this.getCurrentSnapshot();
+
+      // Clear all branches except master
+      this.branches.clear();
+      this.branches.set('master', [initialSnapshot.id]);
+      this.currentBranch = 'master';
+
+      // Save to storage
+      this.saveToStorage();
 
       this.stateMachine.updateContext({
-        currentSnapshot: snapshot || undefined,
+        currentSnapshot: initialSnapshot,
         canUndo: false,
-        canRedo: this.snapshots.length > 1,
+        canRedo: false,
       });
 
-      return snapshot;
+      return initialSnapshot;
     }
     return null;
   }
@@ -665,14 +681,12 @@ export class MergeHistoryManager {
    * Clear all timeline data
    */
   public clear(): void {
-    if (this.stateMachine.canPerformAction(TimelineAction.CLEAR)) {
-      this.stateMachine.performAction(TimelineAction.CLEAR);
-      this.snapshots = [];
-      this.currentIndex = -1;
-      this.branches.clear();
-      this.branches.set('main', []);
-      this.currentBranch = 'main';
-      this.stateMachine.reset();
-    }
+    // Force reset regardless of current state
+    this.snapshots = [];
+    this.currentIndex = -1;
+    this.branches.clear();
+    this.branches.set('main', []);
+    this.currentBranch = 'main';
+    this.stateMachine.reset();
   }
 }

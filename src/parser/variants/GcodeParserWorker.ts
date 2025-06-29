@@ -236,8 +236,8 @@ export class GcodeParserWorker {
             if (newLayer !== currentLayer) {
               currentLayer = newLayer;
               layers.add(currentLayer);
-              // Add all active tools to the new layer for color persistence
-              layerColorMap.push([currentLayer, Array.from(activeTools)]);
+              // Add only the current tool to the new layer
+              layerColorMap.push([currentLayer, [currentTool]]);
             }
           }
         } else if (
@@ -283,7 +283,7 @@ export class GcodeParserWorker {
             // Update current layer with new tool
             const existingEntry = layerColorMap.find(([layer]) => layer === currentLayer);
             if (existingEntry) {
-              existingEntry[1] = Array.from(activeTools);
+              existingEntry[1] = [currentTool];
             }
           }
         } else if (command === 'M600') {
@@ -413,25 +413,13 @@ export class GcodeParserWorker {
       merged.layerColorMap.set(0, ['T0']);
     }
 
-    // Apply color persistence: ensure all active tools are present in all layers
-    const allLayers = Array.from(merged.layers).sort((a, b) => a - b);
-    const processedLayers = new Map<number, string[]>();
+    // No color persistence needed - keep only the tools actually used in each layer
+    // The layerColorMap already contains the correct mapping from the chunks
 
-    for (const layer of allLayers) {
-      const layerTools = merged.layerColorMap.get(layer) || [];
-      // Add any new tools found in this layer to active set
-      layerTools.forEach((tool) => merged.activeTools.add(tool));
-      // Set this layer to have all active tools
-      processedLayers.set(layer, Array.from(merged.activeTools));
-    }
-
-    // Replace layerColorMap with processed version
-    merged.layerColorMap = processedLayers;
-
-    // Update color first/last seen based on processed layers
+    // Update color first/last seen based on actual layer usage
     merged.colorFirstSeen.clear();
     merged.colorLastSeen.clear();
-    processedLayers.forEach((tools, layer) => {
+    merged.layerColorMap.forEach((tools, layer) => {
       tools.forEach((tool) => {
         if (!merged.colorFirstSeen.has(tool)) {
           merged.colorFirstSeen.set(tool, layer);

@@ -144,7 +144,8 @@ export class AppState {
       mergeHistory: [], // Reset merge history for new file
     });
 
-    // Initialize merge history timeline with initial state
+    // Reset and initialize merge history timeline with initial state
+    this.mergeHistoryManager.clear();
     this.mergeHistoryManager.addInitialState(stats, optimization);
 
     // Auto-save timeline asynchronously

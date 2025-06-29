@@ -2,6 +2,7 @@ import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { appState, AppStateData } from '../../state/AppState';
 import { addMagneticEffect, addGlowHover } from '../../utils/animations';
+import { requireElement, getById, castElement } from '../../utils/domHelpers';
 
 export class FileUploader extends Component {
   private dropZone!: HTMLElement;
@@ -9,27 +10,43 @@ export class FileUploader extends Component {
   private progressBar!: HTMLElement;
   private progressFill!: HTMLElement;
   private progressText!: HTMLElement;
+  private isDragActive = false;
+  private dragCounter = 0;
 
   constructor() {
     super('#uploadSection');
 
-    // Ensure DOM elements exist
-    const dropZone = this.element.querySelector('#dropZone');
-    const fileInput = this.element.querySelector('#fileInput') as HTMLInputElement;
-    const progressBar = this.element.querySelector('#uploadProgress');
-    const progressFill = this.element.querySelector('#progressBarFill');
-    const progressText = progressBar?.querySelector('p');
-
-    if (!dropZone || !fileInput || !progressBar || !progressFill || !progressText) {
-      console.error('FileUploader: Required DOM elements not found');
+    // Ensure DOM elements exist with type safety
+    try {
+      this.dropZone = requireElement<HTMLElement>(
+        this.element,
+        '#dropZone',
+        'FileUploader dropZone'
+      );
+      this.fileInput = requireElement<HTMLInputElement>(
+        this.element,
+        '#fileInput',
+        'FileUploader fileInput'
+      );
+      this.progressBar = requireElement<HTMLElement>(
+        this.element,
+        '#uploadProgress',
+        'FileUploader progressBar'
+      );
+      this.progressFill = requireElement<HTMLElement>(
+        this.element,
+        '#progressBarFill',
+        'FileUploader progressFill'
+      );
+      this.progressText = requireElement<HTMLElement>(
+        this.progressBar,
+        'p',
+        'FileUploader progressText'
+      );
+    } catch (error) {
+      console.error('FileUploader initialization failed:', error);
       return;
     }
-
-    this.dropZone = dropZone as HTMLElement;
-    this.fileInput = fileInput;
-    this.progressBar = progressBar as HTMLElement;
-    this.progressFill = progressFill as HTMLElement;
-    this.progressText = progressText as HTMLElement;
 
     this.attachEventListeners();
     this.addMicroInteractions();
@@ -45,7 +62,7 @@ export class FileUploader extends Component {
     this.toggle(view === 'upload');
 
     // Also hide/show the Why section
-    const whySection = document.getElementById('whySection');
+    const whySection = getById('whySection');
     if (whySection) {
       if (view === 'upload') {
         whySection.classList.remove('hidden');
@@ -85,6 +102,7 @@ export class FileUploader extends Component {
     this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
 
     // Drag and drop
+    this.dropZone.addEventListener('dragenter', this.handleDragEnter.bind(this));
     this.dropZone.addEventListener('dragover', this.handleDragOver.bind(this));
     this.dropZone.addEventListener('dragleave', this.handleDragLeave.bind(this));
     this.dropZone.addEventListener('drop', this.handleDrop.bind(this));
@@ -96,8 +114,9 @@ export class FileUploader extends Component {
     // Add magnetic effect to button
     const button = this.dropZone.querySelector('button');
     if (button) {
-      addMagneticEffect(button as HTMLElement, 0.4);
-      addGlowHover(button as HTMLElement, 'pink');
+      const htmlButton = castElement(button, HTMLElement, 'Example button');
+      addMagneticEffect(htmlButton, 0.4);
+      addGlowHover(htmlButton, 'pink');
     }
 
     // Add smooth transition for icon
@@ -151,7 +170,11 @@ export class FileUploader extends Component {
   }
 
   private handleFileSelect(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    const target = event.target;
+    if (!target || !(target instanceof HTMLInputElement)) {
+      return;
+    }
+    const input = target;
     if (input.files && input.files[0]) {
       this.processFile(input.files[0]);
       // Reset the input value so the same file can be selected again
@@ -159,11 +182,23 @@ export class FileUploader extends Component {
     }
   }
 
+  private handleDragEnter(event: DragEvent): void {
+    event.preventDefault();
+    this.dragCounter++;
+    
+    if (!this.isDragActive && this.dropZone) {
+      this.isDragActive = true;
+      this.dropZone.classList.add('drag-enter');
+    }
+  }
+
   private handleDragOver(event: DragEvent): void {
     event.preventDefault();
-    if (this.dropZone) {
+    // Only apply the drag-over state once, don't re-trigger on every dragover event
+    if (this.isDragActive && this.dropZone && !this.dropZone.classList.contains('drag-over')) {
       this.dropZone.classList.add('drag-over');
-      // Add haptic feedback for mobile if supported
+      this.dropZone.classList.remove('drag-enter');
+      // Add haptic feedback for mobile if supported (only once)
       if ('vibrate' in navigator) {
         navigator.vibrate(10);
       }
@@ -172,15 +207,22 @@ export class FileUploader extends Component {
 
   private handleDragLeave(event: DragEvent): void {
     event.preventDefault();
-    if (this.dropZone) {
-      this.dropZone.classList.remove('drag-over');
+    this.dragCounter--;
+    
+    // Only reset when all drag events have left (counter reaches 0)
+    if (this.dragCounter === 0 && this.isDragActive && this.dropZone) {
+      this.isDragActive = false;
+      this.dropZone.classList.remove('drag-over', 'drag-enter');
     }
   }
 
   private handleDrop(event: DragEvent): void {
     event.preventDefault();
+    // Reset everything on drop
+    this.dragCounter = 0;
     if (this.dropZone) {
-      this.dropZone.classList.remove('drag-over');
+      this.isDragActive = false;
+      this.dropZone.classList.remove('drag-over', 'drag-enter');
     }
 
     if (!event.dataTransfer) return;
