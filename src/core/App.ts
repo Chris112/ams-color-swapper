@@ -2,7 +2,6 @@ import { appState } from '../state/AppState';
 import { eventBus, AppEvents } from './EventEmitter';
 import { FileUploader } from '../ui/components/FileUploader';
 import { ResultsView } from '../ui/components/ResultsView';
-import { FactoryFloorUI } from '../ui/components/FactoryFloorUI';
 import { ExamplePanel } from '../ui/components/ExamplePanel';
 import { ConfigurationModal } from '../ui/components/ConfigurationModal';
 import { FilamentSyncStatus } from '../ui/components/FilamentSyncStatus';
@@ -13,10 +12,6 @@ import { gcodeCache } from '../services/GcodeCache';
 import { ColorMergeService, MergeHistoryEntry } from '../services/ColorMergeService';
 import { ColorMergePanel } from '../ui/components/ColorMergePanel';
 import { MergeHistoryTimeline } from '../ui/components/MergeHistoryTimeline';
-
-// Factory Floor Components
-import { FactoryFloorScene } from '../ui/components/factory/FactoryFloorScene';
-import { FactoryFloorService, FactoryState } from '../services/FactoryFloorService';
 
 // Services
 import { FileProcessingService } from '../services/FileProcessingService';
@@ -51,12 +46,6 @@ export class App {
 
   // Command executor
   private commandExecutor: CommandExecutor;
-
-  // Factory Floor
-  private factoryFloorScene: FactoryFloorScene | null = null;
-  private factoryFloorService: FactoryFloorService | null = null;
-  private factoryFloorUI: FactoryFloorUI | null = null;
-  private currentView: 'analysis' | 'factory' = 'analysis';
 
   // UI Components
   private resultsView: ResultsView | null = null;
@@ -165,11 +154,6 @@ export class App {
 
     // Note: Optimization algorithm dropdown has been removed from the main page
     // It's now only available in the printer configuration modal
-
-    // Initialize factory floor UI separately when needed
-    this.factoryFloorUI = new FactoryFloorUI();
-    // Initialize factory floor UI immediately so button listeners work
-    this.factoryFloorUI.initialize();
   }
 
   private attachEventListeners(): void {
@@ -204,39 +188,6 @@ export class App {
       this.logger.info('Configuration updated', config);
     });
 
-    // View toggle event
-    eventBus.on(AppEvents.VIEW_TOGGLE, (view) => {
-      // Only switch if it's a supported view
-      if (view === 'analysis' || view === 'factory') {
-        this.switchView(view);
-      }
-    });
-
-    // Factory floor events
-    eventBus.on(AppEvents.FACTORY_BUILD_SPEED_CHANGED, (speed) => {
-      if (this.factoryFloorService) {
-        this.factoryFloorService.setBuildSpeed(speed);
-      }
-    });
-
-    eventBus.on(AppEvents.FACTORY_PAUSE_ALL, () => {
-      if (this.factoryFloorService) {
-        this.factoryFloorService.pauseAllBuilds();
-      }
-    });
-
-    eventBus.on(AppEvents.FACTORY_RESUME_ALL, () => {
-      if (this.factoryFloorService) {
-        this.factoryFloorService.resumeAllBuilds();
-      }
-    });
-
-    eventBus.on(AppEvents.FACTORY_CLEAR, () => {
-      if (this.factoryFloorService) {
-        this.factoryFloorService.clearFactory();
-      }
-    });
-
     // State changes - re-attach merge button listener
     appState.subscribe((state) => {
       if (state.view === 'results' && state.stats) {
@@ -249,10 +200,15 @@ export class App {
             });
           }
 
-          // Attach timeline button listener
+          // Attach timeline button listener (remove old listener first)
           const timelineBtn = document.getElementById('openTimelineBtn');
           if (timelineBtn && this.mergeHistoryTimeline) {
-            timelineBtn.addEventListener('click', () => {
+            // Remove any existing click handler by cloning the button
+            const newTimelineBtn = timelineBtn.cloneNode(true) as HTMLElement;
+            timelineBtn.parentNode?.replaceChild(newTimelineBtn, timelineBtn);
+
+            // Add fresh click handler
+            newTimelineBtn.addEventListener('click', () => {
               this.mergeHistoryTimeline!.toggle();
             });
           }
@@ -317,29 +273,6 @@ export class App {
 
     // Update state with results
     appState.setAnalysisResults(stats, optimization, logs);
-
-    // Show view navigation now that analysis is complete
-    const viewNavigation = document.getElementById('viewNavigation');
-    if (viewNavigation) {
-      viewNavigation.style.display = 'block';
-      viewNavigation.classList.remove('hidden');
-      viewNavigation.removeAttribute('hidden');
-    }
-
-    // Initialize factory floor UI now that results section is visible
-    if (this.factoryFloorUI) {
-      this.factoryFloorUI.initialize();
-    }
-
-    // Add to factory floor if service is available
-    if (this.factoryFloorService) {
-      try {
-        const fileContent = await file.text();
-        await this.factoryFloorService.addPrint(file.name, fileContent, stats);
-      } catch (error) {
-        console.warn('Failed to add print to factory floor:', error);
-      }
-    }
   }
 
   private async handleExportRequest(): Promise<void> {
@@ -403,236 +336,6 @@ export class App {
   private handleReset(): void {
     appState.reset();
     this.logger.clearLogs();
-
-    // Hide the view navigation section
-    const viewNavigation = document.getElementById('viewNavigation');
-    if (viewNavigation) {
-      viewNavigation.setAttribute('hidden', '');
-    }
-
-    // Switch back to analysis view if in factory view
-    if (this.currentView === 'factory') {
-      this.switchView('analysis');
-    }
-  }
-
-  private switchView(view: 'analysis' | 'factory'): void {
-    this.currentView = view;
-
-    const analysisSection = document.getElementById('resultsSection');
-    const factorySection = document.getElementById('factorySection');
-    const viewNavigation = document.getElementById('viewNavigation');
-
-    // Always show the navigation header when switching views (if results exist)
-    if (viewNavigation && appState.getState().stats) {
-      viewNavigation.style.display = 'block';
-      viewNavigation.classList.remove('hidden');
-      viewNavigation.removeAttribute('hidden');
-    }
-
-    if (view === 'factory') {
-      // Show factory section FIRST so container has dimensions
-      if (analysisSection) {
-        analysisSection.style.display = 'none';
-        analysisSection.classList.add('hidden');
-        analysisSection.setAttribute('hidden', '');
-      }
-      if (factorySection) {
-        factorySection.style.display = 'block';
-        factorySection.classList.remove('hidden');
-        factorySection.removeAttribute('hidden');
-      }
-
-      // Initialize factory floor AFTER showing the section
-      if (!this.factoryFloorScene) {
-        // Wait a frame for the layout to update
-        requestAnimationFrame(() => {
-          this.initializeFactoryFloor();
-        });
-      }
-    } else {
-      // Show analysis section, hide factory
-      if (analysisSection) {
-        analysisSection.style.display = 'block';
-        analysisSection.classList.remove('hidden');
-        analysisSection.removeAttribute('hidden');
-      }
-      if (factorySection) {
-        factorySection.style.display = 'none';
-        factorySection.classList.add('hidden');
-        factorySection.setAttribute('hidden', '');
-      }
-    }
-
-    // Update toggle buttons
-    this.updateViewToggleButtons();
-  }
-
-  private initializeFactoryFloor(): void {
-    // Initializing factory floor...
-    const container = document.getElementById('factoryFloorContainer');
-    // Container found
-
-    if (!container) {
-      // Factory floor container not found
-      return;
-    }
-
-    // Clear any loading messages
-    const loadingDivs = container.querySelectorAll('.absolute, div');
-    loadingDivs.forEach((div) => {
-      if (div !== container && div.parentNode === container) {
-        // Removing loading div
-        div.remove();
-      }
-    });
-
-    try {
-      // Creating FactoryFloorScene...
-      this.factoryFloorScene = new FactoryFloorScene(container);
-
-      // Creating FactoryFloorService...
-      this.factoryFloorService = new FactoryFloorService(this.factoryFloorScene, {
-        autoStartBuilding: true,
-        maxConcurrentBuilds: 3,
-        buildSpeed: 2,
-        persistData: true, // Re-enabled with IndexedDB
-        enableAnimations: true,
-      });
-
-      // Set up factory floor event listeners
-      this.setupFactoryFloorEvents();
-
-      // Add current file to factory floor if available
-      this.addCurrentFileToFactory();
-
-      // Factory floor initialized successfully
-    } catch (error) {
-      // Failed to initialize factory floor
-    }
-  }
-
-  private setupFactoryFloorEvents(): void {
-    if (!this.factoryFloorService) return;
-
-    this.factoryFloorService.on('printSelected', (_data: { printId: string | null }) => {
-      this.updateFactoryFloorUI();
-    });
-
-    this.factoryFloorService.on('factoryStateChanged', (data: { state: FactoryState }) => {
-      this.updateFactoryStatsUI(data.state);
-    });
-
-    this.factoryFloorService.on('buildingStarted', (_data: { printId: string }) => {
-      // Started building print
-    });
-
-    this.factoryFloorService.on('buildingCompleted', (_data: { printId: string }) => {
-      // Completed building print
-    });
-  }
-
-  private async addCurrentFileToFactory(): Promise<void> {
-    if (!this.factoryFloorService) return;
-
-    const state = appState.getState();
-    if (state.currentFile && state.stats) {
-      try {
-        // Adding current file to factory floor
-
-        // Read the file content
-        const fileContent = await this.readFileAsText(state.currentFile);
-
-        // Add to factory floor
-        await this.factoryFloorService.addPrint(state.currentFile.name, fileContent, state.stats);
-
-        // Successfully added current file to factory floor
-      } catch (error) {
-        // Failed to add current file to factory floor
-      }
-    }
-  }
-
-  private readFileAsText(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result && typeof e.target.result === 'string') {
-          resolve(e.target.result);
-        } else {
-          reject(new Error('Failed to read file'));
-        }
-      };
-      reader.onerror = () => reject(reader.error);
-      reader.readAsText(file);
-    });
-  }
-
-  private updateViewToggleButtons(): void {
-    const analysisBtn = document.getElementById('analysisViewBtn');
-    const factoryBtn = document.getElementById('factoryViewBtn');
-
-    if (analysisBtn && factoryBtn) {
-      if (this.currentView === 'analysis') {
-        analysisBtn.classList.add('bg-vibrant-blue', 'text-white');
-        analysisBtn.classList.remove('bg-white/10', 'text-white/70');
-        factoryBtn.classList.remove('bg-vibrant-blue', 'text-white');
-        factoryBtn.classList.add('bg-white/10', 'text-white/70');
-      } else {
-        factoryBtn.classList.add('bg-vibrant-blue', 'text-white');
-        factoryBtn.classList.remove('bg-white/10', 'text-white/70');
-        analysisBtn.classList.remove('bg-vibrant-blue', 'text-white');
-        analysisBtn.classList.add('bg-white/10', 'text-white/70');
-      }
-    }
-  }
-
-  private updateFactoryFloorUI(): void {
-    if (!this.factoryFloorService) return;
-
-    const selectedPrint = this.factoryFloorService.getSelectedPrint();
-    const infoPanel = document.getElementById('printInfoPanel');
-
-    if (selectedPrint && infoPanel) {
-      infoPanel.innerHTML = `
-        <h4 class="text-lg font-semibold text-white mb-2">${selectedPrint.filename}</h4>
-        <div class="space-y-1 text-sm text-white/70">
-          <p>Layers: ${selectedPrint.stats.totalLayers}</p>
-          <p>Colors: ${selectedPrint.stats.colors.length}</p>
-          <p>Progress: ${Math.round(selectedPrint.buildProgress * 100)}%</p>
-          <p>Added: ${selectedPrint.dateAdded.toLocaleDateString()}</p>
-        </div>
-      `;
-      infoPanel.style.display = 'block';
-    } else if (infoPanel) {
-      infoPanel.style.display = 'none';
-    }
-  }
-
-  private updateFactoryStatsUI(state: FactoryState): void {
-    const statsPanel = document.getElementById('factoryStatsPanel');
-    if (statsPanel) {
-      statsPanel.innerHTML = `
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div class="glass rounded-lg p-3">
-            <div class="text-2xl font-bold text-vibrant-blue">${state.totalPrints}</div>
-            <div class="text-sm text-white/60">Total Prints</div>
-          </div>
-          <div class="glass rounded-lg p-3">
-            <div class="text-2xl font-bold text-vibrant-green">${state.activePrints}</div>
-            <div class="text-sm text-white/60">Building</div>
-          </div>
-          <div class="glass rounded-lg p-3">
-            <div class="text-2xl font-bold text-vibrant-purple">${state.completedPrints}</div>
-            <div class="text-sm text-white/60">Completed</div>
-          </div>
-          <div class="glass rounded-lg p-3">
-            <div class="text-2xl font-bold text-vibrant-orange">${state.queuedPrints}</div>
-            <div class="text-sm text-white/60">Queued</div>
-          </div>
-        </div>
-      `;
-    }
   }
 
   /**
@@ -782,15 +485,6 @@ export class App {
   }
 
   public destroy(): void {
-    // Clean up factory floor
-    if (this.factoryFloorService) {
-      this.factoryFloorService.dispose();
-    }
-
-    if (this.factoryFloorUI) {
-      this.factoryFloorUI.destroy();
-    }
-
     // Save timeline before destroying
     if (this.mergeHistoryTimeline) {
       try {

@@ -3,6 +3,7 @@ import { AppEvents } from '../../core/EventEmitter';
 import { SystemConfiguration } from '../../types/configuration';
 import { addRippleEffect, addGlowHover } from '../../utils/animations';
 import { ParserAlgorithm } from '../../domain/models/AmsConfiguration';
+import { requireElement, queryElement, queryElements } from '../../utils/domHelpers';
 
 export class ConfigurationModal extends Component {
   private configType: 'ams' | 'toolhead' = 'ams';
@@ -14,7 +15,7 @@ export class ConfigurationModal extends Component {
   private applyBtn: HTMLElement | null = null;
   private resetBtn: HTMLElement | null = null;
   private closeBtn: HTMLElement | null = null;
-  private typeRadios: NodeListOf<HTMLInputElement> | null = null;
+  private typeRadios: HTMLInputElement[] = [];
   private unitInput: HTMLInputElement | null = null;
   private previewContainer: HTMLElement | null = null;
   private algorithmSelect: HTMLSelectElement | null = null;
@@ -266,25 +267,46 @@ export class ConfigurationModal extends Component {
 
     // Get references to elements
     this.modalElement = this.element.querySelector('#configModal');
-    this.applyBtn = this.element.querySelector('#applyConfig');
-    this.resetBtn = this.element.querySelector('#resetConfig');
-    this.closeBtn = this.element.querySelector('#closeModal');
-    this.typeRadios = this.element.querySelectorAll('input[name="configType"]');
-    this.unitInput = this.element.querySelector('#unitCount');
-    this.previewContainer = this.element.querySelector('#configPreview');
-    this.algorithmSelect = this.element.querySelector('#modalOptimizationAlgorithm');
-    this.parserSelect = this.element.querySelector('#modalParserAlgorithm');
+    try {
+      this.applyBtn = requireElement<HTMLElement>(
+        this.element,
+        '#applyConfig',
+        'ConfigurationModal applyBtn'
+      );
+      this.resetBtn = requireElement<HTMLElement>(
+        this.element,
+        '#resetConfig',
+        'ConfigurationModal resetBtn'
+      );
+      this.closeBtn = requireElement<HTMLElement>(
+        this.element,
+        '#closeModal',
+        'ConfigurationModal closeBtn'
+      );
+      this.unitInput = requireElement<HTMLInputElement>(
+        this.element,
+        '#unitCount',
+        'ConfigurationModal unitInput'
+      );
+      this.previewContainer = requireElement<HTMLElement>(
+        this.element,
+        '#configPreview',
+        'ConfigurationModal previewContainer'
+      );
 
-    // Validate required elements
-    if (
-      !this.modalElement ||
-      !this.applyBtn ||
-      !this.resetBtn ||
-      !this.closeBtn ||
-      !this.unitInput ||
-      !this.previewContainer
-    ) {
-      console.error('ConfigurationModal: Failed to find required elements');
+      // Optional elements
+      this.typeRadios = queryElements<HTMLInputElement>(this.element, 'input[name="configType"]');
+      this.algorithmSelect = queryElement<HTMLSelectElement>(
+        this.element,
+        '#modalOptimizationAlgorithm'
+      );
+      this.parserSelect = queryElement<HTMLSelectElement>(this.element, '#modalParserAlgorithm');
+
+      if (!this.modalElement) {
+        throw new Error('Modal element not found');
+      }
+    } catch (error) {
+      console.error('ConfigurationModal initialization failed:', error);
       return;
     }
 
@@ -310,8 +332,11 @@ export class ConfigurationModal extends Component {
     // Close on backdrop click
     if (this.modalElement) {
       this.modalElement.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const modalContent = this.modalElement?.querySelector('.modal-content');
+        const target = e.target;
+        if (!(target instanceof HTMLElement)) return;
+        const modalContent = this.modalElement
+          ? queryElement(this.modalElement, '.modal-content')
+          : null;
 
         // Close if clicking on the modal wrapper or backdrop, but not on the content
         if (target === this.modalElement || target.classList.contains('modal-backdrop')) {
@@ -333,7 +358,7 @@ export class ConfigurationModal extends Component {
     });
 
     // Type radio changes
-    if (this.typeRadios) {
+    if (this.typeRadios.length > 0) {
       this.typeRadios.forEach((radio) => {
         radio.addEventListener('change', () => {
           this.configType = radio.value as 'ams' | 'toolhead';
@@ -512,7 +537,7 @@ export class ConfigurationModal extends Component {
     this.parserAlgorithm = 'optimized';
 
     // Update UI
-    const amsRadio = this.element.querySelector('input[value="ams"]') as HTMLInputElement;
+    const amsRadio = queryElement<HTMLInputElement>(this.element, 'input[value="ams"]');
     if (amsRadio) amsRadio.checked = true;
     if (this.unitInput) this.unitInput.value = '1';
     if (this.algorithmSelect) this.algorithmSelect.value = 'greedy';

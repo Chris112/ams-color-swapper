@@ -1,4 +1,5 @@
 import { Color } from '../models/Color';
+import { getFromMap } from '../../utils/typeGuards';
 
 export interface ColorOverlap {
   color1: string;
@@ -47,8 +48,8 @@ export class ColorOverlapAnalyzer {
         const color2 = colors[j];
 
         if (this.hasOverlap(color1, color2)) {
-          overlaps.get(color1.id)!.add(color2.id);
-          overlaps.get(color2.id)!.add(color1.id);
+          getFromMap(overlaps, color1.id, `Color overlap set not found for color: ${color1.id}`).add(color2.id);
+          getFromMap(overlaps, color2.id, `Color overlap set not found for color: ${color2.id}`).add(color1.id);
         }
       }
     }
@@ -85,7 +86,7 @@ export class ColorOverlapAnalyzer {
 
         // Check if candidate overlaps with any color in the group
         const overlapsWithGroup = group.some((groupColor) =>
-          overlaps.get(groupColor.id)!.has(candidate.id)
+          getFromMap(overlaps, groupColor.id, `Color overlap set not found for color: ${groupColor.id}`).has(candidate.id)
         );
 
         if (!overlapsWithGroup) {
@@ -179,7 +180,7 @@ export class ColorOverlapAnalyzer {
       let bestSwapIncrease = Infinity;
 
       for (let slot = 1; slot <= Math.min(slotIndex - 1, maxSlots); slot++) {
-        const existingColors = assignments.get(slot)!;
+        const existingColors = getFromMap(assignments, slot, `Slot assignment not found for slot: ${slot}`);
         const mergedColors = [...existingColors, ...remainingGroup.colors];
         const newSwaps = this.calculateSwapsForGroup(mergedColors);
         const currentSwaps = this.calculateSwapsForGroup(existingColors);
@@ -192,12 +193,12 @@ export class ColorOverlapAnalyzer {
       }
 
       // Merge into best slot
-      const existingColors = assignments.get(bestSlot)!;
+      const existingColors = getFromMap(assignments, bestSlot, `Slot assignment not found for slot: ${bestSlot}`);
       assignments.set(bestSlot, [...existingColors, ...remainingGroup.colors]);
       totalSwaps += bestSwapIncrease;
 
       // Update swap details
-      const mergedSorted = [...assignments.get(bestSlot)!].sort(
+      const mergedSorted = [...getFromMap(assignments, bestSlot, `Slot assignment not found for slot: ${bestSlot}`)].sort(
         (a, b) => a.firstLayer - b.firstLayer
       );
       // Clear old swaps for this slot and recalculate

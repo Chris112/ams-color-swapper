@@ -1,16 +1,23 @@
 import { Component } from '../../core/Component';
 import { appState } from '../../state/AppState';
 import { StateSnapshot, MergeTimelineState } from '../../services/MergeHistoryManager';
+import { queryElement } from '../../utils/domHelpers';
 
 export class MergeHistoryTimeline extends Component {
   private isVisible: boolean = false;
   private tooltipElement: HTMLElement | null = null;
   private storageMetrics: { totalSize: number; timelineCount: number } | null = null;
+  private clickOutsideHandler: ((e: MouseEvent) => void) | null = null;
 
   constructor() {
     const container = document.createElement('div');
     container.id = 'mergeHistoryTimeline';
-    container.className = 'merge-timeline-container hidden';
+    container.className =
+      'merge-timeline-container hidden fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center';
+    container.innerHTML = `
+      <div class="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm"></div>
+      <div class="timeline-dialog relative z-10 w-full max-w-4xl max-h-[80vh] overflow-auto m-4"></div>
+    `;
     document.body.appendChild(container);
 
     super('#mergeHistoryTimeline');
@@ -30,7 +37,11 @@ export class MergeHistoryTimeline extends Component {
       return;
     }
 
-    this.element.innerHTML = `
+    // Find the dialog container within our element
+    const dialogContainer = this.element.querySelector('.timeline-dialog');
+    if (!dialogContainer) return;
+
+    dialogContainer.innerHTML = `
       <div class="glass rounded-2xl p-6 border border-white/10 bg-black/40 backdrop-blur-sm">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-bold text-white flex items-center gap-2">
@@ -260,8 +271,12 @@ export class MergeHistoryTimeline extends Component {
   }
 
   private attachEventListeners(): void {
+    // Get the dialog container for event delegation
+    const dialogContainer = this.element.querySelector('.timeline-dialog');
+    if (!dialogContainer) return;
+
     // Control buttons
-    const undoBtn = this.element.querySelector('#timelineUndo');
+    const undoBtn = dialogContainer.querySelector('#timelineUndo');
     if (undoBtn) {
       undoBtn.addEventListener('click', () => {
         appState.undoLastMerge();
@@ -269,7 +284,7 @@ export class MergeHistoryTimeline extends Component {
       });
     }
 
-    const redoBtn = this.element.querySelector('#timelineRedo');
+    const redoBtn = dialogContainer.querySelector('#timelineRedo');
     if (redoBtn) {
       redoBtn.addEventListener('click', () => {
         appState.redoMerge();
@@ -277,7 +292,7 @@ export class MergeHistoryTimeline extends Component {
       });
     }
 
-    const resetBtn = this.element.querySelector('#timelineReset');
+    const resetBtn = dialogContainer.querySelector('#timelineReset');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         appState.resetToInitialState();
@@ -286,35 +301,36 @@ export class MergeHistoryTimeline extends Component {
     }
 
     // Close button
-    const closeBtn = this.element.querySelector('#closeTimeline');
+    const closeBtn = dialogContainer.querySelector('#closeTimeline');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.hide());
     }
 
     // Branch selector
-    const branchSelector = this.element.querySelector('#branchSelector') as HTMLSelectElement;
+    const branchSelector = queryElement<HTMLSelectElement>(dialogContainer, '#branchSelector');
     if (branchSelector) {
       branchSelector.addEventListener('change', (e) => {
-        const target = e.target as HTMLSelectElement;
+        const target = e.target;
+        if (!target || !(target instanceof HTMLSelectElement)) return;
         appState.switchMergeBranch(target.value);
         this.render();
       });
     }
 
     // Create branch button
-    const createBranchBtn = this.element.querySelector('#createBranch');
+    const createBranchBtn = dialogContainer.querySelector('#createBranch');
     if (createBranchBtn) {
       createBranchBtn.addEventListener('click', () => this.showCreateBranchDialog());
     }
 
     // Export timeline button
-    const exportBtn = this.element.querySelector('#exportTimeline');
+    const exportBtn = dialogContainer.querySelector('#exportTimeline');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => this.exportTimeline());
     }
 
     // Timeline node clicks
-    this.element.querySelectorAll('.timeline-node').forEach((node) => {
+    dialogContainer.querySelectorAll('.timeline-node').forEach((node) => {
       node.addEventListener('click', (e) => {
         const target = e.target as SVGElement;
         const snapshotId = target.getAttribute('data-snapshot-id');
@@ -410,6 +426,26 @@ export class MergeHistoryTimeline extends Component {
     await this.loadStorageMetrics();
 
     this.render();
+
+    // Add click outside handler
+    if (!this.clickOutsideHandler) {
+      this.clickOutsideHandler = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+
+        // Check if click is on the backdrop or outside the dialog content
+        if (
+          target === this.element ||
+          (target.closest('.merge-timeline-container') && !target.closest('.timeline-dialog'))
+        ) {
+          this.hide();
+        }
+      };
+
+      // Add with slight delay to prevent immediate close on open
+      setTimeout(() => {
+        this.element.addEventListener('click', this.clickOutsideHandler!);
+      }, 100);
+    }
   }
 
   private async loadStorageMetrics(): Promise<void> {
@@ -445,6 +481,12 @@ export class MergeHistoryTimeline extends Component {
     this.isVisible = false;
     this.element.classList.add('hidden');
     this.hideTooltip();
+
+    // Remove click outside handler
+    if (this.clickOutsideHandler) {
+      this.element.removeEventListener('click', this.clickOutsideHandler);
+      this.clickOutsideHandler = null;
+    }
   }
 
   public toggle(): void {

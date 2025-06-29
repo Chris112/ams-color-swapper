@@ -224,11 +224,11 @@ export class GcodeParserRegex {
         // Initialize the new layer
         this.initializeLayer(this.currentLayer);
 
-        // Add ALL active tools to this layer (they all contribute to the layer)
-        // This ensures colors persist across layers even without explicit tool changes
-        for (const tool of this.activeTools) {
-          this.addColorToLayer(this.currentLayer, tool);
-          this.updateColorSeen(tool, this.currentLayer);
+        // Add only the currently active tool to this layer
+        // Each layer should only have the color that's actually being used
+        if (this.currentTool !== null) {
+          this.addColorToLayer(this.currentLayer, this.currentTool);
+          this.updateColorSeen(this.currentTool, this.currentLayer);
         }
 
         this.logger.silly(

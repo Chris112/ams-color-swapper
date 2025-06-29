@@ -23,8 +23,7 @@ src/
 ├── services/            # Application services
 │   ├── FileProcessingService.ts
 │   ├── OptimizationService.ts
-│   ├── ExportService.ts
-│   └── FactoryFloorService.ts
+│   └── ExportService.ts
 ├── ui/                  # UI components
 │   ├── components/      # UI component implementations
 │   └── templates/       # HTML templates

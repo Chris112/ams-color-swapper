@@ -92,35 +92,76 @@ export class OptimizationService {
       result = {
         totalColors: print.colors.length,
         requiredSlots: saResult.assignments.size,
-        manualSwaps: saResult.swapDetails.map((swap) => ({
-          unit: Math.ceil(swap.slot / 4),
-          slot: ((swap.slot - 1) % 4) + 1,
-          fromColor: swap.fromColor,
-          toColor: swap.toColor,
-          atLayer: swap.atLayer,
-          pauseStartLayer: swap.atLayer,
-          pauseEndLayer: swap.atLayer,
-          zHeight: 0,
-          reason: `Swap at layer ${swap.atLayer}`,
-          timingOptions: {
-            earliest: swap.atLayer,
-            latest: swap.atLayer,
-            optimal: swap.atLayer,
-            adjacentOnly: true,
-            bufferLayers: 0,
-          },
-          swapWindow: {
-            startLayer: swap.atLayer,
-            endLayer: swap.atLayer,
-            flexibilityScore: 0,
-            constraints: [],
-          },
-          confidence: {
-            timing: 90,
-            necessity: 100,
-            userControl: 50,
-          },
-        })),
+        manualSwaps: saResult.swapDetails.map((swap) => {
+          // Find the colors to understand their usage patterns
+          const fromColor = stats.colors.find((c) => c.id === swap.fromColor);
+          const toColor = stats.colors.find((c) => c.id === swap.toColor);
+
+          // Calculate meaningful pause window
+          let pauseStart = swap.atLayer;
+          let pauseEnd = swap.atLayer;
+          let earliest = swap.atLayer;
+          let latest = swap.atLayer;
+
+          if (fromColor && toColor) {
+            // For a swap, we need to remove fromColor and insert toColor
+            // The swap should happen after fromColor is no longer needed
+            // and before toColor is needed
+
+            // Find the actual transition point
+            const lastFromColorUse = fromColor.lastLayer;
+            const firstToColorUse = toColor.firstLayer;
+
+            if (firstToColorUse > lastFromColorUse) {
+              // There's a gap - we can swap anytime in this window
+              pauseStart = lastFromColorUse + 1;
+              pauseEnd = firstToColorUse - 1;
+              earliest = pauseStart;
+              latest = pauseEnd;
+            } else {
+              // Colors overlap or are adjacent - must swap at the exact transition
+              // Use the swap layer calculated by the optimization algorithm
+              pauseStart = pauseEnd = swap.atLayer;
+              earliest = latest = swap.atLayer;
+            }
+          }
+
+          const flexibilityRange = latest - earliest;
+          const flexibilityScore = Math.min(100, (flexibilityRange / 10) * 100);
+
+          return {
+            unit: Math.ceil(swap.slot / 4),
+            slot: ((swap.slot - 1) % 4) + 1,
+            fromColor: swap.fromColor,
+            toColor: swap.toColor,
+            atLayer: swap.atLayer,
+            pauseStartLayer: pauseStart,
+            pauseEndLayer: pauseEnd,
+            zHeight: 0,
+            reason:
+              flexibilityRange > 0
+                ? `Swap ${swap.fromColor} → ${swap.toColor} (${flexibilityRange + 1} layer window)`
+                : `Critical swap ${swap.fromColor} → ${swap.toColor} at exact layer`,
+            timingOptions: {
+              earliest,
+              latest,
+              optimal: swap.atLayer,
+              adjacentOnly: flexibilityRange === 0,
+              bufferLayers: Math.max(0, Math.floor(flexibilityRange / 2)),
+            },
+            swapWindow: {
+              startLayer: earliest,
+              endLayer: latest,
+              flexibilityScore,
+              constraints: flexibilityRange === 0 ? ['Colors are adjacent - no flexibility'] : [],
+            },
+            confidence: {
+              timing: flexibilityRange > 5 ? 95 : 75,
+              necessity: 100,
+              userControl: flexibilityRange > 0 ? 90 : 30,
+            },
+          };
+        }),
         estimatedTimeSaved: 0, // SA doesn't calculate this directly, need to derive or estimate
         slotAssignments: slotAssignments,
         canShareSlots: [], // TODO: Calculate actual color sharing pairs

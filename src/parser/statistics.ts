@@ -23,7 +23,12 @@ export async function calculateStatistics(
     (key) => !isNaN(key) && key !== null && key !== undefined
   );
   const maxLayerFromMap = layerKeys.length > 0 ? Math.max(...layerKeys) : 0;
-  const calculatedLayers = maxLayerFromMap + 1;
+  const minLayerFromMap = layerKeys.length > 0 ? Math.min(...layerKeys) : 0;
+  
+  // For 1-based indexing (like OrcaSlicer), totalLayers = maxLayer
+  // For 0-based indexing, totalLayers = maxLayer + 1
+  // Detect indexing scheme: if minimum layer is 1, it's 1-based
+  const calculatedLayers = minLayerFromMap === 1 ? maxLayerFromMap : maxLayerFromMap + 1;
 
   const totalLayers =
     partialStats.totalLayers && partialStats.totalLayers > 1 && !isNaN(partialStats.totalLayers)

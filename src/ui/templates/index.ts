@@ -7,6 +7,7 @@ import {
 } from '../../types/constraints';
 import { Color } from '../../domain/models/Color';
 import { formatColorDisplay } from '../../utils/colorNames';
+import { formatDisplayRange, formatDisplayLayer } from '../../utils/layerHelpers';
 
 // File statistics template
 export const fileStatsTemplate = (stats: GcodeStats): string => {
@@ -165,7 +166,7 @@ export const colorStatsTemplate = (
               <div class="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span class="text-white/70 block">Layers</span>
-                  <span class="text-white font-semibold">${color.firstLayer}-${color.lastLayer}</span>
+                  <span class="text-white font-semibold">${formatDisplayRange(color.firstLayer, color.lastLayer)}</span>
                 </div>
                 <div>
                   <span class="text-white/70 block">Usage</span>
@@ -190,38 +191,24 @@ export const colorStatsTemplate = (
 };
 
 // Optimization template
-export const optimizationTemplate = (optimization: OptimizationResult): string => {
+export const optimizationTemplate = (
+  optimization: OptimizationResult,
+  stats?: GcodeStats
+): string => {
+  // Determine terminology based on configuration
+  const isAmsMode = optimization.configuration?.type === 'ams' && (optimization.configuration?.unitCount || 0) > 0;
+  const assignmentTitle = isAmsMode ? 'AMS Slot Assignments' : 'Toolhead Assignments';
+  
   return `
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in">
-        <div class="text-3xl font-bold gradient-text mb-2">${optimization.totalSlots}</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider">AMS Slots Used</div>
-      </div>
-      
-      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in" style="animation-delay: 0.1s">
-        <div class="text-3xl font-bold gradient-text mb-2">${optimization.manualSwaps.length}</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider">Manual Swaps</div>
-      </div>
-      
-      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in" style="animation-delay: 0.2s">
-        <div class="text-3xl font-bold gradient-text mb-2">95%</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider">Efficiency</div>
-      </div>
-      
-      <div class="glass rounded-2xl p-6 hover:scale-105 transition-transform animate-fade-in" style="animation-delay: 0.3s">
-        <div class="text-3xl font-bold gradient-text mb-2">${optimization.manualSwaps.length * 5}min</div>
-        <div class="text-sm text-white/60 uppercase tracking-wider">Est. Swap Time</div>
-      </div>
-    </div>
 
     <div class="glass rounded-3xl p-8 animate-fade-in" style="animation-delay: 0.4s">
-      <h4 class="text-xl font-bold text-white mb-6">AMS Slot Assignments</h4>
+      <h4 class="text-xl font-bold text-white mb-6">${assignmentTitle}</h4>
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         ${optimization.slotAssignments
           .map((assignment, index) => {
             const colors = assignment.colors || [];
             return `
-          <div class="bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all cursor-pointer animate-scale-in" style="animation-delay: ${0.5 + index * 0.1}s">
+          <div class="bg-white/5 backdrop-blur-sm rounded-xl p-4 hover:bg-white/10 transition-all animate-scale-in" style="animation-delay: ${0.5 + index * 0.1}s">
             <div class="flex items-center justify-between mb-3">
               <span class="text-sm font-medium text-white/80">Unit ${assignment.unit}</span>
               <span class="text-xs px-2 py-1 bg-vibrant-purple/20 text-vibrant-purple rounded-full">Slot ${assignment.slot}</span>
@@ -231,14 +218,19 @@ export const optimizationTemplate = (optimization: OptimizationResult): string =
               ${
                 colors.length > 0
                   ? colors
-                      .map(
-                        (color) => `
+                      .map((colorId) => {
+                        // Find the actual color object from stats
+                        const colorObj = stats?.colors.find((c) => c.id === colorId);
+                        const hexValue = colorObj?.hexValue || colorId;
+                        const colorName = colorObj?.name || colorObj?.id || colorId;
+
+                        return `
                 <div class="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
-                  <div class="w-4 h-4 rounded-full ring-1 ring-white/20" style="background-color: ${color || '#888888'}"></div>
-                  <span class="text-xs text-white/90 flex-1 truncate">${formatColorDisplay(color, color)}</span>
+                  <div class="w-4 h-4 rounded-full ring-1 ring-white/20 shadow-sm" style="background-color: ${hexValue}"></div>
+                  <span class="text-xs text-white/90 flex-1 truncate">${formatColorDisplay(hexValue, colorName)}</span>
                 </div>
-              `
-                      )
+              `;
+                      })
                       .join('')
                   : '<div class="text-xs text-white/50 italic p-2">Empty slot</div>'
               }
@@ -310,23 +302,26 @@ export const filamentUsageTemplate = (filamentUsage: FilamentUsage[]): string =>
 };
 
 // Simplified swap instructions template with only Glassmorphism design
-export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats): string => {
+export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats, optimization?: OptimizationResult): string => {
+  // Determine terminology based on configuration
+  const isAmsMode = optimization?.configuration?.type === 'ams' && (optimization?.configuration?.unitCount || 0) > 0;
+  
   if (swaps.length === 0) {
     return `
       <div class="text-center p-12 glass rounded-3xl border border-vibrant-green/30">
         <div class="text-6xl mb-4 animate-pulse">✅</div>
         <h4 class="text-2xl font-bold gradient-text mb-2">No Manual Swaps Required!</h4>
-        <p class="text-white/70">Your print is optimized perfectly for the available AMS slots.</p>
+        <p class="text-white/70">Your print is optimized perfectly for the available ${isAmsMode ? 'AMS' : 'toolhead'} slots.</p>
       </div>
     `;
   }
 
   // Return glassmorphism design directly
-  return swapInstructionsGlassmorphismDesign(swaps, stats);
+  return swapInstructionsGlassmorphismDesign(swaps, stats, isAmsMode);
 };
 
 // Ultra Premium Glassmorphism Cards Design
-function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeStats): string {
+function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeStats, isAmsMode: boolean): string {
   const getContrastColor = (hexValue: string): string => {
     const r = parseInt(hexValue.substring(1, 3), 16);
     const g = parseInt(hexValue.substring(3, 5), 16);
@@ -349,21 +344,43 @@ function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeSt
           <div class="floating-orb orb-3"></div>
         </div>
         
-        <!-- Progress Ring -->
-        <div class="absolute top-6 right-6">
-          <input type="checkbox" class="swap-progress w-6 h-6 rounded-full border-2 border-white/30 bg-white/10 text-vibrant-green focus:ring-vibrant-green cursor-pointer" data-swap-index="${index}">
+        <!-- Step Number Badge -->
+        <div class="step-badge">
+          <div class="step-number">${index + 1}</div>
         </div>
 
-        <!-- Holographic Number Badge -->
-        <div class="holo-badge">
-          <div class="holo-number">${index + 1}</div>
-          <div class="holo-shine"></div>
+        <!-- Progress Checkbox with Highlight -->
+        <div class="progress-checkbox-container">
+          <label class="progress-label">
+            <input type="checkbox" class="swap-progress" data-swap-index="${index}">
+            <span class="progress-checkbox"></span>
+            <span class="progress-text">Mark as complete</span>
+          </label>
         </div>
 
-        <!-- Header with Glow Effect -->
-        <div class="mb-6">
-          <div class="text-2xl font-bold text-white mb-2">Layer ${swap.atLayer}</div>
-          ${swap.zHeight ? `<div class="text-white/60">Z: ${swap.zHeight.toFixed(2)}mm</div>` : ''}
+        <!-- Header with Consolidated Pause Info -->
+        <div class="mb-6 pl-16">
+          ${
+            swap.swapWindow && swap.swapWindow.startLayer !== swap.swapWindow.endLayer
+              ? (() => {
+                  const minLayer = Math.min(swap.swapWindow.startLayer, swap.swapWindow.endLayer);
+                  const maxLayer = Math.max(swap.swapWindow.startLayer, swap.swapWindow.endLayer);
+                  const windowSize = Math.abs(maxLayer - minLayer + 1);
+                  return `<div class="text-2xl font-bold text-white mb-2">
+                    Pause Between Layers ${formatDisplayRange(minLayer, maxLayer)}
+                  </div>
+                  <div class="text-amber-400 text-sm font-medium">
+                    ${windowSize} layer window - pause anytime within this range
+                  </div>`;
+                })()
+              : `<div class="text-2xl font-bold text-white mb-2">
+                  ${formatDisplayLayer(swap.atLayer)}
+                </div>
+                <div class="text-red-400 text-sm font-medium">
+                  Critical timing - colors are adjacent
+                </div>`
+          }
+          ${swap.zHeight ? `<div class="text-white/60 text-sm mt-1">Z Height: ${swap.zHeight.toFixed(2)}mm</div>` : ''}
         </div>
 
         <!-- Premium Color Swatches -->
@@ -411,34 +428,20 @@ function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeSt
         <div class="slot-info-premium">
           <div class="slot-detail">
             <div class="slot-icon">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <circle cx="9" cy="9" r="2"/>
-                <path d="M21 15l-3.086-3.086a2 2 0 00-2.828 0L6 21"/>
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <circle cx="12" cy="12" r="8"/>
+                <path d="M12 4v4"/>
+                <path d="M12 16v4"/>
+                <path d="M4 12h4"/>
+                <path d="M16 12h4"/>
               </svg>
             </div>
             <div class="slot-text">
               <div class="slot-label">Target Slot</div>
-              <div class="slot-value">AMS ${swap.unit} • Slot ${swap.slot}</div>
+              <div class="slot-value">${isAmsMode ? 'AMS' : 'Toolhead'} ${swap.unit} • Slot ${swap.slot}</div>
             </div>
           </div>
-        </div>
-
-        <!-- Interactive Action Buttons -->
-        <div class="action-buttons">
-          <button class="action-btn copy-swap" data-swap-index="${index}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-            </svg>
-            Copy
-          </button>
-          <button class="action-btn focus-layer" data-layer="${swap.atLayer}">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-            </svg>
-            Focus
-          </button>
         </div>
       </div>
     `;
@@ -455,8 +458,16 @@ function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeSt
       
       <div class="swap-content">
         <header class="swap-header">
-          <h3 class="swap-title">Premium Swap Instructions</h3>
-          <div class="swap-subtitle">${swaps.length} swaps required</div>
+          <h3 class="swap-title">Manual Swap Instructions</h3>
+          <div class="swap-subtitle">
+            <span>${swaps.length} color swap${swaps.length > 1 ? 's' : ''} required during print</span>
+            <span class="progress-hint">
+              <svg class="w-4 h-4 inline-block mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Track your progress with checkboxes
+            </span>
+          </div>
         </header>
 
         <div class="swap-list">
@@ -552,8 +563,8 @@ export const constraintViolationRangeTemplate = (
 ): string => {
   const layerText =
     range.startLayer === range.endLayer
-      ? `Layer ${range.startLayer}`
-      : `Layers ${range.startLayer}-${range.endLayer}`;
+      ? formatDisplayLayer(range.startLayer)
+      : `Layers ${formatDisplayRange(range.startLayer, range.endLayer)}`;
 
   return `
     <div class="constraint-violation-range mb-6">

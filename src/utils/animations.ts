@@ -93,9 +93,10 @@ export const staggerAnimation = (
   const elements = container.querySelectorAll(selector);
 
   elements.forEach((element, index) => {
-    const el = element as HTMLElement;
-    el.style.animationDelay = `${index * delay}ms`;
-    el.classList.add(animationClass);
+    if (element instanceof HTMLElement) {
+      element.style.animationDelay = `${index * delay}ms`;
+      element.classList.add(animationClass);
+    }
   });
 };
 

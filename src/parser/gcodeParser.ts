@@ -4,14 +4,21 @@ import { LayerColorInfo } from '../types/layer';
 import { Logger } from '../utils/logger';
 import { BrowserFileReader } from '../utils/fileReader';
 import { calculateStatistics } from './statistics';
+import { gcodeToInternalLayer, detectGcodeNumberingScheme } from '../utils/layerHelpers';
+import { 
+  getOrThrow, 
+  firstOrUndefined, 
+  assertDefined,
+  safeArrayAccess 
+} from '../utils/typeGuards';
 
 export class GcodeParser {
   private logger: Logger;
   private stats: Partial<GcodeStats>;
   private currentLayer: number = 0;
   private currentZ: number = 0;
-  private currentTool: string = 'T0';
-  private activeTools: Set<string> = new Set(['T0']); // Track all tools that have been used
+  private currentTool: string | null = null; // Will be set by first tool change
+  private activeTools: Set<string> = new Set(); // Track all tools that have been used
   private toolChanges: ToolChange[] = [];
   private layerColorMap: Map<number, string[]> = new Map();
   private colorFirstSeen: Map<string, number> = new Map();
@@ -21,6 +28,8 @@ export class GcodeParser {
   private lineNumber: number = 0;
   private startTime: number = 0;
   private onProgress?: (progress: number, message: string) => void;
+  private gcodeLayers: number[] = []; // Track raw G-code layer numbers for scheme detection
+  private isGcodeOneBased: boolean | null = null; // Will be determined during parsing
 
   constructor(logger?: Logger, onProgress?: (progress: number, message: string) => void) {
     this.logger = logger || new Logger('GcodeParser');
@@ -35,139 +44,151 @@ export class GcodeParser {
   }
 
   async parse(file: File): Promise<GcodeStats> {
-    this.startTime = Date.now();
-    this.logger.info(`Starting G-code parse for ${file.name}`);
-
-    if (this.onProgress) {
-      this.onProgress(5, 'Reading file...');
-    }
-
-    this.stats.fileName = file.name;
-    this.stats.fileSize = file.size;
-    this.stats.totalLayers = 1; // Initialize with at least 1 layer
-    this.stats.totalHeight = 0;
-
-    // Initialize layer 0 with the default tool
-    this.initializeLayer(0);
-    this.addColorToLayer(0, this.currentTool);
-    this.updateColorSeen(this.currentTool, 0);
-
-    // Estimate total lines for progress tracking (approximately 24 bytes per line)
-    if (this.onProgress) {
-      this.onProgress(10, 'Estimating file size...');
-    }
-    const estimatedLines = Math.ceil(file.size / 24);
-    this.logger.info(
-      `Estimated lines to process: ${estimatedLines.toLocaleString()} (based on ${file.size.toLocaleString()} bytes)`
-    );
-
-    // Create reader from the original file
-    const reader = new BrowserFileReader(file);
-
-    if (this.onProgress) {
-      this.onProgress(20, 'Parsing G-code...');
-    }
-    await this.processLines(reader, estimatedLines);
-
-    const parseTime = Date.now() - this.startTime;
-    this.logger.info(`Parse completed in ${parseTime}ms`);
-
-    if (this.onProgress) {
-      this.onProgress(85, 'Analyzing colors and calculating statistics...');
-    }
-
-    // Finalize the last layer
-    if (this.currentLayer >= 0) {
-      this.updateLayerDetails(this.currentLayer);
-    }
-
-    const completeStats = await calculateStatistics(
-      this.stats as GcodeStats,
-      this.toolChanges,
-      this.layerColorMap,
-      this.colorFirstSeen,
-      this.colorLastSeen,
-      Array.from(this.layerDetails.values()),
-      parseTime
-    );
-
-    if (this.onProgress) {
-      this.onProgress(95, 'Finalizing analysis...');
-    }
-
-    // Load raw content for geometry parsing if needed
-    if (!this.stats.rawContent) {
+      this.startTime = Date.now();
+      this.logger.info(`Starting G-code parse for ${file.name}`);
+  
       if (this.onProgress) {
-        this.onProgress(90, 'Loading content for geometry parsing...');
+        this.onProgress(5, 'Reading file...');
       }
-      this.stats.rawContent = await file.text();
-      completeStats.rawContent = this.stats.rawContent;
-    }
-
-    // Ensure we have at least basic data
-    if (!completeStats.colors || completeStats.colors.length === 0) {
-      // Add default color if none found
-      const { Color } = await import('../domain/models/Color');
-      completeStats.colors = [
-        new Color({
-          id: 'T0',
-          name: 'Default Color',
-          hexValue: '#888888',
-          firstLayer: 0,
-          lastLayer: completeStats.totalLayers - 1,
-          layersUsed: new Set(Array.from({ length: completeStats.totalLayers }, (_, i) => i)),
-          partialLayers: new Set(),
-          totalLayers: completeStats.totalLayers,
-        }),
-      ];
-    }
-
-    // Log analysis summary
-    this.logger.info('G-code Analysis Summary', {
-      fileName: file.name,
-      parseTime: `${parseTime}ms`,
-      totalLayers: completeStats.totalLayers,
-      totalHeight: `${completeStats.totalHeight}mm`,
-      uniqueColors: completeStats.colors.length,
-      toolChanges: completeStats.toolChanges?.length || 0,
-      filamentUsage: completeStats.filamentUsageStats?.total
-        ? `${completeStats.filamentUsageStats.total.toFixed(2)}mm`
-        : 'N/A',
-      printTime: completeStats.printTime || 'N/A',
-    });
-
-    // Log color details
-    completeStats.colors.forEach((color, index) => {
-      this.logger.info(`Color ${index + 1}`, {
-        id: color.id,
-        name: color.name,
-        hex: color.hexValue,
-        usage: `${color.usagePercentage?.toFixed(2)}%`,
-        layers: `${color.firstLayer}-${color.lastLayer}`,
-        layerCount: color.layerCount,
-        layersUsed: Array.from(color.layersUsed || []).length,
-      });
-    });
-
-    // Log layer-by-layer color breakdown (first 10 layers for debugging)
-    this.logger.debug('Layer-by-layer color breakdown:');
-    for (let i = 0; i <= Math.min(10, completeStats.totalLayers - 1); i++) {
-      const layerColors = completeStats.layerColorMap.get(i) || [];
-      this.logger.debug(`Layer ${i}: [${layerColors.join(', ')}]`);
-    }
-    if (completeStats.totalLayers > 11) {
-      this.logger.debug(`... (showing first 10 layers of ${completeStats.totalLayers} total)`);
-    }
-
-    // Log optimization potential
-    if (completeStats.colors.length > 4) {
+  
+      this.stats.fileName = file.name;
+      this.stats.fileSize = file.size;
+      this.stats.totalLayers = 1; // Initialize with at least 1 layer
+      this.stats.totalHeight = 0;
+  
+      // Don't initialize layer 0 automatically - let layer detection from comments determine the numbering scheme
+      this.currentLayer = -1; // Start with -1 to indicate no layer has been processed yet
+  
+      // Estimate total lines for progress tracking (approximately 24 bytes per line)
+      if (this.onProgress) {
+        this.onProgress(10, 'Estimating file size...');
+      }
+      const estimatedLines = Math.ceil(file.size / 24);
       this.logger.info(
-        `Optimization needed: ${completeStats.colors.length} colors detected, but AMS only has 4 slots`
+        `Estimated lines to process: ${estimatedLines.toLocaleString()} (based on ${file.size.toLocaleString()} bytes)`
       );
+  
+      // Create reader from the original file
+      const reader = new BrowserFileReader(file);
+  
+      if (this.onProgress) {
+        this.onProgress(20, 'Parsing G-code...');
+      }
+      await this.processLines(reader, estimatedLines);
+  
+      const parseTime = Date.now() - this.startTime;
+      this.logger.info(`Parse completed in ${parseTime}ms`);
+  
+      if (this.onProgress) {
+        this.onProgress(85, 'Analyzing colors and calculating statistics...');
+      }
+  
+      // Finalize the last layer
+      if (this.currentLayer >= 0) {
+        this.updateLayerDetails(this.currentLayer);
+      }
+  
+      // If no layers were detected from comments, initialize with layer 0 (fallback for legacy files)
+      if (this.currentLayer === -1) {
+        this.currentLayer = 0;
+        this.initializeLayer(0);
+        // Set default tool if none was detected
+        if (this.currentTool === null) {
+          this.currentTool = 'T0';
+          this.activeTools.add('T0');
+        }
+        this.addColorToLayer(0, this.currentTool);
+        this.updateColorSeen(this.currentTool, 0);
+      }
+  
+      const completeStats = await calculateStatistics(
+        this.stats as GcodeStats,
+        this.toolChanges,
+        this.layerColorMap,
+        this.colorFirstSeen,
+        this.colorLastSeen,
+        Array.from(this.layerDetails.values()),
+        parseTime
+      );
+  
+      if (this.onProgress) {
+        this.onProgress(95, 'Finalizing analysis...');
+      }
+  
+      // Load raw content for geometry parsing if needed
+      if (!this.stats.rawContent) {
+        if (this.onProgress) {
+          this.onProgress(90, 'Loading content for geometry parsing...');
+        }
+        this.stats.rawContent = await file.text();
+        completeStats.rawContent = this.stats.rawContent;
+      }
+  
+      // Ensure we have at least basic data
+      if (!completeStats.colors || completeStats.colors.length === 0) {
+        // Add default color if none found
+        const { Color } = await import('../domain/models/Color');
+        completeStats.colors = [
+          new Color({
+            id: 'T0',
+            name: 'Default Color',
+            hexValue: '#888888',
+            firstLayer: 0,
+            lastLayer: completeStats.totalLayers - 1,
+            layersUsed: new Set(Array.from({ length: completeStats.totalLayers }, (_, i) => i)),
+            partialLayers: new Set(),
+            totalLayers: completeStats.totalLayers,
+          }),
+        ];
+      }
+  
+      // Log analysis summary
+      this.logger.info('G-code Analysis Summary', {
+        fileName: file.name,
+        parseTime: `${parseTime}ms`,
+        totalLayers: completeStats.totalLayers,
+        totalHeight: `${completeStats.totalHeight}mm`,
+        uniqueColors: completeStats.colors.length,
+        toolChanges: completeStats.toolChanges?.length || 0,
+        filamentUsage: completeStats.filamentUsageStats?.total
+          ? `${completeStats.filamentUsageStats.total.toFixed(2)}mm`
+          : 'N/A',
+        printTime: completeStats.printTime || 'N/A',
+      });
+  
+      // Log color details
+      completeStats.colors.forEach((color, index) => {
+        this.logger.info(`Color ${index + 1}`, {
+          id: color.id,
+          name: color.name,
+          hex: color.hexValue,
+          usage: `${color.usagePercentage?.toFixed(2)}%`,
+          layers: `${color.firstLayer}-${color.lastLayer}`,
+          layerCount: color.layerCount,
+          layersUsed: Array.from(color.layersUsed || []).length,
+        });
+      });
+  
+      // Log layer-by-layer color breakdown (first 10 layers for debugging)
+      this.logger.debug('Layer-by-layer color breakdown:');
+      for (let i = 0; i <= Math.min(10, completeStats.totalLayers - 1); i++) {
+        const layerColors = completeStats.layerColorMap.get(i) || [];
+        this.logger.debug(`Layer ${i}: [${layerColors.join(', ')}]`);
+      }
+      if (completeStats.totalLayers > 11) {
+        this.logger.debug(`... (showing first 10 layers of ${completeStats.totalLayers} total)`);
+      }
+  
+      // Log optimization potential
+      if (completeStats.colors.length > 4) {
+        this.logger.info(
+          `Optimization needed: ${completeStats.colors.length} colors detected, but AMS only has 4 slots`
+        );
+      }
+  
+      return completeStats;
     }
 
-    return completeStats;
-  }
 
   private async processLines(reader: BrowserFileReader, totalLines: number): Promise<void> {
     // Update progress every 1% or every 1000 lines, whichever is more frequent
@@ -201,7 +222,8 @@ export class GcodeParser {
       return;
     }
 
-    const command = line.split(' ')[0].toUpperCase();
+    const parts = line.split(' ');
+    const command = getOrThrow(parts, 0, `Invalid G-code line format: '${line}'`).toUpperCase();
 
     switch (command) {
       case 'G0':
@@ -210,6 +232,9 @@ export class GcodeParser {
         break;
       case 'M600':
         this.parseFilamentChange(line);
+        break;
+      case 'M620':
+        this.parseBambuToolChange(line);
         break;
       case 'T0':
       case 'T1':
@@ -229,7 +254,8 @@ export class GcodeParser {
     if (line.includes('extruder_colour') || line.includes('filament_colour')) {
       const colorMatch = line.match(/= (.+)/);
       if (colorMatch) {
-        const colors = colorMatch[1].split(';').map((c) => c.trim());
+        const colorString = getOrThrow(colorMatch, 1, `Invalid color definition format in line: '${line}'`);
+        const colors = colorString.split(';').map((c) => c.trim());
         this.logger.info(`Found ${colors.length} color definitions`);
         // Store color info for later use
         if (!this.stats.slicerInfo) {
@@ -242,13 +268,15 @@ export class GcodeParser {
     if (line.includes('generated by')) {
       const slicerMatch = line.match(/generated by (.+?) ([\d.]+)/i);
       if (slicerMatch) {
+        const software = getOrThrow(slicerMatch, 1, `Invalid slicer software format in line: '${line}'`);
+        const version = getOrThrow(slicerMatch, 2, `Invalid slicer version format in line: '${line}'`);
         if (!this.stats.slicerInfo) {
           this.stats.slicerInfo = {
-            software: slicerMatch[1],
-            version: slicerMatch[2],
+            software,
+            version,
           };
         }
-        this.logger.info(`Detected slicer: ${slicerMatch[1]} v${slicerMatch[2]}`);
+        this.logger.info(`Detected slicer: ${software} v${version}`);
       }
     }
 
@@ -269,27 +297,41 @@ export class GcodeParser {
     }
 
     if (layerMatch) {
-      const newLayer = parseInt(layerMatch[1]);
-      if (newLayer !== this.currentLayer) {
+      const layerString = getOrThrow(layerMatch, 1, `Invalid layer number format in line: '${line}'`) as string;
+      const gcodeLayer = parseInt(layerString);
+      
+      // Track G-code layer numbers for numbering scheme detection
+      this.gcodeLayers.push(gcodeLayer);
+      
+      // Detect numbering scheme if not already determined
+      if (this.isGcodeOneBased === null && this.gcodeLayers.length >= 1) {
+        this.isGcodeOneBased = detectGcodeNumberingScheme(this.gcodeLayers);
+        this.logger.info(`Detected G-code numbering scheme: ${this.isGcodeOneBased ? '1-based' : '0-based'}`);
+      }
+      
+      // Convert G-code layer to internal 0-based layer
+      const internalLayer = gcodeToInternalLayer(gcodeLayer, this.isGcodeOneBased || false);
+      
+      if (internalLayer !== this.currentLayer) {
         // Finalize previous layer details
         if (this.currentLayer >= 0) {
           this.updateLayerDetails(this.currentLayer);
         }
 
         // Start new layer
-        this.currentLayer = newLayer;
+        this.currentLayer = internalLayer;
         this.layerToolChanges = []; // Reset tool changes for new layer
         this.initializeLayer(this.currentLayer);
 
-        // Add ALL active tools to this layer (they all contribute to the layer)
-        // This ensures colors persist across layers even without explicit tool changes
-        for (const tool of this.activeTools) {
-          this.addColorToLayer(this.currentLayer, tool);
-          this.updateColorSeen(tool, this.currentLayer);
+        // Add only the currently active tool to this layer
+        // Each layer should only have the color that's actually being used
+        if (this.currentTool !== null) {
+          this.addColorToLayer(this.currentLayer, this.currentTool);
+          this.updateColorSeen(this.currentTool, this.currentLayer);
         }
 
         this.logger.silly(
-          `Layer ${this.currentLayer} - Active tools: ${Array.from(this.activeTools).join(', ')}, Current: ${this.currentTool}`
+          `G-code Layer ${gcodeLayer} → Internal Layer ${this.currentLayer} - Current tool: ${this.currentTool}`
         );
       }
     }
@@ -298,9 +340,9 @@ export class GcodeParser {
     if (line.includes('total estimated time:')) {
       const timeMatch = line.match(/total estimated time:\s*(\d+)h\s*(\d+)m\s*(\d+)s/);
       if (timeMatch) {
-        const hours = parseInt(timeMatch[1]);
-        const minutes = parseInt(timeMatch[2]);
-        const seconds = parseInt(timeMatch[3]);
+        const hours = parseInt(getOrThrow(timeMatch, 1, `Invalid hour format in time: '${line}'`));
+        const minutes = parseInt(getOrThrow(timeMatch, 2, `Invalid minute format in time: '${line}'`));
+        const seconds = parseInt(getOrThrow(timeMatch, 3, `Invalid second format in time: '${line}'`));
         this.stats.printTime = `${hours}h ${minutes}m ${seconds}s`;
         this.stats.estimatedPrintTime = hours * 3600 + minutes * 60 + seconds;
         this.logger.info(`Total estimated time: ${this.stats.printTime}`);
@@ -310,9 +352,9 @@ export class GcodeParser {
     else if (line.includes('estimated printing time')) {
       const timeMatch = line.match(/(\d+)h\s*(\d+)m\s*(\d+)s/);
       if (timeMatch) {
-        const hours = parseInt(timeMatch[1]);
-        const minutes = parseInt(timeMatch[2]);
-        const seconds = parseInt(timeMatch[3]);
+        const hours = parseInt(getOrThrow(timeMatch, 1, `Invalid hour format in time: '${line}'`));
+        const minutes = parseInt(getOrThrow(timeMatch, 2, `Invalid minute format in time: '${line}'`));
+        const seconds = parseInt(getOrThrow(timeMatch, 3, `Invalid second format in time: '${line}'`));
         if (!this.stats.printTime) {
           this.stats.printTime = `${hours}h ${minutes}m ${seconds}s`;
         }
@@ -325,7 +367,8 @@ export class GcodeParser {
     if (line.includes('filament cost =')) {
       const costMatch = line.match(/filament cost = (.+)/);
       if (costMatch) {
-        const costs = costMatch[1].split(',').map((c) => parseFloat(c.trim()));
+        const costString = getOrThrow(costMatch, 1, `Invalid cost format in line: '${line}'`);
+        const costs = costString.split(',').map((c) => parseFloat(c.trim()));
         const totalCost = costs.reduce((sum, cost) => sum + cost, 0);
         this.stats.printCost = Math.round(totalCost * 100) / 100; // Round to 2 decimal places
         this.logger.info(`Print cost: $${this.stats.printCost}`);
@@ -448,7 +491,7 @@ export class GcodeParser {
           this.stats.filamentEstimates = [];
         }
         this.stats.filamentEstimates.push({
-          colorId: this.currentTool,
+          colorId: this.currentTool || 'T0',
           length,
         });
       }
@@ -477,30 +520,60 @@ export class GcodeParser {
     );
   }
 
-  private parseToolChange(tool: string) {
-    if (tool !== this.currentTool) {
-      const change: ToolChange = {
-        fromTool: this.currentTool,
-        toTool: tool,
-        layer: this.currentLayer,
-        lineNumber: this.lineNumber,
-        zHeight: this.currentZ,
-      };
-
-      this.toolChanges.push(change);
-      this.layerToolChanges.push(change);
-      this.logger.silly(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer}`);
-
-      this.currentTool = tool;
-
-      // Track this tool as active (used in the print)
-      this.activeTools.add(tool);
-
-      // Add the new tool to the current layer's color list
-      this.addColorToLayer(this.currentLayer, tool);
-      this.updateColorSeen(tool, this.currentLayer);
+  private parseBambuToolChange(line: string) {
+    // Parse M620 S[toolNumber]A format
+    // Example: M620 S0A (switch to T0), M620 S1A (switch to T1)
+    const bambuMatch = line.match(/M620\s+S(\d+)A/i);
+    if (bambuMatch) {
+      const toolNumber = parseInt(bambuMatch[1]);
+      const tool = `T${toolNumber}`;
+      this.logger.silly(`Bambu tool change detected: ${line} → ${tool}`);
+      this.parseToolChange(tool);
     }
   }
+
+  private parseToolChange(tool: string) {
+      if (tool !== this.currentTool) {
+        // Only process tool changes if we're in a valid layer (>= 0)
+        if (this.currentLayer >= 0 && this.currentTool !== null) {
+          // End the previous tool's range at the previous layer
+          // This prevents overlap - previous tool ends before current layer
+          if (this.currentLayer > 0) {
+            this.updateColorSeen(this.currentTool, this.currentLayer - 1);
+          }
+
+          const change: ToolChange = {
+            fromTool: this.currentTool,
+            toTool: tool,
+            layer: this.currentLayer,
+            lineNumber: this.lineNumber,
+            zHeight: this.currentZ,
+          };
+  
+          this.toolChanges.push(change);
+          this.layerToolChanges.push(change);
+          this.logger.silly(`Tool change: ${this.currentTool} → ${tool} at layer ${this.currentLayer} (${this.currentTool} ends at ${this.currentLayer - 1})`);
+        } else if (this.currentTool === null) {
+          this.logger.silly(`Initial tool set to: ${tool}`);
+        }
+
+        // When a tool change happens during a layer, that layer should only have the new tool
+        if (this.currentLayer >= 0) {
+          // Remove the old tool from the current layer if it was added
+          if (this.currentTool !== null) {
+            this.removeColorFromLayer(this.currentLayer, this.currentTool);
+          }
+          // Add the new tool to the current layer
+          this.addColorToLayer(this.currentLayer, tool);
+          this.updateColorSeen(tool, this.currentLayer);
+        }
+  
+        this.currentTool = tool;
+        // Track this tool as active (used in the print)
+        this.activeTools.add(tool);
+      }
+    }
+
 
   private updateColorSeen(tool: string, layer: number) {
     if (!this.colorFirstSeen.has(tool)) {
@@ -517,10 +590,25 @@ export class GcodeParser {
       this.layerDetails.set(layer, {
         layer,
         colors: [],
-        primaryColor: this.currentTool,
+        primaryColor: this.currentTool || 'T0',
         toolChangeCount: 0,
         toolChangesInLayer: [],
       });
+    }
+  }
+
+  private removeColorFromLayer(layer: number, tool: string) {
+    const colors = this.layerColorMap.get(layer) || [];
+    const index = colors.indexOf(tool);
+    if (index !== -1) {
+      colors.splice(index, 1);
+      this.layerColorMap.set(layer, colors);
+
+      const layerInfo = this.layerDetails.get(layer);
+      if (layerInfo) {
+        layerInfo.colors = [...colors];
+        layerInfo.primaryColor = firstOrUndefined(colors) || 'T0';
+      }
     }
   }
 
@@ -533,7 +621,7 @@ export class GcodeParser {
       const layerInfo = this.layerDetails.get(layer);
       if (layerInfo) {
         layerInfo.colors = [...colors];
-        layerInfo.primaryColor = colors[0]; // First color is primary for now
+        layerInfo.primaryColor = firstOrUndefined(colors) || 'T0'; // First color is primary, fallback to T0
       }
     }
   }
@@ -544,7 +632,7 @@ export class GcodeParser {
       layerInfo.toolChangesInLayer = [...this.layerToolChanges];
       layerInfo.toolChangeCount = this.layerToolChanges.length;
       // Primary color is the most recent tool (last one used in layer)
-      layerInfo.primaryColor = this.currentTool;
+      layerInfo.primaryColor = this.currentTool || 'T0';
     }
   }
 }

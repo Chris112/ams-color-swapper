@@ -67,7 +67,6 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 
 #### Repository pattern files (may be unused):
 
-- `src/repositories/FactoryFloorRepository.ts`
 - `src/repositories/FileRepository.ts`
 - `src/repositories/HMRStateRepository.ts`
 - `src/repositories/index.ts`
