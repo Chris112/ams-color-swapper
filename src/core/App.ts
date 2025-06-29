@@ -12,6 +12,7 @@ import { parserWorkerService } from '../services/ParserWorkerService';
 import { gcodeCache } from '../services/GcodeCache';
 import { ColorMergeService, MergeHistoryEntry } from '../services/ColorMergeService';
 import { ColorMergePanel } from '../ui/components/ColorMergePanel';
+import { MergeHistoryTimeline } from '../ui/components/MergeHistoryTimeline';
 
 // Factory Floor Components
 import { FactoryFloorScene } from '../ui/components/factory/FactoryFloorScene';
@@ -60,6 +61,7 @@ export class App {
   // UI Components
   private resultsView: ResultsView | null = null;
   private colorMergePanel: ColorMergePanel | null = null;
+  private mergeHistoryTimeline: MergeHistoryTimeline | null = null;
 
   constructor() {
     this.logger = new Logger();
@@ -122,11 +124,13 @@ export class App {
     // Initialize main components (not the configuration modal yet)
     this.resultsView = new ResultsView();
     this.colorMergePanel = new ColorMergePanel();
+    this.mergeHistoryTimeline = new MergeHistoryTimeline();
     this.components = [
       new FileUploader(),
       this.resultsView,
       new FilamentSyncStatus('body'), // Add sync status indicator
       this.colorMergePanel,
+      this.mergeHistoryTimeline,
     ];
 
     // Initialize configuration modal
@@ -241,7 +245,25 @@ export class App {
               this.colorMergePanel!.show();
             });
           }
+          
+          // Attach timeline button listener
+          const timelineBtn = document.getElementById('openTimelineBtn');
+          if (timelineBtn && this.mergeHistoryTimeline) {
+            timelineBtn.addEventListener('click', () => {
+              this.mergeHistoryTimeline!.toggle();
+            });
+          }
         }, 100);
+      }
+    });
+    
+    // Listen for Ctrl+Shift+T to toggle timeline
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+        e.preventDefault();
+        if (this.mergeHistoryTimeline && appState.getState().view === 'results') {
+          this.mergeHistoryTimeline.toggle();
+        }
       }
     });
   }
@@ -757,6 +779,21 @@ export class App {
 
     if (this.factoryFloorUI) {
       this.factoryFloorUI.destroy();
+    }
+    
+    // Save timeline before destroying
+    if (this.mergeHistoryTimeline) {
+      try {
+        const timelineManager = (appState as any).mergeHistoryManager;
+        if (timelineManager && timelineManager.saveToStorage) {
+          // Trigger save but don't await (app is shutting down)
+          timelineManager.saveToStorage().catch((error: any) => {
+            console.warn('Failed to save timeline on destroy:', error);
+          });
+        }
+      } catch (error) {
+        console.warn('Failed to save timeline on destroy:', error);
+      }
     }
 
     // Clean up all components
