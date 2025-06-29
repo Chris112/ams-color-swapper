@@ -1,23 +1,22 @@
-// Smooth number counter animation
+// Animate number from 0 to target value
 export const animateNumber = (
   element: HTMLElement,
-  start: number,
-  end: number,
+  targetValue: number,
   duration: number = 1000,
-  suffix: string = ''
+  format?: (value: number) => string
 ): void => {
   const startTime = performance.now();
-  const range = end - start;
+  const startValue = 0;
 
   const updateNumber = (currentTime: number) => {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
 
-    // Easing function (ease-out cubic)
-    const easeOut = 1 - Math.pow(1 - progress, 3);
-    const current = Math.round(start + range * easeOut);
+    // Easing function
+    const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+    const currentValue = startValue + (targetValue - startValue) * easeOutQuart;
 
-    element.textContent = current + suffix;
+    element.textContent = format ? format(currentValue) : Math.round(currentValue).toString();
 
     if (progress < 1) {
       requestAnimationFrame(updateNumber);
@@ -100,16 +99,6 @@ export const staggerAnimation = (
   });
 };
 
-// Smooth scroll to element
-export const smoothScrollTo = (element: HTMLElement, offset: number = 0): void => {
-  const targetPosition = element.getBoundingClientRect().top + window.pageYOffset - offset;
-
-  window.scrollTo({
-    top: targetPosition,
-    behavior: 'smooth',
-  });
-};
-
 // Add glow effect on hover
 export const addGlowHover = (element: HTMLElement, color: string = 'pink'): void => {
   const glowClass = `shadow-glow-${color}`;
@@ -120,67 +109,6 @@ export const addGlowHover = (element: HTMLElement, color: string = 'pink'): void
 
   element.addEventListener('mouseleave', () => {
     element.classList.remove(glowClass);
-  });
-};
-
-// Typewriter effect
-export const typewriterEffect = (
-  element: HTMLElement,
-  text: string,
-  speed: number = 50
-): Promise<void> => {
-  return new Promise((resolve) => {
-    let index = 0;
-    element.textContent = '';
-
-    const type = () => {
-      if (index < text.length) {
-        element.textContent += text.charAt(index);
-        index++;
-        setTimeout(type, speed);
-      } else {
-        resolve();
-      }
-    };
-
-    type();
-  });
-};
-
-// Parallax effect for backgrounds
-export const addParallaxEffect = (element: HTMLElement, speed: number = 0.5): void => {
-  let ticking = false;
-
-  const updateParallax = () => {
-    const scrolled = window.pageYOffset;
-    const yPos = -(scrolled * speed);
-
-    element.style.transform = `translateY(${yPos}px)`;
-    ticking = false;
-  };
-
-  const onScroll = () => {
-    if (!ticking) {
-      requestAnimationFrame(updateParallax);
-      ticking = true;
-    }
-  };
-
-  window.addEventListener('scroll', onScroll);
-};
-
-// Color transition effect
-export const colorTransition = (
-  element: HTMLElement,
-  fromColor: string,
-  toColor: string,
-  duration: number = 1000
-): void => {
-  element.style.transition = `background-color ${duration}ms ease`;
-  element.style.backgroundColor = fromColor;
-
-  requestAnimationFrame(() => {
-    element.style.backgroundColor = toColor;
   });
 };
 

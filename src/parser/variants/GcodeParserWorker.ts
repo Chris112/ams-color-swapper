@@ -1,6 +1,13 @@
-import { GcodeStats, LayerColorInfo } from '../../types';
+import { GcodeStats } from '../../types/gcode';
+import { LayerColorInfo } from '../../types/layer';
 import { Color } from '../../domain/models/Color';
 import { Logger } from '../../utils/logger';
+import {
+  ColorRange,
+  ToolChangeData,
+  ParserWorkerResult,
+  MergedParserData,
+} from '../../types/parser';
 
 export class GcodeParserWorker {
   private logger: Logger;
@@ -125,7 +132,7 @@ export class GcodeParserWorker {
       stats.colors = uniqueColors;
 
       // Calculate color usage ranges
-      const colorRanges: any[] = [];
+      const colorRanges: ColorRange[] = [];
       mergedData.colorFirstSeen.forEach((firstLayer, colorId) => {
         const lastLayer = mergedData.colorLastSeen.get(colorId) || firstLayer;
         colorRanges.push({
@@ -201,7 +208,7 @@ export class GcodeParserWorker {
     const layers = new Set<number>();
     const tools = new Set<string>(['T0']);
     const activeTools = new Set<string>(['T0']); // Track all tools used in this chunk
-    const toolChanges: any[] = [];
+    const toolChanges: ToolChangeData[] = [];
     const layerColorMap: Array<[number, string[]]> = [];
 
     let currentLayer = 0;
@@ -315,26 +322,12 @@ export class GcodeParserWorker {
     };
   }
 
-  private mergeWorkerResults(results: any[]): {
-    layers: Set<number>;
-    tools: Set<string>;
-    toolChanges: any[];
-    maxZ: number;
-    hasM600: boolean;
-    colorDefs?: string[];
-    slicerInfo?: { software: string; version: string };
-    printTime?: string;
-    estimatedPrintTime?: number;
-    filamentWeights?: number[];
-    layerColorMap: Map<number, string[]>;
-    colorFirstSeen: Map<string, number>;
-    colorLastSeen: Map<string, number>;
-  } {
+  private mergeWorkerResults(results: ParserWorkerResult[]): MergedParserData {
     const merged = {
       layers: new Set<number>([0]),
       tools: new Set<string>(['T0']),
       activeTools: new Set<string>(['T0']), // Global active tools
-      toolChanges: [] as any[],
+      toolChanges: [] as ToolChangeData[],
       maxZ: 0,
       hasM600: false,
       colorDefs: undefined as string[] | undefined,
@@ -362,10 +355,10 @@ export class GcodeParserWorker {
       }
 
       // Merge tool changes with corrected line numbers
-      result.toolChanges.forEach((tc: any) => {
+      result.toolChanges.forEach((tc) => {
         merged.toolChanges.push({
           ...tc,
-          lineNumber: tc.lineNumber + globalLineOffset,
+          lineNumber: tc.lineNumber !== undefined ? tc.lineNumber + globalLineOffset : undefined,
         });
       });
 
@@ -412,7 +405,7 @@ export class GcodeParserWorker {
         });
       });
 
-      globalLineOffset += result.lineCount;
+      globalLineOffset += result.lineCount || 0;
     }
 
     // Ensure layer 0 is in the map

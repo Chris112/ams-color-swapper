@@ -1,7 +1,10 @@
-import { GcodeStats, ToolChange, LayerColorInfo } from '../../types';
+import { GcodeStats } from '../../types/gcode';
+import { ToolChange } from '../../types/tool';
+import { LayerColorInfo } from '../../types/layer';
 import { Color } from '../../domain/models/Color';
 import { Logger } from '../../utils/logger';
 import { BrowserFileReader } from '../../utils/fileReader';
+import { ColorRange } from '../../types/color';
 
 interface LazyParseResult {
   basicStats: {
@@ -480,8 +483,8 @@ export class GcodeParserLazy {
     return '#808080';
   }
 
-  private calculateColorRanges(layerColorMap: Map<number, string[]>): any[] {
-    const colorRanges: any[] = [];
+  private calculateColorRanges(layerColorMap: Map<number, string[]>): ColorRange[] {
+    const colorRanges: ColorRange[] = [];
     const colorLayerMap = new Map<string, number[]>();
 
     // Build map of which layers each color appears in
@@ -490,7 +493,10 @@ export class GcodeParserLazy {
         if (!colorLayerMap.has(color)) {
           colorLayerMap.set(color, []);
         }
-        colorLayerMap.get(color)!.push(layer);
+        const layers = colorLayerMap.get(color);
+        if (layers) {
+          layers.push(layer);
+        }
       });
     });
 
@@ -510,6 +516,7 @@ export class GcodeParserLazy {
             startLayer: start,
             endLayer: end,
             continuous: true,
+            layerCount: end - start + 1,
           });
           start = layers[i];
           end = start;
@@ -521,6 +528,7 @@ export class GcodeParserLazy {
         startLayer: start,
         endLayer: end,
         continuous: true,
+        layerCount: end - start + 1,
       });
     });
 

@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { Component } from '../../core/Component';
-import { GcodeStats } from '../../types';
+import { GcodeStats } from '../../types/gcode';
 import { HologramConfig, ViewMode, HologramEvents, VolumetricData } from './volumetric/types';
 import { VoxelDataStructure } from './volumetric/VoxelDataStructure';
-// import { HologramEffects } from './volumetric/HologramEffects'; // For future effects
 import { InteractionController } from './volumetric/InteractionController';
 // import { GCodeLoader } from 'three/examples/jsm/loaders/GCodeLoader.js'; // Not used
 
@@ -20,7 +19,6 @@ export class VolumetricHologram extends Component {
   private hologramMesh: THREE.Group | null = null;
   private hologramMaterial: THREE.ShaderMaterial | null = null;
 
-  // private effects!: HologramEffects; // For future effects
   private interactionController!: InteractionController;
 
   private config: HologramConfig = {

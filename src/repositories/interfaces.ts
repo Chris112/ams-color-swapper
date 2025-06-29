@@ -1,4 +1,11 @@
-import { Result, GcodeStats, OptimizationResult, DebugLog } from '../types';
+import { Result } from '../types/result';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
+import { DebugLog } from '../types/logging';
+import type { CachedAnalysis, CacheMetadata } from '../types/cache';
+
+// Re-export cache types
+export type { CachedAnalysis, CacheMetadata } from '../types/cache';
 
 /**
  * Repository for G-code parsing operations
@@ -75,27 +82,4 @@ export interface IFileRepository {
    * Download content as a file
    */
   downloadFile(content: string, fileName: string, mimeType: string): Result<void>;
-}
-
-/**
- * Cached analysis data structure
- */
-export interface CachedAnalysis {
-  key: string;
-  fileName: string;
-  fileSize: number;
-  stats: GcodeStats;
-  optimization: OptimizationResult;
-  logs: DebugLog[];
-  timestamp: number;
-}
-
-/**
- * Cache metadata structure
- */
-export interface CacheMetadata {
-  totalEntries: number;
-  totalSize: number;
-  oldestEntry: number;
-  newestEntry: number;
 }

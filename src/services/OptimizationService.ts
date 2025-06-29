@@ -1,7 +1,9 @@
 import { AmsConfigurationMapper, PrintMapper } from '../domain/mappers';
 import { AmsConfiguration } from '../domain/models';
 import { SimulatedAnnealingOptimizer } from '../domain/services/SimulatedAnnealingOptimizer';
-import { GcodeStats, OptimizationResult, SystemConfiguration } from '../types';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
+import { SystemConfiguration } from '../types/configuration';
 import { Logger } from '../utils/logger';
 import { LayerConstraintAnalyzer } from './LayerConstraintAnalyzer';
 

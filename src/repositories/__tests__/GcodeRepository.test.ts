@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GcodeRepository } from '../GcodeRepository';
-import { ValidationError, ParseError } from '../../types';
+import { ValidationError, ParseError } from '../../types/errors';
 
 // Polyfill File.text() for test environment
 if (!File.prototype.text) {
@@ -165,13 +165,20 @@ describe('GcodeRepository', () => {
     });
 
     it('should handle parser errors', async () => {
-      // Override the mock to throw an error
-      const errorParser = {
-        parse: vi.fn().mockRejectedValue(new Error('Parse failed')),
-      };
-      (repository as any).parser = errorParser;
+      // Mock the parser to throw an error
+      const { GcodeParser } = await import('../../parser/gcodeParser');
+      const mockParser = vi.mocked(GcodeParser);
+      mockParser.mockImplementationOnce(
+        () =>
+          ({
+            parse: vi.fn().mockRejectedValue(new Error('Parse failed')),
+          }) as any
+      );
 
-      const result = await repository.parseContent('invalid', 'test.gcode');
+      // Create a new repository to get the error parser
+      const errorRepository = new GcodeRepository();
+
+      const result = await errorRepository.parseContent('invalid', 'test.gcode');
 
       expect(result.ok).toBe(false);
       if (!result.ok) {

@@ -1,5 +1,9 @@
 import { ICacheRepository, CachedAnalysis, CacheMetadata } from './interfaces';
-import { Result, GcodeStats, OptimizationResult, DebugLog, CacheError } from '../types';
+import { Result } from '../types/result';
+import { CacheError } from '../types/errors';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
+import { DebugLog } from '../types/logging';
 
 export class CacheRepository implements ICacheRepository {
   private dbName = 'ams-gcode-cache';

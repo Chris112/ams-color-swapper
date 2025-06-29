@@ -1,12 +1,14 @@
 import { Color } from './Color';
 import { ToolChange } from './ToolChange';
 import { Slicer, FilamentUsageStats } from './Slicer';
-import { LayerColorInfo } from '../../types';
+import { LayerColorInfo } from '../../types/layer';
 
 /**
- * Domain model representing a 3D print job
+ * Domain model representing a 3D print
  */
 export class Print {
+  public readonly formattedPrintTime: string;
+
   constructor(
     public readonly fileName: string,
     public readonly fileSize: number,
@@ -20,100 +22,73 @@ export class Print {
     public readonly estimatedTime?: number,
     public readonly filamentUsageStats?: FilamentUsageStats
   ) {
-    this.validate();
+    this.formattedPrintTime = this.formatPrintTime(estimatedTime);
   }
 
-  /**
-   * Get average layer height
-   */
-  get averageLayerHeight(): number {
-    if (this.totalLayers === 0) return 0;
-    return this.totalHeight / this.totalLayers;
-  }
+  private formatPrintTime(seconds?: number): string {
+    if (!seconds) return 'Unknown';
 
-  /**
-   * Get all colors used at a specific layer
-   */
-  getColorsAtLayer(layer: number): Color[] {
-    return this.colors.filter((color) => color.isUsedInLayer(layer));
-  }
-
-  /**
-   * Get primary color at specific layer
-   */
-  getPrimaryColorAtLayer(layer: number): Color | undefined {
-    return this.colors.find((color) => color.isPrimaryInLayer(layer));
-  }
-
-  /**
-   * Get layer details for a specific layer
-   */
-  getLayerDetails(layer: number): LayerColorInfo | undefined {
-    return this.layerDetails.find((ld) => ld.layer === layer);
-  }
-
-  /**
-   * Get all colors that overlap (can't share slots)
-   */
-  getOverlappingColors(): Array<[Color, Color]> {
-    const overlaps: Array<[Color, Color]> = [];
-
-    for (let i = 0; i < this.colors.length; i++) {
-      for (let j = i + 1; j < this.colors.length; j++) {
-        if (this.colors[i].overlapsWith(this.colors[j])) {
-          overlaps.push([this.colors[i], this.colors[j]]);
-        }
-      }
-    }
-
-    return overlaps;
-  }
-
-  /**
-   * Get tool changes within a layer range
-   */
-  getToolChangesInRange(startLayer: number, endLayer: number): ToolChange[] {
-    return this.toolChanges.filter((tc) => tc.layer >= startLayer && tc.layer <= endLayer);
-  }
-
-  /**
-   * Check if multiple colors are used
-   */
-  get isMultiColor(): boolean {
-    return this.colors.length > 1;
-  }
-
-  /**
-   * Get estimated print time as formatted string
-   */
-  get formattedPrintTime(): string | undefined {
-    if (!this.estimatedTime) return undefined;
-
-    const hours = Math.floor(this.estimatedTime / 3600);
-    const minutes = Math.floor((this.estimatedTime % 3600) / 60);
-    const seconds = this.estimatedTime % 60;
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
 
     if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
+      return `${hours}h ${minutes}m ${secs}s`;
     } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
+      return `${minutes}m ${secs}s`;
     } else {
-      return `${seconds}s`;
+      return `${secs}s`;
     }
   }
 
-  private validate(): void {
-    if (!this.fileName) {
-      throw new Error('File name is required');
-    }
-    if (this.fileSize < 0) {
-      throw new Error('File size must be non-negative');
-    }
-    if (this.totalLayers < 0) {
-      throw new Error('Total layers must be non-negative');
-    }
-    if (this.totalHeight < 0) {
-      throw new Error('Total height must be non-negative');
-    }
+  /**
+   * Get total number of color changes
+   */
+  public get totalColorChanges(): number {
+    return this.toolChanges.length;
+  }
+
+  /**
+   * Get unique color count
+   */
+  public get uniqueColorCount(): number {
+    return this.colors.length;
+  }
+
+  /**
+   * Get color usage statistics
+   */
+  public getColorUsageStats(): Map<string, number> {
+    const stats = new Map<string, number>();
+
+    this.layerColorMap.forEach((colors) => {
+      colors.forEach((color) => {
+        stats.set(color, (stats.get(color) || 0) + 1);
+      });
+    });
+
+    return stats;
+  }
+
+  /**
+   * Check if print uses specific color
+   */
+  public usesColor(colorId: string): boolean {
+    return this.colors.some((c) => c.id === colorId);
+  }
+
+  /**
+   * Get layers where specific color is used
+   */
+  public getColorLayers(colorId: string): number[] {
+    const layers: number[] = [];
+
+    this.layerColorMap.forEach((colors, layer) => {
+      if (colors.includes(colorId)) {
+        layers.push(layer);
+      }
+    });
+
+    return layers.sort((a, b) => a - b);
   }
 }

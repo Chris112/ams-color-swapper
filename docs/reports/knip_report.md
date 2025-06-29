@@ -9,15 +9,18 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 ## 1. Unused Dependencies
 
 ### Can be safely removed:
+
 - **`autoprefixer`** - Not used in vite.config.js or any build process
 - **`@vitejs/plugin-legacy`** - Not imported in vite.config.js
 
 ### Currently in use (false positives):
+
 - **`three`** and **`@types/three`** - Used by volumetric visualization components
 
 ## 2. Unused Exports
 
 ### Can be safely removed:
+
 - **`formatColorDisplay`** in `src/utils/colorNames.ts:34` - No references found
 - **`getAlgorithmVersion`** in `src/utils/hash.ts:66` - No references found
 - **`hasErrorCode`** in `src/types/errors.ts:98` - No references found
@@ -28,6 +31,7 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 ## 3. Unused Type Exports
 
 ### Can be safely removed:
+
 - **`LogEntry`** type in `src/types/index.ts:145` - No references found
 - **`ColorOverlap`** interface in `src/domain/services/ColorOverlapAnalyzer.ts:3` - File itself appears unused
 - **`IFileRepository`** interface in `src/repositories/interfaces.ts:63` - No implementations found
@@ -35,6 +39,7 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 ## 4. Potentially Unused Files
 
 ### Verified as USED (false positives):
+
 - `src/app.ts` - Main entry point (referenced in index.html)
 - `src/core/*.ts` - Core framework files used throughout
 - `src/workers/*.ts` - Worker files loaded dynamically
@@ -43,6 +48,7 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 ### Likely UNUSED (can be removed):
 
 #### Command pattern files (appear to be unused architecture):
+
 - `src/commands/AnalyzeFileCommand.ts`
 - `src/commands/ClearCacheCommand.ts`
 - `src/commands/CommandExecutor.ts`
@@ -51,6 +57,7 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 - `src/commands/index.ts`
 
 #### Analytics module (appears to be unused):
+
 - `src/analytics/algorithms/AMSSlotOptimizer.ts`
 - `src/analytics/algorithms/ColorOverlapAnalyzer.ts`
 - `src/analytics/algorithms/ColorSubstitutionAnalyzer.ts`
@@ -59,12 +66,14 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 - `src/types/analytics.ts`
 
 #### Repository pattern files (may be unused):
+
 - `src/repositories/FactoryFloorRepository.ts`
 - `src/repositories/FileRepository.ts`
 - `src/repositories/HMRStateRepository.ts`
 - `src/repositories/index.ts`
 
 #### Other potentially unused:
+
 - `test-color-persistence.js` - Test file in root
 - `src/parser/variants/gcode.worker.ts` - Duplicate worker?
 - `src/domain/mappers/` - Mapper pattern files
@@ -75,6 +84,7 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 ### Immediate Actions (Safe to remove):
 
 1. Remove unused dev dependencies:
+
    ```bash
    npm uninstall @vitejs/plugin-legacy autoprefixer
    ```
@@ -92,15 +102,11 @@ Knip identified 58 potentially unused files, 4 unused dependencies, 6 unused exp
 ### Update Knip Configuration:
 
 Add proper entry points and worker configurations to reduce false positives:
+
 ```json
 {
-  "entry": [
-    "src/app.ts",
-    "index.html"
-  ],
-  "ignoreDependencies": [
-    "vite"
-  ]
+  "entry": ["src/app.ts", "index.html"],
+  "ignoreDependencies": ["vite"]
 }
 ```
 
@@ -115,14 +121,8 @@ Add proper entry points and worker configurations to reduce false positives:
 ```json
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": [
-    "src/app.ts",
-    "src/workers/**/*.ts"
-  ],
-  "project": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
+  "entry": ["src/app.ts", "src/workers/**/*.ts"],
+  "project": ["src/**/*.ts", "src/**/*.tsx"],
   "ignore": [
     "**/*.test.ts",
     "**/*.spec.ts",
@@ -131,10 +131,7 @@ Add proper entry points and worker configurations to reduce false positives:
     "dist/**",
     "node_modules/**"
   ],
-  "ignoreDependencies": [
-    "@types/node",
-    "vite"
-  ],
+  "ignoreDependencies": ["@types/node", "vite"],
   "ignoreExportsUsedInFile": true,
   "includeEntryExports": false,
   "workspaces": {

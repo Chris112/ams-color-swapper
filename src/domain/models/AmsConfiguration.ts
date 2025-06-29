@@ -1,6 +1,6 @@
 import { AmsSlot } from './AmsSlot';
 import { Color } from './Color';
-import { ManualSwap } from '../../types';
+import { ManualSwap } from '../../types/optimization';
 import { ColorOverlapAnalyzer, SwapDetail } from '../services/ColorOverlapAnalyzer';
 
 /**

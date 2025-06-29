@@ -1,6 +1,6 @@
 import { describe, it, expect, bench } from 'vitest';
-import { OptimizationService, OptimizationAlgorithm } from '@/services/OptimizationService';
-import { GcodeStats } from '../../../types';
+import { OptimizationService, OptimizationAlgorithm } from '../../../services/OptimizationService';
+import { GcodeStats } from '../../../types/gcode';
 import { Color } from '../../models/Color';
 
 // Helper function to create a mock GcodeStats object for benchmarking

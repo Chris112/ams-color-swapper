@@ -1,8 +1,9 @@
-import { GcodeStats, LogEntry } from '../types';
+import { GcodeStats } from '../types/gcode';
+import { DebugLog } from '../types/logging';
 
 export interface ParseResult {
   stats: GcodeStats;
-  logs: LogEntry[];
+  logs: DebugLog[];
 }
 
 export class ParserWorkerService {

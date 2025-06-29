@@ -10,7 +10,7 @@ export class ColorMergePanel extends Component {
     container.id = 'colorMergePanel';
     container.className = 'hidden';
     document.body.appendChild(container);
-    
+
     super('#colorMergePanel');
     this.initialize();
   }
@@ -99,9 +99,9 @@ export class ColorMergePanel extends Component {
     const selectedArray = Array.from(this.selectedColors);
     const targetId = selectedArray[0];
     const sourceIds = selectedArray.slice(1);
-    
-    const targetColor = colors.find(c => c.id === targetId);
-    const sourceColors = colors.filter(c => sourceIds.includes(c.id));
+
+    const targetColor = colors.find((c) => c.id === targetId);
+    const sourceColors = colors.filter((c) => sourceIds.includes(c.id));
 
     if (!targetColor) return '';
 
@@ -120,13 +120,17 @@ export class ColorMergePanel extends Component {
           </svg>
           
           <div class="flex gap-2">
-            ${sourceColors.map(color => `
+            ${sourceColors
+              .map(
+                (color) => `
               <div class="text-center">
                 <div class="w-16 h-16 rounded-lg shadow-lg mb-2 opacity-50" style="background-color: ${color.hexValue || '#888'}"></div>
                 <div class="text-sm text-white/70">${color.name || color.id}</div>
                 <div class="text-xs text-red-400">Merge</div>
               </div>
-            `).join('')}
+            `
+              )
+              .join('')}
           </div>
         </div>
         
@@ -152,7 +156,7 @@ export class ColorMergePanel extends Component {
     }
 
     // Color selection
-    this.element.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+    this.element.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
       checkbox.addEventListener('change', (e) => {
         const target = e.target as HTMLInputElement;
         const colorId = target.dataset.colorId;

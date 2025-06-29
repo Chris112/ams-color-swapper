@@ -1,7 +1,9 @@
 import { Color } from '../domain/models/Color';
 import { FilamentDatabase } from '../services/FilamentDatabase';
 import { ColorDeduplicationService } from '../services/ColorDeduplicationService';
-import { GcodeStats, LayerColorInfo, ToolChange } from '../types';
+import { GcodeStats } from '../types/gcode';
+import { ToolChange } from '../types/tool';
+import { LayerColorInfo } from '../types/layer';
 import { extractColorInfo, extractColorRanges } from './colorExtractor';
 import { Logger } from '../utils/logger';
 
@@ -71,7 +73,10 @@ export async function calculateStatistics(
         let name = color.name;
 
         if (index < definedColorCount) {
-          hexValue = partialStats.slicerInfo!.colorDefinitions![index];
+          const colorDefs = partialStats.slicerInfo?.colorDefinitions;
+          if (colorDefs && index < colorDefs.length) {
+            hexValue = colorDefs[index];
+          }
           // Update the name based on the hex color using FilamentDatabase
           if (hexValue) {
             // Get enhanced name from FilamentDatabase (non-blocking)

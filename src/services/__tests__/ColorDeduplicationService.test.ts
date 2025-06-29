@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ColorDeduplicationService } from '../ColorDeduplicationService';
 import { Color } from '../../domain/models/Color';
-import { ToolChange } from '../../types';
+import { ToolChange } from '../../types/tool';
 
 describe('ColorDeduplicationService', () => {
   const service = new ColorDeduplicationService();

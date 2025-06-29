@@ -1,5 +1,5 @@
 import { Color } from '../domain/models/Color';
-import { ToolChange } from '../types';
+import { ToolChange } from '../types/tool';
 import { Logger } from '../utils/logger';
 
 export interface DeduplicationResult {
@@ -132,8 +132,8 @@ export class ColorDeduplicationService {
   ): ToolChange[] {
     return toolChanges.map((tc) => ({
       ...tc,
-      fromTool: colorMapping.get(tc.fromTool) || tc.fromTool,
-      toTool: colorMapping.get(tc.toTool) || tc.toTool,
+      fromTool: colorMapping.get(String(tc.fromTool)) || tc.fromTool,
+      toTool: colorMapping.get(String(tc.toTool)) || tc.toTool,
     }));
   }
 

@@ -1,5 +1,5 @@
 import { Color } from '../domain/models/Color';
-import { GcodeStats } from '../types';
+import { GcodeStats } from '../types/gcode';
 import { Logger } from '../utils/logger';
 
 const logger = new Logger('ColorMergeService');
@@ -93,8 +93,8 @@ export class ColorMergeService {
     // Update tool changes
     mergedStats.toolChanges = mergedStats.toolChanges.map((change) => ({
       ...change,
-      fromTool: sourceColorIds.includes(change.fromTool) ? targetColorId : change.fromTool,
-      toTool: sourceColorIds.includes(change.toTool) ? targetColorId : change.toTool,
+      fromTool: sourceColorIds.includes(String(change.fromTool)) ? targetColorId : change.fromTool,
+      toTool: sourceColorIds.includes(String(change.toTool)) ? targetColorId : change.toTool,
     }));
 
     // Update layer color map
@@ -111,9 +111,11 @@ export class ColorMergeService {
     if (mergedStats.layerDetails) {
       mergedStats.layerDetails = mergedStats.layerDetails.map((detail) => ({
         ...detail,
-        colors: detail.colors.map((c) => (sourceColorIds.includes(c) ? targetColorId : c)),
+        colors: detail.colors.map((c: string) => (sourceColorIds.includes(c) ? targetColorId : c)),
         uniqueColors: Array.from(
-          new Set(detail.colors.map((c) => (sourceColorIds.includes(c) ? targetColorId : c)))
+          new Set(
+            detail.colors.map((c: string) => (sourceColorIds.includes(c) ? targetColorId : c))
+          )
         ),
       }));
     }
@@ -129,7 +131,7 @@ export class ColorMergeService {
     // Merge overlapping ranges for the same color
     const mergedRanges: typeof newColorUsageRanges = [];
     const colorRangeMap = new Map<string, typeof newColorUsageRanges>();
-    
+
     newColorUsageRanges.forEach((range) => {
       if (!colorRangeMap.has(range.colorId)) {
         colorRangeMap.set(range.colorId, []);
@@ -138,7 +140,7 @@ export class ColorMergeService {
     });
 
     colorRangeMap.forEach((ranges, colorId) => {
-      const layerRanges = ranges.map(r => ({ start: r.startLayer, end: r.endLayer }));
+      const layerRanges = ranges.map((r) => ({ start: r.startLayer, end: r.endLayer }));
       const merged = this.mergeOverlappingRanges(layerRanges);
       merged.forEach(({ start, end }) => {
         mergedRanges.push({
@@ -245,16 +247,19 @@ export class ColorMergeService {
   private cloneStats(stats: GcodeStats): GcodeStats {
     return {
       ...stats,
-      colors: stats.colors.map((c) => new Color({
-        id: c.id,
-        name: c.name,
-        hexValue: c.hexValue,
-        firstLayer: c.firstLayer,
-        lastLayer: c.lastLayer,
-        layersUsed: new Set(c.layersUsed),
-        partialLayers: new Set(c.partialLayers),
-        totalLayers: stats.totalLayers,
-      })),
+      colors: stats.colors.map(
+        (c) =>
+          new Color({
+            id: c.id,
+            name: c.name,
+            hexValue: c.hexValue,
+            firstLayer: c.firstLayer,
+            lastLayer: c.lastLayer,
+            layersUsed: new Set(c.layersUsed),
+            partialLayers: new Set(c.partialLayers),
+            totalLayers: stats.totalLayers,
+          })
+      ),
       toolChanges: stats.toolChanges.map((tc) => ({ ...tc })),
       layerColorMap: new Map(stats.layerColorMap),
       layerDetails: stats.layerDetails ? stats.layerDetails.map((ld) => ({ ...ld })) : undefined,
@@ -264,8 +269,9 @@ export class ColorMergeService {
 
   /**
    * Merge overlapping layer ranges
+   * @internal Made public for testing
    */
-  private mergeOverlappingRanges(
+  public mergeOverlappingRanges(
     ranges: Array<{ start: number; end: number }>
   ): Array<{ start: number; end: number }> {
     if (ranges.length <= 1) return ranges;

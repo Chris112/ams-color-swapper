@@ -1,10 +1,5 @@
 // Worker script for parallel G-code parsing
-interface WorkerMessage {
-  type: 'parse';
-  chunk: string;
-  chunkIndex: number;
-  totalChunks: number;
-}
+import type { ParserWorkerMessage } from '../../types/worker/parser';
 
 interface WorkerResult {
   type: 'result';
@@ -29,7 +24,7 @@ interface WorkerResult {
   };
 }
 
-self.onmessage = (event: MessageEvent<WorkerMessage>) => {
+self.onmessage = (event: MessageEvent<ParserWorkerMessage>) => {
   const { type, chunk, chunkIndex } = event.data;
 
   if (type === 'parse') {

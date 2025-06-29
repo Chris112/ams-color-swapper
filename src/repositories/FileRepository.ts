@@ -1,5 +1,6 @@
 import { IFileRepository } from './interfaces';
-import { Result, FileError } from '../types';
+import { Result } from '../types/result';
+import { FileError } from '../types/errors';
 import { generateCacheKey } from '../utils/hash';
 
 export class FileRepository implements IFileRepository {

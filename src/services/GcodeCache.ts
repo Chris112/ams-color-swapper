@@ -1,21 +1,12 @@
-import { GcodeStats, OptimizationResult, DebugLog } from '../types';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
+import { DebugLog } from '../types/logging';
+import { CacheMetadata, CachedAnalysis } from '../types/cache';
 
-interface CacheEntry {
-  key: string; // SHA-256 hash of file content
-  fileName: string;
-  fileSize: number;
-  stats: GcodeStats;
-  optimization: OptimizationResult;
-  logs: DebugLog[];
-  timestamp: number;
+// Extend CachedAnalysis for internal use with version
+interface CacheEntry extends CachedAnalysis {
+  logs: DebugLog[]; // Make logs required internally
   version: string; // Cache format version for future compatibility
-}
-
-interface CacheMetadata {
-  totalEntries: number;
-  totalSize: number; // Approximate size in bytes
-  oldestEntry: number; // Timestamp
-  newestEntry: number; // Timestamp
 }
 
 export class GcodeCache {
@@ -100,16 +91,19 @@ export class GcodeCache {
     if (!this.db) await this.initialize();
 
     // Convert Maps to plain objects for storage
-    const statsToStore = {
+    const statsToStore: GcodeStats = {
       ...stats,
-      layerColorMap: Object.fromEntries(stats.layerColorMap || new Map()),
+      layerColorMap: Object.fromEntries(stats.layerColorMap || new Map()) as unknown as Map<
+        number,
+        string[]
+      >,
     };
 
     const entry: CacheEntry = {
       key,
       fileName,
       fileSize,
-      stats: statsToStore as any,
+      stats: statsToStore,
       optimization,
       logs,
       timestamp: Date.now(),

@@ -53,11 +53,11 @@ export class TimelineStateMachine {
     canRedo: false,
     isModified: false,
   };
-  
+
   constructor() {
     this.defineTransitions();
   }
-  
+
   private defineTransitions(): void {
     // Define all valid state transitions
     const transitions: TimelineTransition[] = [
@@ -67,7 +67,7 @@ export class TimelineStateMachine {
         action: TimelineAction.INITIALIZE,
         to: TimelineState.INITIAL,
       },
-      
+
       // Adding merges
       {
         from: [TimelineState.INITIAL, TimelineState.AT_SNAPSHOT],
@@ -83,7 +83,7 @@ export class TimelineStateMachine {
           ctx.canUndo = true;
         },
       },
-      
+
       // Navigation
       {
         from: [TimelineState.AT_SNAPSHOT, TimelineState.INITIAL],
@@ -99,7 +99,7 @@ export class TimelineStateMachine {
           ctx.canRedo = true;
         },
       },
-      
+
       {
         from: [TimelineState.AT_SNAPSHOT],
         action: TimelineAction.REDO,
@@ -111,7 +111,7 @@ export class TimelineStateMachine {
         action: TimelineAction.REDO,
         to: TimelineState.AT_SNAPSHOT,
       },
-      
+
       {
         from: [TimelineState.AT_SNAPSHOT, TimelineState.INITIAL],
         action: TimelineAction.JUMP_TO,
@@ -122,7 +122,7 @@ export class TimelineStateMachine {
         action: TimelineAction.JUMP_TO,
         to: TimelineState.AT_SNAPSHOT,
       },
-      
+
       {
         from: [TimelineState.AT_SNAPSHOT, TimelineState.INITIAL],
         action: TimelineAction.RESET,
@@ -132,7 +132,7 @@ export class TimelineStateMachine {
           ctx.canRedo = false;
         },
       },
-      
+
       // Branching
       {
         from: [TimelineState.AT_SNAPSHOT, TimelineState.INITIAL],
@@ -147,7 +147,7 @@ export class TimelineStateMachine {
           ctx.isModified = true;
         },
       },
-      
+
       {
         from: [TimelineState.AT_SNAPSHOT, TimelineState.INITIAL],
         action: TimelineAction.SWITCH_BRANCH,
@@ -158,7 +158,7 @@ export class TimelineStateMachine {
         action: TimelineAction.SWITCH_BRANCH,
         to: TimelineState.AT_SNAPSHOT,
       },
-      
+
       // Import/Export
       {
         from: [TimelineState.AT_SNAPSHOT, TimelineState.INITIAL, TimelineState.EMPTY],
@@ -170,7 +170,7 @@ export class TimelineStateMachine {
         action: TimelineAction.EXPORT,
         to: TimelineState.AT_SNAPSHOT,
       },
-      
+
       {
         from: [TimelineState.EMPTY, TimelineState.AT_SNAPSHOT, TimelineState.INITIAL],
         action: TimelineAction.IMPORT,
@@ -184,7 +184,7 @@ export class TimelineStateMachine {
           ctx.isModified = false;
         },
       },
-      
+
       // Clear
       {
         from: [TimelineState.AT_SNAPSHOT, TimelineState.INITIAL],
@@ -198,7 +198,7 @@ export class TimelineStateMachine {
         },
       },
     ];
-    
+
     // Store transitions in map for quick lookup
     transitions.forEach((transition) => {
       transition.from.forEach((fromState) => {
@@ -207,66 +207,66 @@ export class TimelineStateMachine {
       });
     });
   }
-  
+
   private getTransitionKey(state: TimelineState, action: TimelineAction): string {
     return `${state}:${action}`;
   }
-  
+
   public canPerformAction(action: TimelineAction): boolean {
     const key = this.getTransitionKey(this.currentState, action);
     const transition = this.transitions.get(key);
-    
+
     if (!transition) {
       return false;
     }
-    
+
     if (transition.guard) {
       return transition.guard(this.context);
     }
-    
+
     return true;
   }
-  
+
   public performAction(action: TimelineAction): boolean {
     const key = this.getTransitionKey(this.currentState, action);
     const transition = this.transitions.get(key);
-    
+
     if (!transition) {
       console.warn(`Invalid transition: ${this.currentState} -> ${action}`);
       return false;
     }
-    
+
     if (transition.guard && !transition.guard(this.context)) {
       console.warn(`Guard prevented transition: ${this.currentState} -> ${action}`);
       return false;
     }
-    
+
     // Update state
     const previousState = this.currentState;
     this.currentState = transition.to;
     this.context.currentState = transition.to;
-    
+
     // Execute side effects
     if (transition.effect) {
       transition.effect(this.context);
     }
-    
+
     console.log(`Timeline state transition: ${previousState} -> ${this.currentState} (${action})`);
     return true;
   }
-  
+
   public getCurrentState(): TimelineState {
     return this.currentState;
   }
-  
+
   public getContext(): Readonly<TimelineContext> {
     return { ...this.context };
   }
-  
+
   public updateContext(updates: Partial<TimelineContext>): void {
     this.context = { ...this.context, ...updates };
   }
-  
+
   public reset(): void {
     this.currentState = TimelineState.EMPTY;
     this.context = {
@@ -277,23 +277,23 @@ export class TimelineStateMachine {
       isModified: false,
     };
   }
-  
+
   public getAvailableActions(): TimelineAction[] {
     const actions: TimelineAction[] = [];
-    
+
     Object.values(TimelineAction).forEach((action) => {
       if (this.canPerformAction(action)) {
         actions.push(action);
       }
     });
-    
+
     return actions;
   }
-  
+
   public isInState(...states: TimelineState[]): boolean {
     return states.includes(this.currentState);
   }
-  
+
   public validateStateIntegrity(): boolean {
     // Check for any inconsistencies in the state
     const validations = [
@@ -307,7 +307,7 @@ export class TimelineStateMachine {
       // Can't be modified without any operations
       !(this.context.isModified && this.isInState(TimelineState.EMPTY, TimelineState.INITIAL)),
     ];
-    
+
     return validations.every((v) => v);
   }
 }

@@ -1,6 +1,6 @@
 import { Component } from '../../core/Component';
 import { appState } from '../../state/AppState';
-import { StateSnapshot } from '../../services/MergeHistoryManager';
+import { StateSnapshot, MergeTimelineState } from '../../services/MergeHistoryManager';
 
 export class MergeHistoryTimeline extends Component {
   private isVisible: boolean = false;
@@ -12,7 +12,7 @@ export class MergeHistoryTimeline extends Component {
     container.id = 'mergeHistoryTimeline';
     container.className = 'merge-timeline-container hidden';
     document.body.appendChild(container);
-    
+
     super('#mergeHistoryTimeline');
     this.initialize();
   }
@@ -101,9 +101,9 @@ export class MergeHistoryTimeline extends Component {
     `;
   }
 
-  private renderBranchSelector(timelineState: any): string {
+  private renderBranchSelector(timelineState: MergeTimelineState): string {
     const branches = Array.from(timelineState.branches.keys());
-    
+
     if (branches.length <= 1) {
       return '';
     }
@@ -112,9 +112,13 @@ export class MergeHistoryTimeline extends Component {
       <div class="flex items-center gap-2 text-sm">
         <span class="text-white/70">Branch:</span>
         <select id="branchSelector" class="bg-white/10 border border-white/20 rounded px-3 py-1 text-white text-sm">
-          ${branches.map(branch => `
+          ${branches
+            .map(
+              (branch) => `
             <option value="${branch}" ${branch === timelineState.currentBranch ? 'selected' : ''}>${branch}</option>
-          `).join('')}
+          `
+            )
+            .join('')}
         </select>
         <button id="createBranch" class="px-3 py-1 bg-vibrant-purple rounded text-white text-sm hover:bg-vibrant-purple/80 transition-colors">
           + New Branch
@@ -127,7 +131,7 @@ export class MergeHistoryTimeline extends Component {
     `;
   }
 
-  private renderTimelineTrack(timelineState: any): string {
+  private renderTimelineTrack(timelineState: MergeTimelineState): string {
     const snapshots = timelineState.snapshots;
     if (snapshots.length === 0) return '';
 
@@ -141,25 +145,28 @@ export class MergeHistoryTimeline extends Component {
           <line x1="20" y1="50" x2="${trackWidth - 20}" y2="50" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
           
           <!-- Snapshot nodes -->
-          ${snapshots.map((snapshot: StateSnapshot, index: number) => {
-            const x = 20 + (index * nodeSpacing);
-            const isCurrent = index === timelineState.currentIndex;
-            const isOptimal = snapshot.violationCount === 0;
-            const isInitial = index === 0;
-            
-            return this.renderTimelineNode(snapshot, index, x, 50, {
-              isCurrent,
-              isOptimal,
-              isInitial,
-            });
-          }).join('')}
+          ${snapshots
+            .map((snapshot: StateSnapshot, index: number) => {
+              const x = 20 + index * nodeSpacing;
+              const isCurrent = index === timelineState.currentIndex;
+              const isOptimal = snapshot.violationCount === 0;
+              const isInitial = index === 0;
+
+              return this.renderTimelineNode(snapshot, index, x, 50, {
+                isCurrent,
+                isOptimal,
+                isInitial,
+              });
+            })
+            .join('')}
         </svg>
         
         <!-- Node labels and violation counts -->
         <div class="absolute inset-0 pointer-events-none">
-          ${snapshots.map((snapshot: StateSnapshot, index: number) => {
-            const x = 20 + (index * nodeSpacing);
-            return `
+          ${snapshots
+            .map((snapshot: StateSnapshot, index: number) => {
+              const x = 20 + index * nodeSpacing;
+              return `
               <div class="absolute text-center pointer-events-auto" 
                    style="left: ${x - 25}px; top: 70px; width: 50px;"
                    data-snapshot-id="${snapshot.id}">
@@ -167,25 +174,26 @@ export class MergeHistoryTimeline extends Component {
                 <div class="text-xs text-white/50">violations</div>
               </div>
             `;
-          }).join('')}
+            })
+            .join('')}
         </div>
       </div>
     `;
   }
 
   private renderTimelineNode(
-    snapshot: StateSnapshot, 
-    index: number, 
-    x: number, 
+    snapshot: StateSnapshot,
+    index: number,
+    x: number,
     y: number,
     flags: { isCurrent: boolean; isOptimal: boolean; isInitial: boolean }
   ): string {
     const { isCurrent, isOptimal, isInitial } = flags;
-    
+
     let nodeColor = 'rgba(255,255,255,0.6)';
     let fillColor = 'rgba(255,255,255,0.1)';
     let strokeWidth = 2;
-    
+
     if (isCurrent) {
       nodeColor = '#8b5cf6';
       fillColor = 'rgba(139, 92, 246, 0.2)';
@@ -200,7 +208,7 @@ export class MergeHistoryTimeline extends Component {
 
     const nodeSize = isCurrent ? 8 : 6;
     const nodeType = isInitial ? 'rect' : isOptimal ? 'polygon' : 'circle';
-    
+
     let nodeElement = '';
     if (nodeType === 'rect') {
       // Square for initial state
@@ -241,7 +249,7 @@ export class MergeHistoryTimeline extends Component {
     const coords: string[] = [];
 
     for (let i = 0; i < points * 2; i++) {
-      const angle = (i * angleStep / 2) - Math.PI / 2;
+      const angle = (i * angleStep) / 2 - Math.PI / 2;
       const radius = i % 2 === 0 ? outerRadius : innerRadius;
       const x = cx + Math.cos(angle) * radius;
       const y = cy + Math.sin(angle) * radius;
@@ -298,7 +306,7 @@ export class MergeHistoryTimeline extends Component {
     if (createBranchBtn) {
       createBranchBtn.addEventListener('click', () => this.showCreateBranchDialog());
     }
-    
+
     // Export timeline button
     const exportBtn = this.element.querySelector('#exportTimeline');
     if (exportBtn) {
@@ -306,7 +314,7 @@ export class MergeHistoryTimeline extends Component {
     }
 
     // Timeline node clicks
-    this.element.querySelectorAll('.timeline-node').forEach(node => {
+    this.element.querySelectorAll('.timeline-node').forEach((node) => {
       node.addEventListener('click', (e) => {
         const target = e.target as SVGElement;
         const snapshotId = target.getAttribute('data-snapshot-id');
@@ -334,13 +342,14 @@ export class MergeHistoryTimeline extends Component {
   private showTooltip(snapshotId: string, event: MouseEvent): void {
     const timelineState = appState.getTimelineState();
     const snapshot = timelineState.snapshots.find((s: StateSnapshot) => s.id === snapshotId);
-    
+
     if (!snapshot) return;
 
     this.hideTooltip();
 
     this.tooltipElement = document.createElement('div');
-    this.tooltipElement.className = 'timeline-tooltip absolute z-50 glass rounded-lg p-3 text-sm pointer-events-none';
+    this.tooltipElement.className =
+      'timeline-tooltip absolute z-50 glass rounded-lg p-3 text-sm pointer-events-none';
     this.tooltipElement.style.left = `${event.clientX + 10}px`;
     this.tooltipElement.style.top = `${event.clientY - 50}px`;
 
@@ -396,31 +405,31 @@ export class MergeHistoryTimeline extends Component {
   public async show(): Promise<void> {
     this.isVisible = true;
     this.element.classList.remove('hidden');
-    
+
     // Load storage metrics
     await this.loadStorageMetrics();
-    
+
     this.render();
   }
-  
+
   private async loadStorageMetrics(): Promise<void> {
     try {
-      const timelineManager = (appState as any).mergeHistoryManager;
-      if (timelineManager && timelineManager.getStorageMetrics) {
+      const timelineManager = appState.getMergeHistoryManager();
+      if (timelineManager) {
         this.storageMetrics = await timelineManager.getStorageMetrics();
       }
     } catch (error) {
       console.error('Failed to load storage metrics:', error);
     }
   }
-  
+
   private renderStorageInfo(): string {
     if (!this.storageMetrics) return '';
-    
+
     const { totalSize } = this.storageMetrics;
     const sizeKB = (totalSize / 1024).toFixed(1);
     const sizePercent = Math.min((totalSize / (5 * 1024 * 1024)) * 100, 100); // 5MB as max
-    
+
     return `
       <div class="ml-4 text-xs text-white/50">
         Storage: ${sizeKB}KB
@@ -445,15 +454,15 @@ export class MergeHistoryTimeline extends Component {
       this.show();
     }
   }
-  
+
   private exportTimeline(): void {
     try {
-      const timelineManager = (appState as any).mergeHistoryManager;
+      const timelineManager = appState.getMergeHistoryManager();
       if (timelineManager) {
         const timelineData = timelineManager.exportTimeline();
         const blob = new Blob([timelineData], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = `merge-timeline-${new Date().toISOString().split('T')[0]}.json`;
@@ -461,7 +470,7 @@ export class MergeHistoryTimeline extends Component {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         // Show success notification
         this.showNotification('Timeline exported successfully!', 'success');
       }
@@ -470,7 +479,7 @@ export class MergeHistoryTimeline extends Component {
       this.showNotification('Failed to export timeline', 'error');
     }
   }
-  
+
   private showNotification(message: string, type: 'success' | 'error'): void {
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 z-50 glass rounded-lg p-4 animate-fade-in ${
@@ -482,18 +491,19 @@ export class MergeHistoryTimeline extends Component {
           type === 'success' ? 'bg-green-500' : 'bg-red-500'
         }">
           <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            ${type === 'success' 
-              ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
-              : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
+            ${
+              type === 'success'
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>'
             }
           </svg>
         </div>
         <div class="text-white font-medium">${message}</div>
       </div>
     `;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
       notification.classList.add('animate-fade-out');
       setTimeout(() => notification.remove(), 300);

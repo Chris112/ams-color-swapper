@@ -1,14 +1,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { CacheRepository } from '../CacheRepository';
-import { GcodeStats, OptimizationResult, DebugLog } from '../../types';
+import { GcodeStats } from '../../types/gcode';
+import { OptimizationResult } from '../../types/optimization';
+import { DebugLog } from '../../types/logging';
+
+// Type for mock request objects
+interface MockRequest {
+  onsuccess: ((event: Event) => void) | null;
+  onerror: ((event: Event) => void) | null;
+  result?: any;
+}
+
+interface MockOpenRequest extends MockRequest {
+  onupgradeneeded: ((event: IDBVersionChangeEvent) => void) | null;
+}
 
 // Mock IndexedDB for testing
 const mockIndexedDB = {
   open: vi.fn(),
   deleteDatabase: vi.fn(),
-};
+} as any;
 
-global.indexedDB = mockIndexedDB as any;
+global.indexedDB = mockIndexedDB;
 
 describe('CacheRepository', () => {
   let repository: CacheRepository;
@@ -46,10 +59,10 @@ describe('CacheRepository', () => {
     };
 
     // Setup IndexedDB mock
-    const openRequest = {
-      onsuccess: null as any,
-      onerror: null as any,
-      onupgradeneeded: null as any,
+    const openRequest: MockOpenRequest = {
+      onsuccess: null,
+      onerror: null,
+      onupgradeneeded: null,
       result: mockDb,
     };
 
@@ -61,7 +74,7 @@ describe('CacheRepository', () => {
     // Simulate successful DB open
     setTimeout(() => {
       if (openRequest.onsuccess) {
-        openRequest.onsuccess();
+        openRequest.onsuccess(new Event('success'));
       }
     }, 0);
   });
@@ -85,37 +98,38 @@ describe('CacheRepository', () => {
         createObjectStore: vi.fn(() => mockObjectStore),
       };
 
-      let capturedUpgradeHandler: any = null;
-      const upgradeRequest = {
-        set onupgradeneeded(handler: any) {
-          capturedUpgradeHandler = handler;
-        },
-        onsuccess: null as any,
-        onerror: null as any,
+      const upgradeRequest: MockOpenRequest = {
+        onupgradeneeded: null,
+        onsuccess: null,
+        onerror: null,
         result: upgradeDb,
       };
 
-      mockIndexedDB.open.mockReturnValue(upgradeRequest);
+      // Mock the open method to capture the request
+      mockIndexedDB.open.mockImplementation(() => {
+        // Simulate the upgrade process after a tick
+        setTimeout(() => {
+          if (upgradeRequest.onupgradeneeded) {
+            const event = new Event('upgradeneeded') as IDBVersionChangeEvent;
+            Object.defineProperty(event, 'target', {
+              value: { result: upgradeDb },
+              writable: false,
+            });
+            upgradeRequest.onupgradeneeded(event);
+          }
+          // Then trigger success
+          setTimeout(() => {
+            if (upgradeRequest.onsuccess) {
+              upgradeRequest.onsuccess(new Event('success'));
+            }
+          }, 0);
+        }, 0);
+        return upgradeRequest;
+      });
 
       // Create a new repository instance and call initialize
       const newRepository = new CacheRepository();
-      const initPromise = newRepository.initialize();
-
-      // Wait for the handler to be set
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      // Now trigger the upgrade event
-      if (capturedUpgradeHandler) {
-        const event = { target: { result: upgradeDb } };
-        capturedUpgradeHandler(event);
-      }
-
-      // Trigger success to complete initialization
-      if (upgradeRequest.onsuccess) {
-        upgradeRequest.onsuccess();
-      }
-
-      await initPromise;
+      await newRepository.initialize();
 
       expect(upgradeDb.createObjectStore).toHaveBeenCalledWith('parsed-results', {
         keyPath: 'key',
@@ -144,9 +158,9 @@ describe('CacheRepository', () => {
         version: '1.0.0',
       };
 
-      const getRequest = {
-        onsuccess: null as any,
-        onerror: null as any,
+      const getRequest: MockRequest = {
+        onsuccess: null,
+        onerror: null,
         result: mockEntry,
       };
 
@@ -157,7 +171,7 @@ describe('CacheRepository', () => {
       // Simulate successful get
       setTimeout(() => {
         if (getRequest.onsuccess) {
-          getRequest.onsuccess();
+          getRequest.onsuccess(new Event('success'));
         }
       }, 0);
 
@@ -173,9 +187,9 @@ describe('CacheRepository', () => {
     it('should return null for non-existent entry', async () => {
       await repository.initialize();
 
-      const getRequest = {
-        onsuccess: null as any,
-        onerror: null as any,
+      const getRequest: MockRequest = {
+        onsuccess: null,
+        onerror: null,
         result: undefined,
       };
 
@@ -185,7 +199,7 @@ describe('CacheRepository', () => {
 
       setTimeout(() => {
         if (getRequest.onsuccess) {
-          getRequest.onsuccess();
+          getRequest.onsuccess(new Event('success'));
         }
       }, 0);
 
@@ -210,15 +224,15 @@ describe('CacheRepository', () => {
         version: '1.0.0',
       };
 
-      const getRequest = {
-        onsuccess: null as any,
-        onerror: null as any,
+      const getRequest: MockRequest = {
+        onsuccess: null,
+        onerror: null,
         result: expiredEntry,
       };
 
-      const deleteRequest = {
-        onsuccess: null as any,
-        onerror: null as any,
+      const deleteRequest: MockRequest = {
+        onsuccess: null,
+        onerror: null,
       };
 
       mockObjectStore.get.mockReturnValue(getRequest);
@@ -228,13 +242,13 @@ describe('CacheRepository', () => {
 
       setTimeout(() => {
         if (getRequest.onsuccess) {
-          getRequest.onsuccess();
+          getRequest.onsuccess(new Event('success'));
         }
       }, 0);
 
       setTimeout(() => {
         if (deleteRequest.onsuccess) {
-          deleteRequest.onsuccess();
+          deleteRequest.onsuccess(new Event('success'));
         }
       }, 10);
 
@@ -274,9 +288,9 @@ describe('CacheRepository', () => {
 
       const logs: DebugLog[] = [];
 
-      const putRequest = {
-        onsuccess: null as any,
-        onerror: null as any,
+      const putRequest: MockRequest = {
+        onsuccess: null,
+        onerror: null,
       };
 
       mockObjectStore.put.mockReturnValue(putRequest);
@@ -285,7 +299,7 @@ describe('CacheRepository', () => {
 
       setTimeout(() => {
         if (putRequest.onsuccess) {
-          putRequest.onsuccess();
+          putRequest.onsuccess(new Event('success'));
         }
       }, 0);
 
@@ -307,9 +321,9 @@ describe('CacheRepository', () => {
     it('should clear all cache entries', async () => {
       await repository.initialize();
 
-      const clearRequest = {
-        onsuccess: null as any,
-        onerror: null as any,
+      const clearRequest: MockRequest = {
+        onsuccess: null,
+        onerror: null,
       };
 
       mockObjectStore.clear.mockReturnValue(clearRequest);
@@ -318,7 +332,7 @@ describe('CacheRepository', () => {
 
       setTimeout(() => {
         if (clearRequest.onsuccess) {
-          clearRequest.onsuccess();
+          clearRequest.onsuccess(new Event('success'));
         }
       }, 0);
 
@@ -347,9 +361,9 @@ describe('CacheRepository', () => {
         },
       ];
 
-      const getAllRequest = {
-        onsuccess: null as any,
-        onerror: null as any,
+      const getAllRequest: MockRequest = {
+        onsuccess: null,
+        onerror: null,
         result: mockEntries,
       };
 
@@ -359,7 +373,7 @@ describe('CacheRepository', () => {
 
       setTimeout(() => {
         if (getAllRequest.onsuccess) {
-          getAllRequest.onsuccess();
+          getAllRequest.onsuccess(new Event('success'));
         }
       }, 0);
 

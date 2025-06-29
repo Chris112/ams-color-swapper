@@ -1,12 +1,11 @@
+import { GcodeStats } from '../types/gcode';
+import { PrintConstraints, SystemConfiguration } from '../types/configuration';
 import {
-  GcodeStats,
   LayerConstraintViolation,
   ConstraintViolationRange,
   ColorConsolidationSuggestion,
   ConstraintValidationResult,
-  PrintConstraints,
-  SystemConfiguration,
-} from '../types';
+} from '../types/constraints';
 import { Color } from '../domain/models/Color';
 
 /**

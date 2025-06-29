@@ -1,6 +1,6 @@
 import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
-import { SystemConfiguration } from '../../types';
+import { SystemConfiguration } from '../../types/configuration';
 import { addRippleEffect, addGlowHover } from '../../utils/animations';
 import { ParserAlgorithm } from '../../domain/models/AmsConfiguration';
 
@@ -571,7 +571,7 @@ export class ConfigurationModal extends Component {
             type: this.configType,
             unitCount: this.unitCount,
             totalSlots: this.configType === 'ams' ? this.unitCount * 4 : this.unitCount,
-            parserAlgorithm: this.parserAlgorithm as any,
+            parserAlgorithm: this.parserAlgorithm,
           };
           this.emit(AppEvents.CONFIGURATION_CHANGED, configuration);
         }

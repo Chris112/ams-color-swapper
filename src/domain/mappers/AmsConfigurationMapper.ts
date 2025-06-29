@@ -1,4 +1,5 @@
-import { OptimizationResult, SlotAssignment, ColorPair } from '../../types';
+import { OptimizationResult, SlotAssignment } from '../../types/optimization';
+import { ColorPair } from '../../types/color';
 import { AmsConfiguration, Color } from '../models';
 
 /**

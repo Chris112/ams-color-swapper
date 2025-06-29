@@ -1,12 +1,10 @@
+import { GcodeStats, FilamentUsage } from '../../types/gcode';
+import { OptimizationResult, ManualSwap } from '../../types/optimization';
 import {
-  GcodeStats,
-  OptimizationResult,
-  ManualSwap,
-  FilamentUsage,
   ConstraintValidationResult,
   ConstraintViolationRange,
   ColorConsolidationSuggestion,
-} from '../../types';
+} from '../../types/constraints';
 import { Color } from '../../domain/models/Color';
 import { formatColorDisplay } from '../../utils/colorNames';
 

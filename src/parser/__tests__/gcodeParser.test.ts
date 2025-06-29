@@ -1,14 +1,21 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { GcodeParser } from '../gcodeParser';
-import { GcodeStats } from '../../types';
+import { GcodeStats } from '../../types/gcode';
 
 // Mock file for browser testing
 function createMockFile(content: string, name: string): File {
   const blob = new Blob([content], { type: 'text/plain' });
   const file = new File([blob], name, { type: 'text/plain' });
 
-  // Add the text() method that returns a Promise<string>
-  (file as any).text = async () => content;
+  // Override text() method if not available (for test environments)
+  if (!file.text) {
+    Object.defineProperty(file, 'text', {
+      value: async () => content,
+      writable: false,
+      enumerable: false,
+      configurable: true,
+    });
+  }
 
   return file;
 }

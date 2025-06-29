@@ -1,4 +1,6 @@
-import { Result, GcodeStats, FileError } from '../types';
+import { Result } from '../types/result';
+import { FileError } from '../types/errors';
+import { GcodeStats } from '../types/gcode';
 import { Logger } from '../utils/logger';
 import { parserWorkerService } from './ParserWorkerService';
 import { createParser } from '../parser/parserFactory';

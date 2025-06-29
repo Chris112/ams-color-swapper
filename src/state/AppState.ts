@@ -1,8 +1,11 @@
-import { GcodeStats, OptimizationResult, LogEntry, SystemConfiguration } from '../types';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
+import { DebugLog } from '../types/logging';
+import { SystemConfiguration } from '../types/configuration';
 import { hmrStateRepository } from '../repositories/HMRStateRepository';
 import { MergeHistoryEntry } from '../services/ColorMergeService';
 import { MergeHistoryManager, StateSnapshot } from '../services/MergeHistoryManager';
-import { eventBus } from '../core/EventEmitter';
+import { eventBus, AppEvents } from '../core/EventEmitter';
 
 export interface AppStateData {
   currentFile: File | null;
@@ -11,7 +14,7 @@ export interface AppStateData {
   loadingProgress: number;
   stats: GcodeStats | null;
   optimization: OptimizationResult | null;
-  logs: LogEntry[];
+  logs: DebugLog[];
   error: string | null;
   view: 'upload' | 'results';
   configuration: SystemConfiguration;
@@ -58,10 +61,10 @@ export class AppState {
   constructor() {
     // Initialize merge history manager
     this.mergeHistoryManager = new MergeHistoryManager();
-    
+
     // Load persisted preferences from localStorage
     this.loadPersistedPreferences();
-    
+
     // Try to load saved timeline asynchronously
     this.loadTimelineAsync();
 
@@ -69,7 +72,7 @@ export class AppState {
     if (import.meta.env.DEV) {
       this.initializeHMRPersistence();
     }
-    
+
     // Set up keyboard shortcuts for timeline navigation
     this.setupKeyboardShortcuts();
   }
@@ -126,7 +129,7 @@ export class AppState {
     }
   }
 
-  setAnalysisResults(stats: GcodeStats, optimization: OptimizationResult, logs: LogEntry[]): void {
+  setAnalysisResults(stats: GcodeStats, optimization: OptimizationResult, logs: DebugLog[]): void {
     // AppState: Setting analysis results, switching to results view
     this.setState({
       stats,
@@ -140,12 +143,12 @@ export class AppState {
       originalStats: stats, // Keep original for undo
       mergeHistory: [], // Reset merge history for new file
     });
-    
+
     // Initialize merge history timeline with initial state
     this.mergeHistoryManager.addInitialState(stats, optimization);
-    
+
     // Auto-save timeline asynchronously
-    this.mergeHistoryManager.saveToStorage().catch(error => {
+    this.mergeHistoryManager.saveToStorage().catch((error) => {
       console.error('Failed to save timeline:', error);
     });
 
@@ -171,7 +174,11 @@ export class AppState {
     });
   }
 
-  setMergedStats(stats: GcodeStats, optimization: OptimizationResult, mergeEntry: MergeHistoryEntry): void {
+  setMergedStats(
+    stats: GcodeStats,
+    optimization: OptimizationResult,
+    mergeEntry: MergeHistoryEntry
+  ): void {
     // Add to merge history timeline
     this.mergeHistoryManager.addMergeState(stats, optimization, {
       targetColorId: mergeEntry.targetColorId,
@@ -179,15 +186,15 @@ export class AppState {
       freedSlots: mergeEntry.freedSlots,
       description: `Merged ${mergeEntry.sourceColorIds.join(', ')} → ${mergeEntry.targetColorId}`,
     });
-    
+
     this.setState({
       stats,
       optimization,
       mergeHistory: [...this.state.mergeHistory, mergeEntry],
     });
-    
+
     // Auto-save timeline after merge asynchronously
-    this.mergeHistoryManager.saveToStorage().catch(error => {
+    this.mergeHistoryManager.saveToStorage().catch((error) => {
       console.error('Failed to save timeline after merge:', error);
     });
   }
@@ -198,61 +205,69 @@ export class AppState {
       this.navigateToSnapshot(previousSnapshot);
     }
   }
-  
+
   redoMerge(): void {
     const nextSnapshot = this.mergeHistoryManager.redo();
     if (nextSnapshot) {
       this.navigateToSnapshot(nextSnapshot);
     }
   }
-  
+
   navigateToSnapshot(snapshot: StateSnapshot | string): void {
     let targetSnapshot: StateSnapshot | null;
-    
+
     if (typeof snapshot === 'string') {
       targetSnapshot = this.mergeHistoryManager.jumpToSnapshot(snapshot);
     } else {
       targetSnapshot = snapshot;
     }
-    
+
     if (targetSnapshot) {
       this.setState({
         stats: targetSnapshot.stats,
         optimization: targetSnapshot.optimization,
         mergeHistory: this.state.mergeHistory, // Keep full history for UI
       });
-      
+
       // Emit event for UI updates
-      eventBus.emit('TIMELINE_NAVIGATED' as any, { snapshot: targetSnapshot });
+      eventBus.emit(AppEvents.TIMELINE_NAVIGATED, { snapshot: targetSnapshot });
     }
   }
-  
+
   resetToInitialState(): void {
     const initialSnapshot = this.mergeHistoryManager.reset();
     if (initialSnapshot) {
       this.navigateToSnapshot(initialSnapshot);
     }
   }
-  
+
   createMergeBranch(name: string): boolean {
     return this.mergeHistoryManager.createBranch(name);
   }
-  
+
   switchMergeBranch(name: string): void {
     const snapshot = this.mergeHistoryManager.switchBranch(name);
     if (snapshot) {
       this.navigateToSnapshot(snapshot);
     }
   }
-  
+
   getTimelineState() {
     return this.mergeHistoryManager.getTimeline();
   }
-  
+
+  /**
+   * Get the merge history manager instance
+   * @returns The merge history manager
+   */
+  getMergeHistoryManager(): MergeHistoryManager {
+    return this.mergeHistoryManager;
+  }
+
   canUndo(): boolean {
     return this.mergeHistoryManager.canUndo();
   }
-  
+
   canRedo(): boolean {
     return this.mergeHistoryManager.canRedo();
   }
@@ -354,7 +369,7 @@ export class AppState {
       console.warn('Failed to load persisted preferences:', error);
     }
   }
-  
+
   private async loadTimelineAsync(): Promise<void> {
     try {
       const loaded = await this.mergeHistoryManager.loadFromStorage();
@@ -365,18 +380,18 @@ export class AppState {
       console.warn('Failed to load timeline:', error);
     }
   }
-  
+
   private setupKeyboardShortcuts(): void {
     document.addEventListener('keydown', (e) => {
       // Only handle shortcuts when results are shown
       if (this.state.view !== 'results') return;
-      
+
       // Ctrl/Cmd + Z for undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         this.undoLastMerge();
       }
-      
+
       // Ctrl/Cmd + Y or Ctrl/Cmd + Shift + Z for redo
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault();

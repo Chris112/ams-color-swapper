@@ -1,4 +1,5 @@
-import { ColorRange, LayerColorInfo } from '../types';
+import { LayerColorInfo } from '../types/layer';
+import { ColorRange } from '../types/color';
 import { Color } from '../domain/models/Color';
 
 export async function extractColorInfo(
@@ -92,6 +93,7 @@ export function extractColorRanges(
           startLayer: range.start,
           endLayer: layer - 1,
           continuous: range.continuous,
+          layerCount: layer - range.start,
         });
         colorRangeTracker.delete(colorId);
       }
@@ -123,6 +125,7 @@ export function extractColorRanges(
       startLayer: range.start,
       endLayer: totalLayers,
       continuous: range.continuous,
+      layerCount: totalLayers - range.start + 1,
     });
   }
 

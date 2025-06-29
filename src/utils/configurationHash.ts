@@ -1,4 +1,4 @@
-import { SystemConfiguration } from '../types';
+import { SystemConfiguration } from '../types/configuration';
 
 /**
  * Generate a deterministic hash for any configuration object
