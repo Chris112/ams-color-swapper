@@ -1,5 +1,5 @@
-import { GcodeStats } from '../../types';
-import { Print, ToolChange } from '../models';
+import { GcodeStats } from '../../types/gcode';
+import { Print, ToolChange, Color } from '../models';
 
 /**
  * Maps between infrastructure types and domain models
@@ -14,10 +14,10 @@ export class PrintMapper {
 
     const toolChanges = stats.toolChanges.map((tc) =>
       ToolChange.fromData({
-        fromTool: tc.fromTool,
-        toTool: tc.toTool,
+        fromTool: String(tc.fromTool),
+        toTool: String(tc.toTool),
         layer: tc.layer,
-        lineNumber: tc.lineNumber,
+        lineNumber: tc.lineNumber ?? 0,
         zHeight: tc.zHeight,
       })
     );
@@ -48,9 +48,9 @@ export class PrintMapper {
    */
   static toInfrastructure(print: Print): GcodeStats {
     // Generate color usage ranges from Color objects
-    const colorUsageRanges = print.colors.map((color) => {
+    const colorUsageRanges = print.colors.map((color: Color) => {
       // Find continuous ranges from layersUsed set
-      const layers = Array.from(color.layersUsed).sort((a, b) => a - b);
+      const layers = Array.from(color.layersUsed).sort((a: number, b: number) => a - b);
       if (layers.length === 0) {
         return {
           colorId: color.id,
@@ -84,7 +84,7 @@ export class PrintMapper {
           }
         : undefined,
       colors: print.colors,
-      toolChanges: print.toolChanges.map((tc) => ({
+      toolChanges: print.toolChanges.map((tc: ToolChange) => ({
         fromTool: tc.fromTool,
         toTool: tc.toTool,
         layer: tc.layer,

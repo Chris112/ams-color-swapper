@@ -6,7 +6,7 @@ import {
   PrintBuilderManager,
   BuildState,
 } from '../ui/components/factory/PrintBuilder';
-import { GcodeStats } from '../types';
+import { GcodeStats } from '../types/gcode';
 import { IFactoryFloorRepository, FactoryFloorRepository } from '../repositories';
 import { GcodeToGeometryConverter } from '../parser/gcodeToGeometry';
 

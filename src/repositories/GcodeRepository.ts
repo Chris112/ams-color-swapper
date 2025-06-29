@@ -1,5 +1,7 @@
 import { IGcodeRepository } from './interfaces';
-import { Result, GcodeStats, ValidationError, ParseError } from '../types';
+import { Result } from '../types/result';
+import { ValidationError, ParseError } from '../types/errors';
+import { GcodeStats } from '../types/gcode';
 import { GcodeParser } from '../parser/gcodeParser';
 
 export class GcodeRepository implements IGcodeRepository {

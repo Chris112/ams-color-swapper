@@ -310,6 +310,13 @@ export class FilamentDatabase {
   }
 
   /**
+   * Check if storage is ready
+   */
+  public getStorageReadyStatus(): boolean {
+    return this.isStorageReady;
+  }
+
+  /**
    * Get current synchronization status
    */
   public async getSyncStatus(): Promise<SyncStatus | null> {

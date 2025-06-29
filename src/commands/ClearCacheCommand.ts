@@ -1,5 +1,5 @@
 import { ICommand } from './ICommand';
-import { Result } from '../types';
+import { Result } from '../types/result';
 import { ICacheRepository } from '../repositories';
 import { Logger } from '../utils/logger';
 import { hmrStateRepository } from '../repositories/HMRStateRepository';

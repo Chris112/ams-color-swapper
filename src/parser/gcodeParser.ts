@@ -1,4 +1,6 @@
-import { GcodeStats, ToolChange, LayerColorInfo } from '../types';
+import { GcodeStats } from '../types/gcode';
+import { ToolChange } from '../types/tool';
+import { LayerColorInfo } from '../types/layer';
 import { Logger } from '../utils/logger';
 import { BrowserFileReader } from '../utils/fileReader';
 import { calculateStatistics } from './statistics';

@@ -1,4 +1,4 @@
-import { eventBus } from '../../core/EventEmitter';
+import { eventBus, AppEvents } from '../../core/EventEmitter';
 
 export class FactoryFloorUI {
   private analysisViewBtn: HTMLButtonElement | null = null;
@@ -34,13 +34,13 @@ export class FactoryFloorUI {
     // View toggle buttons
     if (this.analysisViewBtn) {
       this.analysisViewBtn.addEventListener('click', () => {
-        eventBus.emit('VIEW_TOGGLE' as any, 'analysis');
+        eventBus.emit(AppEvents.VIEW_TOGGLE, 'analysis');
       });
     }
 
     if (this.factoryViewBtn) {
       this.factoryViewBtn.addEventListener('click', () => {
-        eventBus.emit('VIEW_TOGGLE' as any, 'factory');
+        eventBus.emit(AppEvents.VIEW_TOGGLE, 'factory');
       });
     }
 
@@ -50,14 +50,14 @@ export class FactoryFloorUI {
         const target = e.target as HTMLInputElement;
         const speed = parseFloat(target.value);
         this.buildSpeedValue!.textContent = `${speed.toFixed(1)}x`;
-        eventBus.emit('BUILD_SPEED_CHANGED' as any, speed);
+        eventBus.emit(AppEvents.FACTORY_BUILD_SPEED_CHANGED, speed);
       });
     }
 
     // Factory control buttons
     if (this.pauseAllBtn) {
       this.pauseAllBtn.addEventListener('click', () => {
-        eventBus.emit('PAUSE_ALL_BUILDS' as any);
+        eventBus.emit(AppEvents.FACTORY_PAUSE_ALL);
         this.updatePauseButton(true);
       });
     }
@@ -65,7 +65,7 @@ export class FactoryFloorUI {
     if (this.clearFactoryBtn) {
       this.clearFactoryBtn.addEventListener('click', () => {
         if (confirm('Are you sure you want to clear all prints from the factory floor?')) {
-          eventBus.emit('CLEAR_FACTORY' as any);
+          eventBus.emit(AppEvents.FACTORY_CLEAR);
         }
       });
     }
@@ -84,7 +84,7 @@ export class FactoryFloorUI {
 
       // Update click handler for resume
       this.pauseAllBtn.onclick = () => {
-        eventBus.emit('RESUME_ALL_BUILDS' as any);
+        eventBus.emit(AppEvents.FACTORY_RESUME_ALL);
         this.updatePauseButton(false);
       };
     } else {
@@ -97,7 +97,7 @@ export class FactoryFloorUI {
 
       // Restore original click handler
       this.pauseAllBtn.onclick = () => {
-        eventBus.emit('PAUSE_ALL_BUILDS' as any);
+        eventBus.emit(AppEvents.FACTORY_PAUSE_ALL);
         this.updatePauseButton(true);
       };
     }

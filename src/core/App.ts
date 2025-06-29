@@ -205,30 +205,33 @@ export class App {
     });
 
     // View toggle event
-    eventBus.on('VIEW_TOGGLE' as any, (view: 'analysis' | 'factory') => {
-      this.switchView(view);
+    eventBus.on(AppEvents.VIEW_TOGGLE, (view) => {
+      // Only switch if it's a supported view
+      if (view === 'analysis' || view === 'factory') {
+        this.switchView(view);
+      }
     });
 
     // Factory floor events
-    eventBus.on('BUILD_SPEED_CHANGED' as any, (speed: number) => {
+    eventBus.on(AppEvents.FACTORY_BUILD_SPEED_CHANGED, (speed) => {
       if (this.factoryFloorService) {
         this.factoryFloorService.setBuildSpeed(speed);
       }
     });
 
-    eventBus.on('PAUSE_ALL_BUILDS' as any, () => {
+    eventBus.on(AppEvents.FACTORY_PAUSE_ALL, () => {
       if (this.factoryFloorService) {
         this.factoryFloorService.pauseAllBuilds();
       }
     });
 
-    eventBus.on('RESUME_ALL_BUILDS' as any, () => {
+    eventBus.on(AppEvents.FACTORY_RESUME_ALL, () => {
       if (this.factoryFloorService) {
         this.factoryFloorService.resumeAllBuilds();
       }
     });
 
-    eventBus.on('CLEAR_FACTORY' as any, () => {
+    eventBus.on(AppEvents.FACTORY_CLEAR, () => {
       if (this.factoryFloorService) {
         this.factoryFloorService.clearFactory();
       }
@@ -245,7 +248,7 @@ export class App {
               this.colorMergePanel!.show();
             });
           }
-          
+
           // Attach timeline button listener
           const timelineBtn = document.getElementById('openTimelineBtn');
           if (timelineBtn && this.mergeHistoryTimeline) {
@@ -256,7 +259,7 @@ export class App {
         }, 100);
       }
     });
-    
+
     // Listen for Ctrl+Shift+T to toggle timeline
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
@@ -667,7 +670,7 @@ export class App {
     console.log('Filament Database Status:', {
       stats,
       syncStatus,
-      storageReady: (filamentDb as any).isStorageReady,
+      storageReady: filamentDb.getStorageReadyStatus(),
     });
   }
 
@@ -686,11 +689,9 @@ export class App {
 
     try {
       // Perform the merge
-      const mergeResult = this.colorMergeService.mergeColors(
-        state.stats,
-        targetColorId,
-        [sourceColorId]
-      );
+      const mergeResult = this.colorMergeService.mergeColors(state.stats, targetColorId, [
+        sourceColorId,
+      ]);
 
       if (!mergeResult) {
         throw new Error('Failed to merge colors');
@@ -714,7 +715,9 @@ export class App {
         if (!cv.hasViolations) {
           this.logger.info('All constraint violations resolved after merge!');
         } else {
-          this.logger.info(`Remaining violations after merge: ${cv.summary.impossibleLayerCount} impossible layers`);
+          this.logger.info(
+            `Remaining violations after merge: ${cv.summary.impossibleLayerCount} impossible layers`
+          );
         }
       }
 
@@ -723,7 +726,9 @@ export class App {
       appState.setLoading(false);
     } catch (error) {
       console.error('Error merging colors:', error);
-      appState.setError(`Failed to merge colors: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      appState.setError(
+        `Failed to merge colors: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
       appState.setLoading(false);
     }
   }
@@ -735,7 +740,8 @@ export class App {
 
     // Create and show a notification
     const notification = document.createElement('div');
-    notification.className = 'fixed top-4 right-4 z-50 glass rounded-lg p-4 animate-fade-in max-w-md';
+    notification.className =
+      'fixed top-4 right-4 z-50 glass rounded-lg p-4 animate-fade-in max-w-md';
     notification.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -749,15 +755,19 @@ export class App {
             ${mergeHistory.sourceColorIds.length} color${mergeHistory.sourceColorIds.length > 1 ? 's' : ''} merged, 
             ${mergeHistory.freedSlots.length} slot${mergeHistory.freedSlots.length > 1 ? 's' : ''} freed
           </div>
-          ${!hasViolations ? `
+          ${
+            !hasViolations
+              ? `
             <div class="text-green-400 text-sm mt-1 font-medium">
               ✓ All constraint violations resolved!
             </div>
-          ` : `
+          `
+              : `
             <div class="text-amber-400 text-sm mt-1">
               ${violationCount} layer${violationCount !== 1 ? 's' : ''} still need attention
             </div>
-          `}
+          `
+          }
         </div>
       </div>
     `;
@@ -780,14 +790,14 @@ export class App {
     if (this.factoryFloorUI) {
       this.factoryFloorUI.destroy();
     }
-    
+
     // Save timeline before destroying
     if (this.mergeHistoryTimeline) {
       try {
-        const timelineManager = (appState as any).mergeHistoryManager;
-        if (timelineManager && timelineManager.saveToStorage) {
+        const timelineManager = appState.getMergeHistoryManager();
+        if (timelineManager) {
           // Trigger save but don't await (app is shutting down)
-          timelineManager.saveToStorage().catch((error: any) => {
+          timelineManager.saveToStorage().catch((error) => {
             console.warn('Failed to save timeline on destroy:', error);
           });
         }

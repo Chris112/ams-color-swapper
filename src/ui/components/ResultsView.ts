@@ -2,7 +2,7 @@ import { Component } from '../../core/Component';
 import { AppEvents } from '../../core/EventEmitter';
 import { AppStateData } from '../../state/AppState';
 import { appState } from '../../state/AppState';
-import { GcodeStats } from '../../types';
+import { GcodeStats } from '../../types/gcode';
 import { Color } from '../../domain/models/Color';
 import {
   fileStatsTemplate,
@@ -166,7 +166,7 @@ export class ResultsView extends Component {
         if (match) {
           const num = parseInt(match[1]);
           const suffix = match[2] || '';
-          animateNumber(el as HTMLElement, 0, num, 800, suffix);
+          animateNumber(el as HTMLElement, num, 800, (value) => Math.round(value) + suffix);
         }
       });
 
@@ -208,7 +208,7 @@ export class ResultsView extends Component {
 
   private attachConstraintValidationHandlers(): void {
     // Add global functions for constraint validation interaction
-    (window as any).toggleConstraintDetails = (button: HTMLElement) => {
+    window.toggleConstraintDetails = (button: HTMLElement) => {
       const content = button.parentElement?.nextElementSibling;
       const isExpanded = button.classList.contains('expanded');
 
@@ -223,7 +223,7 @@ export class ResultsView extends Component {
       }
     };
 
-    (window as any).copyToClipboard = async (button: HTMLElement, text: string) => {
+    window.copyToClipboard = async (button: HTMLElement, text: string) => {
       try {
         await navigator.clipboard.writeText(text);
         const originalText = button.textContent;
@@ -436,7 +436,7 @@ export class ResultsView extends Component {
         if (match) {
           const num = parseInt(match[1]);
           const suffix = match[2] || '';
-          animateNumber(el as HTMLElement, 0, num, 1000, suffix);
+          animateNumber(el as HTMLElement, num, 1000, (value) => Math.round(value) + suffix);
         }
         el.classList.add('animate-counter');
       });
@@ -1600,7 +1600,7 @@ export class ResultsView extends Component {
 
     // Clear any existing constraint indicators
     const existingIndicators = overlay.querySelectorAll('.constraint-violation-indicator');
-    existingIndicators.forEach(indicator => indicator.remove());
+    existingIndicators.forEach((indicator) => indicator.remove());
 
     // If no violations, we're done
     if (!stats.constraintValidation?.hasViolations) return;

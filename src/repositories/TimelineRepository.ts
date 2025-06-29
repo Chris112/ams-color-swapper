@@ -1,4 +1,5 @@
-import { Result, CacheError } from '../types';
+import { Result } from '../types/result';
+import { CacheError } from '../types/errors';
 import { MergeTimelineState } from '../services/MergeHistoryManager';
 import LZString from 'lz-string';
 
@@ -33,12 +34,12 @@ export class TimelineRepository {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         if (!db.objectStoreNames.contains(this.storeName)) {
           const store = db.createObjectStore(this.storeName, { keyPath: 'id' });
           store.createIndex('updatedAt', 'metadata.updatedAt', { unique: false });
         }
-        
+
         if (!db.objectStoreNames.contains(this.metadataStore)) {
           db.createObjectStore(this.metadataStore, { keyPath: 'key' });
         }
@@ -73,10 +74,10 @@ export class TimelineRepository {
     try {
       // Optimize the timeline data before compression
       const optimizedState = this.optimizeTimelineData(state);
-      
+
       // Compress the timeline data
       const compressedData = LZString.compressToUTF16(JSON.stringify(optimizedState));
-      
+
       const metadata: TimelineMetadata = {
         id,
         createdAt: Date.now(),
@@ -118,7 +119,9 @@ export class TimelineRepository {
     }
   }
 
-  async loadTimeline(id: string): Promise<Result<{ state: MergeTimelineState; currentIndex: number } | null>> {
+  async loadTimeline(
+    id: string
+  ): Promise<Result<{ state: MergeTimelineState; currentIndex: number } | null>> {
     if (!this.db) {
       return Result.err(new CacheError('Database not initialized', 'loadTimeline'));
     }
@@ -150,7 +153,7 @@ export class TimelineRepository {
       }
 
       const state = JSON.parse(decompressedData);
-      
+
       // Restore the full timeline data
       const restoredState = this.restoreTimelineData(state);
 
@@ -227,7 +230,9 @@ export class TimelineRepository {
     }
   }
 
-  async getStorageMetrics(): Promise<Result<{ totalSize: number; timelineCount: number; oldestTimeline: number }>> {
+  async getStorageMetrics(): Promise<
+    Result<{ totalSize: number; timelineCount: number; oldestTimeline: number }>
+  > {
     if (!this.db) {
       return Result.err(new CacheError('Database not initialized', 'getStorageMetrics'));
     }
@@ -272,13 +277,14 @@ export class TimelineRepository {
       });
 
       const totalSize = timelines.reduce((sum, t) => sum + (t.metadata?.sizeBytes || 0), 0);
-      const oldestTimeline = timelines.length > 0 
-        ? Math.min(...timelines.map(t => t.metadata?.createdAt || Date.now()))
-        : Date.now();
+      const oldestTimeline =
+        timelines.length > 0
+          ? Math.min(...timelines.map((t) => t.metadata?.createdAt || Date.now()))
+          : Date.now();
 
       const metricsTx = this.db.transaction([this.metadataStore], 'readwrite');
       const metricsStore = metricsTx.objectStore(this.metadataStore);
-      
+
       await new Promise<void>((resolve, reject) => {
         const req = metricsStore.put({
           key: 'storage-metrics',
@@ -306,15 +312,16 @@ export class TimelineRepository {
         rawContent: undefined,
         layerDetails: undefined,
         // Convert Map to array for better compression (handle both Map and Array)
-        layerColorMap: snapshot.stats.layerColorMap instanceof Map 
-          ? Array.from(snapshot.stats.layerColorMap.entries())
-          : snapshot.stats.layerColorMap,
+        layerColorMap:
+          snapshot.stats.layerColorMap instanceof Map
+            ? Array.from(snapshot.stats.layerColorMap.entries())
+            : snapshot.stats.layerColorMap,
       },
       optimization: {
         ...snapshot.optimization,
         // Keep only essential optimization data
         slotAssignments: snapshot.optimization.slotAssignments,
-        manualSwaps: snapshot.optimization.manualSwaps.map(swap => ({
+        manualSwaps: snapshot.optimization.manualSwaps.map((swap) => ({
           ...swap,
           // Simplify swap data
           timingOptions: undefined,

@@ -133,11 +133,11 @@ body {
 }
 
 /* Timeline node glow effects */
-.timeline-node[data-current="true"] {
+.timeline-node[data-current='true'] {
   filter: drop-shadow(0 0 10px rgba(139, 92, 246, 0.6));
 }
 
-.timeline-node[data-optimal="true"] {
+.timeline-node[data-optimal='true'] {
   filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
 }
 

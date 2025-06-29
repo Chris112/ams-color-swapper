@@ -33,7 +33,7 @@ export function disableConsoleInProduction(): void {
     // Override each method with a no-op function
     consoleMethods.forEach((method) => {
       if (method in console) {
-        (console as any)[method] = noop;
+        (console[method] as unknown) = noop;
       }
     });
 
@@ -41,9 +41,9 @@ export function disableConsoleInProduction(): void {
     const consoleProxy = new Proxy(console, {
       get: () => noop,
       set: () => true,
-    });
+    }) as unknown as Console;
 
     // Replace global console
-    (window as any).console = consoleProxy;
+    window.console = consoleProxy;
   }
 }

@@ -1,7 +1,10 @@
-import { GcodeStats, OptimizationResult, ConstraintValidationResult } from '../types';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
+import { ConstraintValidationResult } from '../types/constraints';
 import { TimelineStateMachine, TimelineAction } from './TimelineStateMachine';
 import { TimelineRepository } from '../repositories/TimelineRepository';
 import { Color } from '../domain/models/Color';
+import { assertDefined, getFromMap } from '../utils/typeGuards';
 
 export interface StateSnapshot {
   id: string;
@@ -32,7 +35,7 @@ export class MergeHistoryManager {
   private static readonly MAX_HISTORY_SIZE = 50;
   private static readonly STORAGE_KEY = 'ams-merge-timeline';
   private static readonly TIMELINE_ID = 'current-timeline';
-  
+
   private snapshots: StateSnapshot[] = [];
   private currentIndex: number = -1;
   private branches: Map<string, string[]> = new Map();
@@ -41,14 +44,14 @@ export class MergeHistoryManager {
   private timelineRepository: TimelineRepository;
   private isInitialized: boolean = false;
   private saveDebounceTimer: number | null = null;
-  
+
   constructor() {
     this.branches.set('main', []);
     this.stateMachine = new TimelineStateMachine();
     this.timelineRepository = new TimelineRepository();
     this.initialize();
   }
-  
+
   private async initialize(): Promise<void> {
     const result = await this.timelineRepository.initialize();
     if (result.ok) {
@@ -57,7 +60,7 @@ export class MergeHistoryManager {
       console.error('Failed to initialize timeline repository:', result.error);
     }
   }
-  
+
   /**
    * Add initial state snapshot
    */
@@ -66,12 +69,12 @@ export class MergeHistoryManager {
       console.warn('Cannot initialize timeline in current state');
       return;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.INITIALIZE);
-    
+
     const violationCount = stats.constraintValidation?.summary.impossibleLayerCount || 0;
     const colorCount = stats.colors.length;
-    
+
     const snapshot: StateSnapshot = {
       id: this.generateId(),
       timestamp: Date.now(),
@@ -82,11 +85,16 @@ export class MergeHistoryManager {
       violationCount,
       colorCount,
     };
-    
+
     this.snapshots = [snapshot];
     this.currentIndex = 0;
-    this.branches.get(this.currentBranch)!.push(snapshot.id);
-    
+    const branch = getFromMap(
+      this.branches,
+      this.currentBranch,
+      `Branch not found: ${this.currentBranch}`
+    );
+    branch.push(snapshot.id);
+
     // Update state machine context
     this.stateMachine.updateContext({
       currentSnapshot: snapshot,
@@ -94,7 +102,7 @@ export class MergeHistoryManager {
       canRedo: false,
     });
   }
-  
+
   /**
    * Add a new merge state
    */
@@ -107,21 +115,27 @@ export class MergeHistoryManager {
       console.warn('Cannot add merge state in current timeline state');
       return;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.ADD_MERGE);
-    
+
     // Remove any states after current index (when we're not at the end)
     if (this.currentIndex < this.snapshots.length - 1) {
       this.snapshots = this.snapshots.slice(0, this.currentIndex + 1);
       // Update branch
-      const branchIds = this.branches.get(this.currentBranch)!;
-      const currentSnapshotIndex = branchIds.indexOf(this.snapshots[this.currentIndex].id);
+      const branchIds = getFromMap(
+        this.branches,
+        this.currentBranch,
+        `Branch not found: ${this.currentBranch}`
+      );
+      const currentSnapshot = this.snapshots[this.currentIndex];
+      assertDefined(currentSnapshot, 'Current snapshot not found');
+      const currentSnapshotIndex = branchIds.indexOf(currentSnapshot.id);
       this.branches.set(this.currentBranch, branchIds.slice(0, currentSnapshotIndex + 1));
     }
-    
+
     const violationCount = stats.constraintValidation?.summary.impossibleLayerCount || 0;
     const colorCount = stats.colors.length;
-    
+
     const snapshot: StateSnapshot = {
       id: this.generateId(),
       timestamp: Date.now(),
@@ -134,38 +148,44 @@ export class MergeHistoryManager {
       violationCount,
       colorCount,
     };
-    
+
     this.snapshots.push(snapshot);
     this.currentIndex++;
-    this.branches.get(this.currentBranch)!.push(snapshot.id);
-    
+    const branch = getFromMap(
+      this.branches,
+      this.currentBranch,
+      `Branch not found: ${this.currentBranch}`
+    );
+    branch.push(snapshot.id);
+
     // Complete the merge action
     this.stateMachine.performAction(TimelineAction.ADD_MERGE);
-    
+
     // Update state machine context
     this.stateMachine.updateContext({
       currentSnapshot: snapshot,
       canUndo: this.currentIndex > 0,
       canRedo: false,
     });
-    
+
     // Enforce history size limit
     if (this.snapshots.length > MergeHistoryManager.MAX_HISTORY_SIZE) {
       const removedSnapshot = this.snapshots.shift();
       this.currentIndex--;
       // Update all branches
       this.branches.forEach((ids, branchName) => {
-        const index = ids.indexOf(removedSnapshot!.id);
+        assertDefined(removedSnapshot, 'Removed snapshot is undefined');
+        const index = ids.indexOf(removedSnapshot.id);
         if (index !== -1) {
           ids.splice(index, 1);
         }
       });
     }
-    
+
     // Auto-save after adding merge state
     this.saveToStorage();
   }
-  
+
   /**
    * Navigate to previous state
    */
@@ -173,25 +193,25 @@ export class MergeHistoryManager {
     if (!this.stateMachine.canPerformAction(TimelineAction.UNDO)) {
       return null;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.UNDO);
-    
+
     if (this.currentIndex > 0) {
       this.currentIndex--;
       const snapshot = this.getCurrentSnapshot();
-      
+
       this.stateMachine.performAction(TimelineAction.UNDO);
       this.stateMachine.updateContext({
         currentSnapshot: snapshot || undefined,
         canUndo: this.currentIndex > 0,
         canRedo: true,
       });
-      
+
       return snapshot;
     }
     return null;
   }
-  
+
   /**
    * Navigate to next state
    */
@@ -199,25 +219,25 @@ export class MergeHistoryManager {
     if (!this.stateMachine.canPerformAction(TimelineAction.REDO)) {
       return null;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.REDO);
-    
+
     if (this.currentIndex < this.snapshots.length - 1) {
       this.currentIndex++;
       const snapshot = this.getCurrentSnapshot();
-      
+
       this.stateMachine.performAction(TimelineAction.REDO);
       this.stateMachine.updateContext({
         currentSnapshot: snapshot || undefined,
         canUndo: true,
         canRedo: this.currentIndex < this.snapshots.length - 1,
       });
-      
+
       return snapshot;
     }
     return null;
   }
-  
+
   /**
    * Jump to specific snapshot
    */
@@ -225,26 +245,26 @@ export class MergeHistoryManager {
     if (!this.stateMachine.canPerformAction(TimelineAction.JUMP_TO)) {
       return null;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.JUMP_TO);
-    
-    const index = this.snapshots.findIndex(s => s.id === snapshotId);
+
+    const index = this.snapshots.findIndex((s) => s.id === snapshotId);
     if (index !== -1) {
       this.currentIndex = index;
       const snapshot = this.getCurrentSnapshot();
-      
+
       this.stateMachine.performAction(TimelineAction.JUMP_TO);
       this.stateMachine.updateContext({
         currentSnapshot: snapshot || undefined,
         canUndo: this.currentIndex > 0,
         canRedo: this.currentIndex < this.snapshots.length - 1,
       });
-      
+
       return snapshot;
     }
     return null;
   }
-  
+
   /**
    * Reset to initial state
    */
@@ -252,24 +272,24 @@ export class MergeHistoryManager {
     if (!this.stateMachine.canPerformAction(TimelineAction.RESET)) {
       return null;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.RESET);
-    
+
     if (this.snapshots.length > 0) {
       this.currentIndex = 0;
       const snapshot = this.getCurrentSnapshot();
-      
+
       this.stateMachine.updateContext({
         currentSnapshot: snapshot || undefined,
         canUndo: false,
         canRedo: this.snapshots.length > 1,
       });
-      
+
       return snapshot;
     }
     return null;
   }
-  
+
   /**
    * Create a new branch from current state
    */
@@ -277,34 +297,38 @@ export class MergeHistoryManager {
     if (!this.stateMachine.canPerformAction(TimelineAction.CREATE_BRANCH)) {
       return false;
     }
-    
+
     if (this.branches.has(branchName)) {
       return false;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.CREATE_BRANCH);
-    
+
     const currentSnapshot = this.getCurrentSnapshot();
     if (!currentSnapshot) {
       return false;
     }
-    
+
     // Create branch from current position
-    const currentBranchIds = this.branches.get(this.currentBranch)!;
+    const currentBranchIds = getFromMap(
+      this.branches,
+      this.currentBranch,
+      `Branch not found: ${this.currentBranch}`
+    );
     const currentIdIndex = currentBranchIds.indexOf(currentSnapshot.id);
     const newBranchIds = currentBranchIds.slice(0, currentIdIndex + 1);
-    
+
     this.branches.set(branchName, newBranchIds);
     this.currentBranch = branchName;
-    
+
     this.stateMachine.performAction(TimelineAction.CREATE_BRANCH);
     this.stateMachine.updateContext({
       currentBranch: branchName,
     });
-    
+
     return true;
   }
-  
+
   /**
    * Switch to a different branch
    */
@@ -312,31 +336,32 @@ export class MergeHistoryManager {
     if (!this.stateMachine.canPerformAction(TimelineAction.SWITCH_BRANCH)) {
       return null;
     }
-    
+
     if (!this.branches.has(branchName)) {
       return null;
     }
-    
+
     this.stateMachine.performAction(TimelineAction.SWITCH_BRANCH);
-    
+
     this.currentBranch = branchName;
-    const branchIds = this.branches.get(branchName)!;
-    
+    const branchIds = getFromMap(this.branches, branchName, `Branch not found: ${branchName}`);
+
     if (branchIds.length > 0) {
       const lastId = branchIds[branchIds.length - 1];
+      assertDefined(lastId, 'No snapshots in branch');
       const result = this.jumpToSnapshot(lastId);
-      
+
       this.stateMachine.performAction(TimelineAction.SWITCH_BRANCH);
       this.stateMachine.updateContext({
         currentBranch: branchName,
       });
-      
+
       return result;
     }
-    
+
     return null;
   }
-  
+
   /**
    * Get current state snapshot
    */
@@ -346,7 +371,7 @@ export class MergeHistoryManager {
     }
     return null;
   }
-  
+
   /**
    * Get all snapshots for timeline display
    */
@@ -358,42 +383,42 @@ export class MergeHistoryManager {
       currentBranch: this.currentBranch,
     };
   }
-  
+
   /**
    * Get snapshot by ID
    */
   public getSnapshot(id: string): StateSnapshot | null {
-    return this.snapshots.find(s => s.id === id) || null;
+    return this.snapshots.find((s) => s.id === id) || null;
   }
-  
+
   /**
    * Check if can undo
    */
   public canUndo(): boolean {
     return this.stateMachine.canPerformAction(TimelineAction.UNDO);
   }
-  
+
   /**
    * Check if can redo
    */
   public canRedo(): boolean {
     return this.stateMachine.canPerformAction(TimelineAction.REDO);
   }
-  
+
   /**
    * Get current timeline state
    */
   public getTimelineState() {
     return this.stateMachine.getCurrentState();
   }
-  
+
   /**
    * Get available actions
    */
   public getAvailableActions() {
     return this.stateMachine.getAvailableActions();
   }
-  
+
   /**
    * Get storage metrics
    */
@@ -404,7 +429,7 @@ export class MergeHistoryManager {
     const result = await this.timelineRepository.getStorageMetrics();
     return result.ok ? result.value : null;
   }
-  
+
   /**
    * Save timeline to IndexedDB with compression
    */
@@ -413,12 +438,12 @@ export class MergeHistoryManager {
       console.warn('Timeline repository not initialized');
       return;
     }
-    
+
     // Debounce saves to avoid excessive writes
     if (this.saveDebounceTimer) {
       clearTimeout(this.saveDebounceTimer);
     }
-    
+
     this.saveDebounceTimer = setTimeout(async () => {
       const timelineState: MergeTimelineState = {
         snapshots: this.snapshots,
@@ -426,13 +451,13 @@ export class MergeHistoryManager {
         branches: this.branches,
         currentBranch: this.currentBranch,
       };
-      
+
       const result = await this.timelineRepository.saveTimeline(
         MergeHistoryManager.TIMELINE_ID,
         timelineState,
         this.currentIndex
       );
-      
+
       if (!result.ok) {
         console.error('Failed to save timeline:', result.error);
         // Fallback to localStorage for critical data only
@@ -440,7 +465,7 @@ export class MergeHistoryManager {
       }
     }, 500) as unknown as number;
   }
-  
+
   private saveMinimalToLocalStorage(): void {
     try {
       // Save only minimal data to localStorage as fallback
@@ -449,12 +474,15 @@ export class MergeHistoryManager {
         currentBranch: this.currentBranch,
         snapshotCount: this.snapshots.length,
       };
-      localStorage.setItem(MergeHistoryManager.STORAGE_KEY + '-minimal', JSON.stringify(minimalData));
+      localStorage.setItem(
+        MergeHistoryManager.STORAGE_KEY + '-minimal',
+        JSON.stringify(minimalData)
+      );
     } catch (error) {
       console.error('Failed to save minimal timeline data:', error);
     }
   }
-  
+
   /**
    * Load timeline from IndexedDB
    */
@@ -462,29 +490,30 @@ export class MergeHistoryManager {
     if (!this.isInitialized) {
       await this.initialize();
     }
-    
+
     try {
       const result = await this.timelineRepository.loadTimeline(MergeHistoryManager.TIMELINE_ID);
-      
+
       if (result.ok && result.value) {
         const { state, currentIndex } = result.value;
         this.snapshots = state.snapshots;
         this.currentIndex = currentIndex;
         this.branches = state.branches;
         this.currentBranch = state.currentBranch;
-        
+
         // Update state machine context
-        if (this.currentIndex >= 0 && this.snapshots[this.currentIndex]) {
+        const currentSnapshot = this.snapshots[this.currentIndex];
+        if (this.currentIndex >= 0 && currentSnapshot) {
           this.stateMachine.updateContext({
-            currentSnapshot: this.snapshots[this.currentIndex],
+            currentSnapshot: currentSnapshot,
             canUndo: this.currentIndex > 0,
             canRedo: this.currentIndex < this.snapshots.length - 1,
           });
         }
-        
+
         return true;
       }
-      
+
       // Try to migrate from localStorage if IndexedDB is empty
       return this.migrateFromLocalStorage();
     } catch (error) {
@@ -492,22 +521,22 @@ export class MergeHistoryManager {
       return false;
     }
   }
-  
+
   private migrateFromLocalStorage(): boolean {
     try {
       const data = localStorage.getItem(MergeHistoryManager.STORAGE_KEY);
       if (!data) return false;
-      
+
       const parsed = JSON.parse(data);
       this.snapshots = parsed.snapshots || [];
       this.currentIndex = parsed.currentIndex || -1;
       this.branches = new Map(parsed.branches || []);
       this.currentBranch = parsed.currentBranch || 'main';
-      
+
       // Save to IndexedDB and remove from localStorage
       this.saveToStorage();
       localStorage.removeItem(MergeHistoryManager.STORAGE_KEY);
-      
+
       console.log('Successfully migrated timeline from localStorage to IndexedDB');
       return true;
     } catch (error) {
@@ -515,7 +544,7 @@ export class MergeHistoryManager {
       return false;
     }
   }
-  
+
   /**
    * Clear saved timeline
    */
@@ -526,21 +555,25 @@ export class MergeHistoryManager {
     localStorage.removeItem(MergeHistoryManager.STORAGE_KEY);
     localStorage.removeItem(MergeHistoryManager.STORAGE_KEY + '-minimal');
   }
-  
+
   /**
    * Export timeline as JSON
    */
   public exportTimeline(): string {
-    return JSON.stringify({
-      snapshots: this.snapshots,
-      branches: Array.from(this.branches.entries()),
-      metadata: {
-        exportDate: new Date().toISOString(),
-        version: '1.0',
+    return JSON.stringify(
+      {
+        snapshots: this.snapshots,
+        branches: Array.from(this.branches.entries()),
+        metadata: {
+          exportDate: new Date().toISOString(),
+          version: '1.0',
+        },
       },
-    }, null, 2);
+      null,
+      2
+    );
   }
-  
+
   /**
    * Import timeline from JSON
    */
@@ -550,26 +583,28 @@ export class MergeHistoryManager {
       if (!data.snapshots || !Array.isArray(data.snapshots)) {
         return false;
       }
-      
+
       this.snapshots = data.snapshots;
-      this.branches = new Map(data.branches || [['main', data.snapshots.map((s: any) => s.id)]]);
+      this.branches = new Map(
+        data.branches || [['main', data.snapshots.map((s: StateSnapshot) => s.id)]]
+      );
       this.currentIndex = this.snapshots.length - 1;
       this.currentBranch = 'main';
-      
+
       return true;
     } catch (error) {
       console.error('Failed to import timeline:', error);
       return false;
     }
   }
-  
+
   /**
    * Generate unique ID
    */
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   /**
    * Deep clone stats
    */
@@ -577,40 +612,47 @@ export class MergeHistoryManager {
     // Properly clone stats while preserving Map types
     return {
       ...stats,
-      colors: stats.colors.map(c => new Color({
-        id: c.id,
-        name: c.name,
-        hexValue: c.hexValue,
-        firstLayer: c.firstLayer,
-        lastLayer: c.lastLayer,
-        layersUsed: new Set(c.layersUsed),
-        partialLayers: new Set(c.partialLayers),
-        totalLayers: stats.totalLayers,
-      })),
+      colors: stats.colors.map(
+        (c) =>
+          new Color({
+            id: c.id,
+            name: c.name,
+            hexValue: c.hexValue,
+            firstLayer: c.firstLayer,
+            lastLayer: c.lastLayer,
+            layersUsed: new Set(c.layersUsed),
+            partialLayers: new Set(c.partialLayers),
+            totalLayers: stats.totalLayers,
+          })
+      ),
       toolChanges: [...stats.toolChanges],
       layerColorMap: new Map(stats.layerColorMap),
       colorUsageRanges: [...stats.colorUsageRanges],
       layerDetails: stats.layerDetails ? [...stats.layerDetails] : undefined,
       filamentEstimates: stats.filamentEstimates ? [...stats.filamentEstimates] : undefined,
       parserWarnings: [...stats.parserWarnings],
-      constraintValidation: stats.constraintValidation ? {
-        ...stats.constraintValidation,
-        violations: stats.constraintValidation.violations.map(v => ({
-          ...v,
-          affectedLayers: v.affectedLayers.map(al => ({ ...al })),
-          suggestions: v.suggestions.map(s => ({ ...s })),
-        })),
-        summary: { ...stats.constraintValidation.summary },
-      } : undefined,
-      deduplicationInfo: stats.deduplicationInfo ? {
-        ...stats.deduplicationInfo,
-        duplicatesFound: [...stats.deduplicationInfo.duplicatesFound],
-        freedSlots: [...stats.deduplicationInfo.freedSlots],
-        colorMapping: new Map(stats.deduplicationInfo.colorMapping),
-      } : undefined,
+      constraintValidation: stats.constraintValidation
+        ? {
+            ...stats.constraintValidation,
+            violations: stats.constraintValidation.violations.map((v) => ({
+              ...v,
+              affectedLayers: v.affectedLayers.map((al) => ({ ...al })),
+              suggestions: v.suggestions.map((s) => ({ ...s })),
+            })),
+            summary: { ...stats.constraintValidation.summary },
+          }
+        : undefined,
+      deduplicationInfo: stats.deduplicationInfo
+        ? {
+            ...stats.deduplicationInfo,
+            duplicatesFound: [...stats.deduplicationInfo.duplicatesFound],
+            freedSlots: [...stats.deduplicationInfo.freedSlots],
+            colorMapping: new Map(stats.deduplicationInfo.colorMapping),
+          }
+        : undefined,
     };
   }
-  
+
   /**
    * Deep clone optimization
    */
@@ -618,7 +660,7 @@ export class MergeHistoryManager {
     // Deep clone to prevent mutations
     return JSON.parse(JSON.stringify(optimization));
   }
-  
+
   /**
    * Clear all timeline data
    */

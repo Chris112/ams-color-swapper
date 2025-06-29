@@ -10,7 +10,7 @@ import { GcodeParserFSM } from '../variants/GcodeParserFSM';
 import { GcodeParserBuffer } from '../variants/GcodeParserBuffer';
 import { GcodeParserLazy } from '../variants/GcodeParserLazy';
 import { Logger } from '../../utils/logger';
-import { GcodeStats } from '../../types';
+import { GcodeStats } from '../../types/gcode';
 
 // Mock the Browser File object for Node.js environment
 class MockFile {

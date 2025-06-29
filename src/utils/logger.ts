@@ -1,4 +1,4 @@
-import { DebugLog } from '../types';
+import { DebugLog } from '../types/logging';
 
 export class Logger {
   private logs: DebugLog[] = [];
@@ -7,7 +7,9 @@ export class Logger {
   private componentName?: string;
 
   constructor(componentName?: string) {
-    this.componentName = componentName;
+    if (componentName !== undefined) {
+      this.componentName = componentName;
+    }
     this.enabled = import.meta.env.MODE === 'development';
   }
 

@@ -58,7 +58,7 @@ describe('hash utilities', () => {
         slice: vi.fn((start, end) => ({
           arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(end - start)),
         })),
-      } as any;
+      } as unknown as File;
 
       const mockHashBuffer = new ArrayBuffer(32);
       mockDigest.mockResolvedValue(mockHashBuffer);

@@ -1,5 +1,7 @@
 import { ICommand } from './ICommand';
-import { Result, GcodeStats, OptimizationResult } from '../types';
+import { Result } from '../types/result';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
 import { ExportService } from '../services/ExportService';
 
 export enum ExportFormat {

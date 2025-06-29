@@ -1,4 +1,4 @@
-import { Result } from '../types';
+import { Result } from '../types/result';
 import { PrintData } from '../services/FactoryFloorService';
 
 export interface IFactoryFloorRepository {

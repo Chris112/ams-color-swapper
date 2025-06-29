@@ -1,5 +1,6 @@
 import { GcodeParser } from '../parser/gcodeParser';
 import { Logger } from '../utils/logger';
+import type { ParserWorkerRequest } from '../types/worker';
 
 // Web Worker for parsing G-code files in a background thread
 let parser: GcodeParser;
@@ -14,8 +15,8 @@ function initialize(onProgress?: (progress: number, message: string) => void) {
 }
 
 // Handle messages from the main thread
-self.addEventListener('message', async (event) => {
-  const { type, payload } = event.data;
+self.addEventListener('message', async (event: MessageEvent<ParserWorkerRequest>) => {
+  const { type } = event.data;
 
   switch (type) {
     case 'parse':
@@ -30,7 +31,7 @@ self.addEventListener('message', async (event) => {
 
         initialize(progressCallback);
 
-        const { fileContent, fileName } = payload;
+        const { fileContent, fileName } = event.data.payload;
 
         // Create a fake File object for the parser
         const blob = new Blob([fileContent], { type: 'text/plain' });

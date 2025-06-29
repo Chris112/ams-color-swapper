@@ -1,5 +1,5 @@
 import { Vector3, Color } from 'three';
-import { GcodeStats } from '../../../types';
+import { GcodeStats } from '../../../types/gcode';
 import { VoxelData, VolumetricData } from './types';
 import { Color as DomainColor } from '../../../domain/models/Color';
 

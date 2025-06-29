@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GcodeStats } from '../types';
+import { GcodeStats } from '../types/gcode';
 import { Color } from '../domain/models/Color';
 
 export interface GcodePath {
@@ -192,7 +192,7 @@ export class GcodeToGeometryConverter {
 
     // Handle tool changes
     if (commands.has('T')) {
-      toolChange = commands.get('T')!;
+      toolChange = commands.get('T');
     }
 
     // Handle movement commands
@@ -203,15 +203,24 @@ export class GcodeToGeometryConverter {
       // Map 3D printer coordinates to Three.js coordinates:
       // G-code: X=left/right, Y=front/back, Z=up/down
       // Three.js: X=left/right, Y=up/down, Z=front/back
-      if (commands.has('X')) newPosition.x = commands.get('X')! * this.SCALE_FACTOR;
-      if (commands.has('Y')) newPosition.z = commands.get('Y')! * this.SCALE_FACTOR; // Y becomes Z
-      if (commands.has('Z')) newPosition.y = commands.get('Z')! * this.SCALE_FACTOR; // Z becomes Y
+      if (commands.has('X')) {
+        const xValue = commands.get('X');
+        if (xValue !== undefined) newPosition.x = xValue * this.SCALE_FACTOR;
+      }
+      if (commands.has('Y')) {
+        const yValue = commands.get('Y');
+        if (yValue !== undefined) newPosition.z = yValue * this.SCALE_FACTOR; // Y becomes Z
+      }
+      if (commands.has('Z')) {
+        const zValue = commands.get('Z');
+        if (zValue !== undefined) newPosition.y = zValue * this.SCALE_FACTOR; // Z becomes Y
+      }
 
       // Check for extrusion - only G1 moves with positive E values are extruding
       if (commands.has('E')) {
-        const eValue = commands.get('E')!;
+        const eValue = commands.get('E');
         // Only consider it extruding if it's G1 with a positive E value
-        extruding = gCode === 1 && eValue > 0;
+        extruding = gCode === 1 && eValue !== undefined && eValue > 0;
       } else {
         // Without E parameter, G0 is travel, G1 could be travel or extrusion
         // Be conservative and only treat explicit E+ moves as extrusion
@@ -246,7 +255,10 @@ export class GcodeToGeometryConverter {
       if (!layerMap.has(path.layer)) {
         layerMap.set(path.layer, []);
       }
-      layerMap.get(path.layer)!.push(path);
+      const layerPaths = layerMap.get(path.layer);
+      if (layerPaths) {
+        layerPaths.push(path);
+      }
     });
 
     const layers: GeometryLayer[] = [];
@@ -310,8 +322,10 @@ export class GcodeToGeometryConverter {
         geometriesByTool.set(path.toolIndex, { paths: [], color: path.color });
       }
 
-      const toolData = geometriesByTool.get(path.toolIndex)!;
-      toolData.paths.push(path);
+      const toolData = geometriesByTool.get(path.toolIndex);
+      if (toolData) {
+        toolData.paths.push(path);
+      }
     });
 
     const layerGeometries: GeometryLayer[] = [];

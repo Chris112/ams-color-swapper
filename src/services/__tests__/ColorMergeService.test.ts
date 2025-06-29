@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { ColorMergeService } from '../ColorMergeService';
 import { Color } from '../../domain/models/Color';
-import { GcodeStats } from '../../types';
+import { GcodeStats } from '../../types/gcode';
 
 describe('ColorMergeService', () => {
   let service: ColorMergeService;
@@ -156,8 +156,7 @@ describe('ColorMergeService', () => {
         { start: 45, end: 60 },
       ];
 
-      // Access private method through type assertion
-      const merged = (service as any).mergeOverlappingRanges(ranges);
+      const merged = service.mergeOverlappingRanges(ranges);
 
       expect(merged).toEqual([
         { start: 0, end: 30 },
@@ -172,7 +171,7 @@ describe('ColorMergeService', () => {
         { start: 31, end: 40 },
       ];
 
-      const merged = (service as any).mergeOverlappingRanges(ranges);
+      const merged = service.mergeOverlappingRanges(ranges);
 
       expect(merged).toEqual([{ start: 0, end: 40 }]);
     });

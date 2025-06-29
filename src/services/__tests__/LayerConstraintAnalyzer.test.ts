@@ -1,21 +1,27 @@
 import { describe, it, expect } from 'vitest';
 import { LayerConstraintAnalyzer } from '../LayerConstraintAnalyzer';
-import { GcodeStats, SystemConfiguration } from '../../types';
+import { GcodeStats } from '../../types/gcode';
+import { SystemConfiguration } from '../../types/configuration';
 import { Color } from '../../domain/models/Color';
 
 describe('LayerConstraintAnalyzer', () => {
-  const createMockStats = (colorCount: number, layerColorMap: Map<number, string[]>): GcodeStats => {
-    const colors = Array.from({ length: colorCount }, (_, i) => 
-      new Color({
-        id: `T${i}`,
-        name: `Color ${i}`,
-        hexValue: `#${i.toString(16).padStart(6, '0')}`,
-        firstLayer: 0,
-        lastLayer: 100,
-        layersUsed: new Set(),
-        partialLayers: new Set(),
-        totalLayers: 100,
-      })
+  const createMockStats = (
+    colorCount: number,
+    layerColorMap: Map<number, string[]>
+  ): GcodeStats => {
+    const colors = Array.from(
+      { length: colorCount },
+      (_, i) =>
+        new Color({
+          id: `T${i}`,
+          name: `Color ${i}`,
+          hexValue: `#${i.toString(16).padStart(6, '0')}`,
+          firstLayer: 0,
+          lastLayer: 100,
+          layersUsed: new Set(),
+          partialLayers: new Set(),
+          totalLayers: 100,
+        })
     );
 
     return {
@@ -135,10 +141,10 @@ describe('LayerConstraintAnalyzer', () => {
       // Should have no violations at all
       expect(result.hasViolations).toBe(false);
       expect(result.violations.length).toBe(0);
-      
+
       // Verify no violations have 'suboptimal' type
-      result.violations.forEach(violation => {
-        violation.affectedLayers.forEach(layer => {
+      result.violations.forEach((violation) => {
+        violation.affectedLayers.forEach((layer) => {
           expect(layer.violationType).not.toBe('suboptimal');
         });
       });
@@ -160,9 +166,9 @@ describe('LayerConstraintAnalyzer', () => {
 
       expect(result.hasViolations).toBe(true);
       expect(result.violations[0].suggestions.length).toBeGreaterThan(0);
-      
+
       // Should have at least one merge suggestion
-      const mergeSuggestions = result.violations[0].suggestions.filter(s => s.type === 'merge');
+      const mergeSuggestions = result.violations[0].suggestions.filter((s) => s.type === 'merge');
       expect(mergeSuggestions.length).toBeGreaterThan(0);
     });
   });

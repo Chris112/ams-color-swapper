@@ -317,7 +317,11 @@ export class FilamentSyncStatus extends Component {
     // Check if the state has special UI properties
     const uiWithExtras =
       state.ui && 'showUpToDateFeedback' in state.ui
-        ? { ...uiState, showUpToDateFeedback: (state.ui as any).showUpToDateFeedback }
+        ? {
+            ...uiState,
+            showUpToDateFeedback: (state.ui as { showUpToDateFeedback: boolean })
+              .showUpToDateFeedback,
+          }
         : uiState;
 
     // Update UI elements based on centralized state

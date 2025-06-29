@@ -154,9 +154,11 @@ export class ExamplePanel {
     // Add click handlers for examples
     this.container.querySelectorAll('[data-filename]').forEach((element) => {
       element.addEventListener('click', () => {
-        const filename = element.getAttribute('data-filename')!;
-        const name = element.getAttribute('data-name')!;
-        this.loadExample(filename, name);
+        const filename = element.getAttribute('data-filename');
+        const name = element.getAttribute('data-name');
+        if (filename && name) {
+          this.loadExample(filename, name);
+        }
       });
     });
 

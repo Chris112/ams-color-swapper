@@ -3,7 +3,11 @@
  * Handles all API fetching without blocking the main UI thread
  */
 
-import { FilamentDatabaseStorage, StoredFilament } from '../services/FilamentDatabaseStorage';
+import {
+  FilamentDatabaseStorage,
+  StoredFilament,
+  SyncStatus,
+} from '../services/FilamentDatabaseStorage';
 import { Logger } from '../utils/logger';
 
 interface FilamentSwatch {
@@ -58,12 +62,10 @@ interface ApiVersionResponse {
   db_last_modified: number;
 }
 
-interface WorkerMessage {
-  type: 'START_SYNC' | 'STOP_SYNC' | 'GET_STATUS' | 'CLEAR_DATA';
-  payload?: any;
-}
+import { FilamentWorkerMessage, FilamentWorkerResponse } from '../types/worker/filament';
 
-interface WorkerResponse {
+// Update response type to match our definition
+type WorkerResponse = FilamentWorkerResponse & {
   type:
     | 'WORKER_READY'
     | 'SYNC_PROGRESS'
@@ -72,7 +74,7 @@ interface WorkerResponse {
     | 'STATUS'
     | 'DATA_CLEARED';
   payload?: any;
-}
+};
 
 class FilamentDatabaseWorker {
   private storage: FilamentDatabaseStorage;
@@ -111,7 +113,7 @@ class FilamentDatabaseWorker {
     }
   }
 
-  async handleMessage(message: WorkerMessage): Promise<void> {
+  async handleMessage(message: FilamentWorkerMessage): Promise<void> {
     this.logger.debug('Worker received message', { type: message.type, payload: message.payload });
 
     if (!this.isInitialized) {
@@ -378,14 +380,18 @@ class FilamentDatabaseWorker {
       }
 
       // Mark sync as complete with version info
-      const syncCompletionData = {
+      const syncCompletionData: Partial<SyncStatus> = {
         is_syncing: false,
         last_sync: Date.now(),
         synced_pages: syncedPages,
         total_pages: totalPages,
-        db_version: versionInfo?.db_version,
-        db_last_modified: versionInfo?.db_last_modified,
       };
+      if (versionInfo?.db_version !== undefined) {
+        syncCompletionData.db_version = versionInfo.db_version;
+      }
+      if (versionInfo?.db_last_modified !== undefined) {
+        syncCompletionData.db_last_modified = versionInfo.db_last_modified;
+      }
       this.logger.info('Updating sync status with completion data', syncCompletionData);
       await this.storage.updateSyncStatus(syncCompletionData);
 
@@ -457,7 +463,7 @@ class FilamentDatabaseWorker {
       // Check remote database version
       this.logger.info('Fetching version info from API...');
       const response = await fetch('https://filamentcolors.xyz/api/version/', {
-        signal: this.currentSyncController?.signal,
+        signal: this.currentSyncController?.signal ?? null,
       });
 
       this.logger.info('Version API response', {
@@ -620,7 +626,7 @@ class FilamentDatabaseWorker {
       this.logger.info('Fetching page', { pageNumber, url });
 
       const response = await fetch(url, {
-        signal: this.currentSyncController?.signal,
+        signal: this.currentSyncController?.signal ?? null,
       });
 
       if (!response.ok) {
@@ -694,6 +700,6 @@ class FilamentDatabaseWorker {
 // Worker initialization
 const worker = new FilamentDatabaseWorker();
 
-self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
+self.onmessage = async (event: MessageEvent<FilamentWorkerMessage>) => {
   await worker.handleMessage(event.data);
 };

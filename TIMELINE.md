@@ -1,6 +1,7 @@
 # Merge Timeline System Implementation Plan
 
 ## Overview
+
 Implement a comprehensive timeline system that allows users to navigate through their merge history, explore different merge strategies, and find the optimal color configuration for their prints.
 
 ## Architecture
@@ -8,6 +9,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
 ### 1. Core Components
 
 #### 1.1 MergeHistoryManager (Already created)
+
 - **Location**: `/src/services/MergeHistoryManager.ts`
 - **Responsibilities**:
   - Store complete state snapshots at each merge point
@@ -17,6 +19,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
   - Export/import timeline configurations
 
 #### 1.2 MergeHistoryTimeline Component (New)
+
 - **Location**: `/src/ui/components/MergeHistoryTimeline.ts`
 - **Responsibilities**:
   - Visual timeline representation
@@ -26,6 +29,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
   - Timeline scrubber
 
 #### 1.3 Enhanced AppState Integration
+
 - **Updates to**: `/src/state/AppState.ts`
 - **Add**:
   - `mergeHistoryManager` instance
@@ -36,6 +40,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
 ### 2. Implementation Steps
 
 #### Step 1: Update AppState Integration
+
 1. Import and instantiate `MergeHistoryManager` in `AppState`
 2. Add methods:
    - `navigateToSnapshot(snapshotId: string)`
@@ -48,6 +53,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
 5. Add keyboard shortcut listeners for Ctrl+Z/Ctrl+Y
 
 #### Step 2: Create MergeHistoryTimeline Component
+
 1. Create visual timeline with:
    - Horizontal timeline bar
    - Nodes for each state (circles/diamonds)
@@ -66,6 +72,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
    - Timeline settings (show/hide details)
 
 #### Step 3: Create Timeline Preview Component
+
 1. Hover preview showing:
    - Merge summary (e.g., "Merged Pink → Light Pink")
    - Before/after color count
@@ -76,6 +83,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
 3. Quick action buttons (jump to this state)
 
 #### Step 4: Update ResultsView Integration
+
 1. Add timeline container to results template
 2. Initialize `MergeHistoryTimeline` when results are shown
 3. Connect timeline events to state updates
@@ -83,12 +91,14 @@ Implement a comprehensive timeline system that allows users to navigate through 
 5. Show/hide timeline based on merge history
 
 #### Step 5: Update Core App Class
+
 1. Add timeline navigation handlers
 2. Connect keyboard shortcuts
 3. Update merge flow to use history manager
 4. Add timeline persistence on app destroy
 
 #### Step 6: Add Branch Management UI
+
 1. Branch selector dropdown
 2. Create branch dialog
 3. Branch comparison view
@@ -96,6 +106,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
 5. Delete branch option
 
 #### Step 7: Add Timeline Persistence
+
 1. Auto-save timeline to localStorage
 2. Export timeline as JSON
 3. Import timeline from JSON
@@ -131,6 +142,7 @@ Implement a comprehensive timeline system that allows users to navigate through 
 ### 4. Data Structures
 
 #### StateSnapshot (Enhanced)
+
 ```typescript
 interface StateSnapshot {
   id: string;

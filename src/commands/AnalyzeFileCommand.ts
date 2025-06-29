@@ -1,5 +1,8 @@
 import { ICommand } from './ICommand';
-import { Result, GcodeStats, OptimizationResult, SystemConfiguration } from '../types';
+import { Result } from '../types/result';
+import { GcodeStats } from '../types/gcode';
+import { OptimizationResult } from '../types/optimization';
+import { SystemConfiguration } from '../types/configuration';
 import { FileProcessingService } from '../services/FileProcessingService';
 import { OptimizationService, OptimizationAlgorithm } from '../services/OptimizationService';
 import { ICacheRepository } from '../repositories';
