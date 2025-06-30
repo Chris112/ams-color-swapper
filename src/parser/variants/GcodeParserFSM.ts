@@ -3,6 +3,7 @@ import { ToolChange } from '../../types/tool';
 import { LayerColorInfo } from '../../types/layer';
 import { Logger } from '../../utils/logger';
 import { BrowserFileReader } from '../../utils/fileReader';
+import { gcodeToInternalLayer } from '../../utils/layerHelpers';
 
 // State machine states
 enum ParserState {
@@ -133,14 +134,8 @@ export class GcodeParserFSM {
       this.onProgress(95, 'Finalizing analysis...');
     }
 
-    // Load raw content for geometry parsing if needed
-    if (!this.stats.rawContent) {
-      if (this.onProgress) {
-        this.onProgress(90, 'Loading content for geometry parsing...');
-      }
-      this.stats.rawContent = await file.text();
-      completeStats.rawContent = this.stats.rawContent;
-    }
+    // rawContent is loaded on-demand to prevent memory issues
+    // It will be populated when needed by downstream components
 
     return completeStats;
   }
@@ -296,7 +291,9 @@ export class GcodeParserFSM {
     if (comment.includes('layer')) {
       const layerMatch = comment.match(/layer\s*(?:#|num\/total_layer_count:)?\s*(\d+)/i);
       if (layerMatch) {
-        const newLayer = parseInt(layerMatch[1]);
+        const gcodeLayer = parseInt(layerMatch[1]);
+        // Convert G-code layer number to internal 0-based layer number
+        const newLayer = gcodeToInternalLayer(gcodeLayer, true); // Assume 1-based G-code
         if (newLayer !== this.currentLayer) {
           // Finalize previous layer details
           if (this.currentLayer >= 0) {
@@ -311,9 +308,15 @@ export class GcodeParserFSM {
           }
           this.initializeLayer(this.currentLayer);
 
-          // Add only the currently active tool to this layer
-          // Each layer should only have the color that's actually being used
-          if (this.currentTool !== null) {
+          // Add all active tools to this layer (carry forward from previous layer)
+          if (this.currentLayer > 0) {
+            const previousLayerTools = this.layerColorMap.get(this.currentLayer - 1) || [];
+            previousLayerTools.forEach((tool) => {
+              this.addColorToLayer(this.currentLayer, tool);
+              this.updateColorSeen(tool, this.currentLayer);
+            });
+          } else if (this.currentTool !== null) {
+            // First layer: add the currently active tool
             this.addColorToLayer(this.currentLayer, this.currentTool);
             this.updateColorSeen(this.currentTool, this.currentLayer);
           }
@@ -427,9 +430,13 @@ export class GcodeParserFSM {
     // Track this tool as active (used in the print)
     this.activeTools.add(tool);
 
-    // Add the new tool to the current layer's color list
-    this.addColorToLayer(this.currentLayer, tool);
-    this.updateColorSeen(tool, this.currentLayer);
+    // When a tool change happens during a layer, accumulate all tools that deposit material
+    if (this.currentLayer >= 0) {
+      // Keep the previous tool - it deposited material on this layer
+      // Add the new tool to the current layer (previous tool remains)
+      this.addColorToLayer(this.currentLayer, tool);
+      this.updateColorSeen(tool, this.currentLayer);
+    }
   }
 
   private handleFilamentChange() {

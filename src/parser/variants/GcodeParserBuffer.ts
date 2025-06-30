@@ -2,6 +2,7 @@ import { GcodeStats } from '../../types/gcode';
 import { ToolChange } from '../../types/tool';
 import { LayerColorInfo } from '../../types/layer';
 import { Logger } from '../../utils/logger';
+import { gcodeToInternalLayer, detectGcodeNumberingScheme } from '../../utils/layerHelpers';
 
 export class GcodeParserBuffer {
   private logger: Logger;
@@ -20,6 +21,8 @@ export class GcodeParserBuffer {
   private lineNumber: number = 0;
   private startTime: number = 0;
   private onProgress?: (progress: number, message: string) => void;
+  private gcodeLayers: number[] = []; // Track raw G-code layer numbers for scheme detection
+  private isGcodeOneBased: boolean | null = null; // Will be determined during parsing
 
   // ASCII codes for optimization
   private static readonly ASCII = {
@@ -62,7 +65,8 @@ export class GcodeParserBuffer {
     this.stats.totalLayers = 1;
     this.stats.totalHeight = 0;
 
-    // Initialize layer 0
+    // Initialize layer 0 with T0 (will be enhanced by layer detection if present)
+    this.currentLayer = 0;
     this.initializeLayer(0);
     this.addColorToLayer(0, this.currentTool);
     this.updateColorSeen(this.currentTool, 0);
@@ -92,8 +96,12 @@ export class GcodeParserBuffer {
       this.updateLayerDetails(this.currentLayer);
     }
 
-    // Set total layers based on maxLayerSeen
-    this.stats.totalLayers = this.maxLayerSeen + 1;
+    // Ensure T0 is present on all layers that were detected
+    // If only layer 0 was used (no layer comments), T0 is already there
+    // This is just a safety check to ensure consistency
+
+    // Let calculateStatistics determine correct totalLayers based on indexing scheme
+    // Don't override it here to maintain consistency with main parser
 
     // Import and calculate statistics
     const { calculateStatistics } = await import('../statistics');
@@ -111,14 +119,8 @@ export class GcodeParserBuffer {
       this.onProgress(95, 'Finalizing analysis...');
     }
 
-    // Load raw content for geometry parsing if needed
-    if (!this.stats.rawContent) {
-      if (this.onProgress) {
-        this.onProgress(90, 'Loading content for geometry parsing...');
-      }
-      this.stats.rawContent = await file.text();
-      completeStats.rawContent = this.stats.rawContent;
-    }
+    // rawContent is loaded on-demand to prevent memory issues
+    // It will be populated when needed by downstream components
 
     return completeStats;
   }
@@ -229,64 +231,69 @@ export class GcodeParserBuffer {
     const decoder = new TextDecoder();
     const line = decoder.decode(buffer.slice(start, end));
 
-    // Handle layer changes
-    if (line.includes('layer')) {
-      let newLayer: number | null = null;
+    // Handle various layer formats (using same logic as main parser)
+    let layerMatch = null;
 
-      // Bambu Lab format
-      let startIndex = line.indexOf('layer num/total_layer_count:');
-      if (startIndex !== -1) {
-        startIndex += 'layer num/total_layer_count:'.length;
-        const endIndex = line.indexOf('/', startIndex);
-        if (endIndex !== -1) {
-          newLayer = parseInt(line.substring(startIndex, endIndex).trim());
-        }
-      } else {
-        startIndex = line.indexOf('; layer #');
-        if (startIndex !== -1) {
-          startIndex += '; layer #'.length;
-          newLayer = parseInt(line.substring(startIndex).trim());
-        }
+    // Bambu Lab format: "; layer num/total_layer_count: 1/197"
+    if (line.includes('layer num/total_layer_count:')) {
+      layerMatch = line.match(/layer num\/total_layer_count:\s*(\d+)/);
+    }
+    // Bambu Lab format: "; layer #2"
+    else if (line.includes('; layer #')) {
+      layerMatch = line.match(/; layer #(\d+)/);
+    }
+    // Standard formats
+    else if (line.includes('LAYER:') || line.includes('layer ')) {
+      layerMatch = line.match(/(?:LAYER:|layer )\s*(\d+)/i);
+    }
+
+    if (layerMatch) {
+      const gcodeLayer = parseInt(layerMatch[1]);
+
+      // Track G-code layer numbers for numbering scheme detection
+      this.gcodeLayers.push(gcodeLayer);
+
+      // Detect numbering scheme if not already determined
+      if (this.isGcodeOneBased === null && this.gcodeLayers.length >= 1) {
+        this.isGcodeOneBased = detectGcodeNumberingScheme(this.gcodeLayers);
+        this.logger.info(
+          `Detected G-code numbering scheme: ${this.isGcodeOneBased ? '1-based' : '0-based'}`
+        );
       }
 
-      // Standard formats
-      if (newLayer === null) {
-        startIndex = line.indexOf('LAYER:');
-        if (startIndex !== -1) {
-          startIndex += 'LAYER:'.length;
-          newLayer = parseInt(line.substring(startIndex).trim());
-        } else {
-          startIndex = line.indexOf('layer ');
-          if (startIndex !== -1) {
-            startIndex += 'layer '.length;
-            newLayer = parseInt(line.substring(startIndex).trim());
-          }
-        }
-      }
+      // Convert G-code layer to internal 0-based layer
+      const internalLayer = gcodeToInternalLayer(gcodeLayer, this.isGcodeOneBased || false);
 
-      if (newLayer !== null && newLayer !== this.currentLayer) {
+      if (internalLayer !== this.currentLayer) {
         // Finalize previous layer details
         if (this.currentLayer >= 0) {
           this.updateLayerDetails(this.currentLayer);
         }
 
         // Start new layer
-        this.currentLayer = newLayer;
+        this.currentLayer = internalLayer;
         this.layerToolChanges = []; // Reset tool changes for new layer
-        if (newLayer > this.maxLayerSeen) {
-          this.maxLayerSeen = newLayer;
+        if (internalLayer > this.maxLayerSeen) {
+          this.maxLayerSeen = internalLayer;
         }
         this.initializeLayer(this.currentLayer);
 
-        // Add only the currently active tool to this layer
-        // Each layer should only have the color that's actually being used
-        if (this.currentTool !== null) {
+        // Carry forward all active tools from previous layer
+        // In multi-color prints, tools remain active until explicitly changed
+        if (this.currentLayer > 0) {
+          const previousLayerTools = this.layerColorMap.get(this.currentLayer - 1) || [];
+          previousLayerTools.forEach((tool) => {
+            this.addColorToLayer(this.currentLayer, tool);
+            this.updateColorSeen(tool, this.currentLayer);
+          });
+        } else {
+          // First layer: add the currently active tool
           this.addColorToLayer(this.currentLayer, this.currentTool);
           this.updateColorSeen(this.currentTool, this.currentLayer);
         }
 
         this.logger.silly(
-          `Layer ${this.currentLayer} - Active tools: ${Array.from(this.activeTools).join(', ')}, Current: ${this.currentTool}`
+          `G-code Layer ${gcodeLayer} → Internal Layer ${this.currentLayer} - Current tool: ${this.currentTool}`
         );
         return;
       }

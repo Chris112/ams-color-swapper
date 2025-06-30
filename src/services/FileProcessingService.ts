@@ -69,7 +69,13 @@ export class FileProcessingService {
     parserAlgorithm: ParserAlgorithm = 'optimized'
   ): Promise<Result<GcodeStats>> {
     // Create a parser with progress callback using the factory
-    const parser = createParser(parserAlgorithm, this.logger, onProgress);
+    const baseParser = createParser(parserAlgorithm, this.logger, onProgress);
+
+    // Check if this is a 3MF file and wrap with 3MF parser if needed
+    const { is3mfFile } = await import('../utils/3mfUtils');
+    const parser = is3mfFile(file)
+      ? new (await import('../parser/Gcode3mfParser')).Gcode3mfParser(baseParser, this.logger)
+      : baseParser;
 
     try {
       const stats = await parser.parse(file);

@@ -48,8 +48,16 @@ export class ColorOverlapAnalyzer {
         const color2 = colors[j];
 
         if (this.hasOverlap(color1, color2)) {
-          getFromMap(overlaps, color1.id, `Color overlap set not found for color: ${color1.id}`).add(color2.id);
-          getFromMap(overlaps, color2.id, `Color overlap set not found for color: ${color2.id}`).add(color1.id);
+          getFromMap(
+            overlaps,
+            color1.id,
+            `Color overlap set not found for color: ${color1.id}`
+          ).add(color2.id);
+          getFromMap(
+            overlaps,
+            color2.id,
+            `Color overlap set not found for color: ${color2.id}`
+          ).add(color1.id);
         }
       }
     }
@@ -86,7 +94,11 @@ export class ColorOverlapAnalyzer {
 
         // Check if candidate overlaps with any color in the group
         const overlapsWithGroup = group.some((groupColor) =>
-          getFromMap(overlaps, groupColor.id, `Color overlap set not found for color: ${groupColor.id}`).has(candidate.id)
+          getFromMap(
+            overlaps,
+            groupColor.id,
+            `Color overlap set not found for color: ${groupColor.id}`
+          ).has(candidate.id)
         );
 
         if (!overlapsWithGroup) {
@@ -180,7 +192,11 @@ export class ColorOverlapAnalyzer {
       let bestSwapIncrease = Infinity;
 
       for (let slot = 1; slot <= Math.min(slotIndex - 1, maxSlots); slot++) {
-        const existingColors = getFromMap(assignments, slot, `Slot assignment not found for slot: ${slot}`);
+        const existingColors = getFromMap(
+          assignments,
+          slot,
+          `Slot assignment not found for slot: ${slot}`
+        );
         const mergedColors = [...existingColors, ...remainingGroup.colors];
         const newSwaps = this.calculateSwapsForGroup(mergedColors);
         const currentSwaps = this.calculateSwapsForGroup(existingColors);
@@ -193,14 +209,18 @@ export class ColorOverlapAnalyzer {
       }
 
       // Merge into best slot
-      const existingColors = getFromMap(assignments, bestSlot, `Slot assignment not found for slot: ${bestSlot}`);
+      const existingColors = getFromMap(
+        assignments,
+        bestSlot,
+        `Slot assignment not found for slot: ${bestSlot}`
+      );
       assignments.set(bestSlot, [...existingColors, ...remainingGroup.colors]);
       totalSwaps += bestSwapIncrease;
 
       // Update swap details
-      const mergedSorted = [...getFromMap(assignments, bestSlot, `Slot assignment not found for slot: ${bestSlot}`)].sort(
-        (a, b) => a.firstLayer - b.firstLayer
-      );
+      const mergedSorted = [
+        ...getFromMap(assignments, bestSlot, `Slot assignment not found for slot: ${bestSlot}`),
+      ].sort((a, b) => a.firstLayer - b.firstLayer);
       // Clear old swaps for this slot and recalculate
       swapDetails.filter((s) => s.slot !== bestSlot);
       for (let i = 1; i < mergedSorted.length; i++) {

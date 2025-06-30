@@ -856,7 +856,7 @@ export class ResultsView extends Component {
       // Draw color segments for this specific color
       const colorRanges = stats.colorUsageRanges.filter((r) => r.colorId === color.id);
       colorRanges.forEach((range) => {
-        // Convert internal layers to display positioning  
+        // Convert internal layers to display positioning
         const displayStartLayer = toDisplayLayer(range.startLayer);
         const displayEndLayer = toDisplayLayer(range.endLayer);
         const x = leftPadding + (displayStartLayer - 1) * layerWidth; // -1 because layer 1 starts at position 0
@@ -920,8 +920,8 @@ export class ResultsView extends Component {
     // Draw each slot row
     let currentRow = 0;
     const unitCount = this.state.optimization.configuration?.unitCount || 1;
-    const slotsPerUnit = Math.ceil(this.state.optimization.totalSlots / unitCount);
-    
+    const slotsPerUnit = Math.ceil((this.state.optimization.totalSlots || 0) / unitCount);
+
     for (let unit = 1; unit <= unitCount; unit++) {
       for (let slot = 1; slot <= slotsPerUnit; slot++) {
         const slotAssignment = slotMap.get(`${unit}-${slot}`);
@@ -947,7 +947,7 @@ export class ResultsView extends Component {
             colorRanges.forEach((range) => {
               // Convert internal layers to display positioning
               const displayStartLayer = toDisplayLayer(range.startLayer);
-              const displayEndLayer = toDisplayLayer(range.endLayer);  
+              const displayEndLayer = toDisplayLayer(range.endLayer);
               const x = leftPadding + (displayStartLayer - 1) * layerWidth; // -1 because layer 1 starts at position 0
               const segmentWidth = (displayEndLayer - displayStartLayer + 1) * layerWidth;
               const segmentY = y + (colorIndex * rowHeight) / slotAssignment.colors.length;
@@ -1084,8 +1084,8 @@ export class ResultsView extends Component {
     });
 
     const unitCount = this.state.optimization.configuration?.unitCount || 1;
-    const slotsPerUnit = Math.ceil(this.state.optimization.totalSlots / unitCount);
-    
+    const slotsPerUnit = Math.ceil((this.state.optimization.totalSlots || 0) / unitCount);
+
     for (let unit = 1; unit <= unitCount; unit++) {
       for (let slot = 1; slot <= slotsPerUnit; slot++) {
         const slotAssignment = slotMap.get(`${unit}-${slot}`);

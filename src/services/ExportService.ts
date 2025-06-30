@@ -231,11 +231,28 @@ export class ExportService {
   /**
    * Export G-code with pause commands (M600) inserted at manual swap points
    */
-  exportGcodeWithPauses(stats: GcodeStats, optimization: OptimizationResult): Result<void> {
-    if (!stats.rawContent) {
+  async exportGcodeWithPauses(
+    stats: GcodeStats,
+    optimization: OptimizationResult,
+    originalFile?: File
+  ): Promise<Result<void>> {
+    // Load raw content on-demand if not already available
+    let rawContent = stats.rawContent;
+    if (!rawContent && originalFile) {
+      try {
+        rawContent = await originalFile.text();
+      } catch (error) {
+        return {
+          ok: false,
+          error: new Error(`Failed to read original file: ${error}`),
+        };
+      }
+    }
+
+    if (!rawContent) {
       return {
         ok: false,
-        error: new Error('Original G-code content not available'),
+        error: new Error('Original G-code content not available. Please re-upload the file.'),
       };
     }
 
@@ -247,7 +264,7 @@ export class ExportService {
     }
 
     // Split the G-code into lines
-    const lines = stats.rawContent.split('\n');
+    const lines = rawContent.split('\n');
     const modifiedLines: string[] = [];
     let currentLayer = 0;
 

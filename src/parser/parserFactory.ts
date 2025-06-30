@@ -7,6 +7,7 @@ import { GcodeParserRegex } from './variants/GcodeParserRegex';
 import { GcodeParserFSM } from './variants/GcodeParserFSM';
 import { GcodeParserWorker } from './variants/GcodeParserWorker';
 import { GcodeParserLazy } from './variants/GcodeParserLazy';
+// Note: Gcode3mfParser is now imported dynamically in FileProcessingService when needed
 
 export interface IGcodeParser {
   parse(file: File): Promise<any>;
@@ -17,23 +18,36 @@ export function createParser(
   logger: Logger,
   onProgress?: (progress: number, message: string) => void
 ): IGcodeParser {
+  // Create the base parser according to the selected algorithm
+  let baseParser: IGcodeParser;
+
   switch (algorithm) {
     case 'optimized':
-      return new GcodeParser(logger, onProgress);
+      baseParser = new GcodeParser(logger, onProgress);
+      break;
     case 'buffer':
-      return new GcodeParserBuffer(logger, onProgress);
+      baseParser = new GcodeParserBuffer(logger, onProgress);
+      break;
     case 'streams':
-      return new GcodeParserStreams(logger, onProgress);
+      baseParser = new GcodeParserStreams(logger, onProgress);
+      break;
     case 'regex':
-      return new GcodeParserRegex(logger, onProgress);
+      baseParser = new GcodeParserRegex(logger, onProgress);
+      break;
     case 'fsm':
-      return new GcodeParserFSM(logger, onProgress);
+      baseParser = new GcodeParserFSM(logger, onProgress);
+      break;
     case 'worker':
-      return new GcodeParserWorker(logger, onProgress);
+      baseParser = new GcodeParserWorker(logger, onProgress);
+      break;
     case 'lazy':
-      return new GcodeParserLazy(logger, onProgress);
+      baseParser = new GcodeParserLazy(logger, onProgress);
+      break;
     default:
-      // Default to standard parser
-      return new GcodeParser(logger, onProgress);
+      baseParser = new GcodeParser(logger, onProgress);
+      break;
   }
+
+  // Return the base parser directly - 3MF support will be handled at a higher level
+  return baseParser;
 }

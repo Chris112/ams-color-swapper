@@ -137,7 +137,11 @@ export class ColorMergeService {
       if (!colorRangeMap.has(range.colorId)) {
         colorRangeMap.set(range.colorId, []);
       }
-      getFromMap(colorRangeMap, range.colorId, `Color range array not found for color: ${range.colorId}`).push(range);
+      getFromMap(
+        colorRangeMap,
+        range.colorId,
+        `Color range array not found for color: ${range.colorId}`
+      ).push(range);
     });
 
     colorRangeMap.forEach((ranges, colorId) => {
@@ -185,6 +189,41 @@ export class ColorMergeService {
         totalLayers: mergedStats.totalLayers,
       });
       mergedStats.colors[targetColorIndex] = mergedColor;
+    }
+
+    // Update filament estimates - merge weights and lengths
+    if (mergedStats.filamentEstimates) {
+      const targetFilamentEstimate = mergedStats.filamentEstimates.find(
+        (est) => est.colorId === targetColorId
+      );
+      const sourceFilamentEstimates = mergedStats.filamentEstimates.filter((est) =>
+        sourceColorIds.includes(est.colorId)
+      );
+
+      if (targetFilamentEstimate && sourceFilamentEstimates.length > 0) {
+        // Combine weights and lengths from source estimates into target
+        const combinedWeight = sourceFilamentEstimates.reduce(
+          (sum, est) => sum + (est.weight || 0),
+          targetFilamentEstimate.weight || 0
+        );
+        const combinedLength = sourceFilamentEstimates.reduce(
+          (sum, est) => sum + (est.length || 0),
+          targetFilamentEstimate.length || 0
+        );
+
+        // Update target estimate with combined values
+        targetFilamentEstimate.weight = combinedWeight;
+        targetFilamentEstimate.length = combinedLength;
+
+        logger.info(
+          `Merged filament estimates: ${sourceColorIds.join(', ')} -> ${targetColorId}, combined weight: ${combinedWeight}g, length: ${combinedLength}mm`
+        );
+      }
+
+      // Remove source filament estimates (orphaned estimates)
+      mergedStats.filamentEstimates = mergedStats.filamentEstimates.filter(
+        (est) => !sourceColorIds.includes(est.colorId)
+      );
     }
 
     // Remove source colors from the colors array
@@ -265,6 +304,10 @@ export class ColorMergeService {
       layerColorMap: new Map(stats.layerColorMap),
       layerDetails: stats.layerDetails ? stats.layerDetails.map((ld) => ({ ...ld })) : undefined,
       colorUsageRanges: stats.colorUsageRanges.map((r) => ({ ...r })),
+      // Properly clone filament estimates array and objects
+      filamentEstimates: stats.filamentEstimates
+        ? stats.filamentEstimates.map((est) => ({ ...est }))
+        : undefined,
     };
   }
 

@@ -1,10 +1,9 @@
 import { GcodeStats } from '../../types/gcode';
 import { ToolChange } from '../../types/tool';
 import { LayerColorInfo } from '../../types/layer';
-import { Color } from '../../domain/models/Color';
 import { Logger } from '../../utils/logger';
 import { BrowserFileReader } from '../../utils/fileReader';
-import { ColorRange } from '../../types/color';
+import { gcodeToInternalLayer, detectGcodeNumberingScheme } from '../../utils/layerHelpers';
 
 interface LazyParseResult {
   basicStats: {
@@ -190,7 +189,7 @@ export class GcodeParserLazy {
       stats.slicerInfo!.colorDefinitions = quickScanResult.colorDefs;
     }
 
-    let currentLayer = 0;
+    let currentLayer = 0; // Start with layer 0
     let maxLayerSeen = 0;
     let currentZ = 0;
     let currentTool = 'T0';
@@ -202,8 +201,10 @@ export class GcodeParserLazy {
     const colorLastSeen: Map<string, number> = new Map();
     let layerToolChanges: ToolChange[] = [];
     let lineNumber = 0;
+    const gcodeLayers: number[] = []; // Track raw G-code layer numbers for scheme detection
+    let isGcodeOneBased: boolean | null = null; // Will be determined during parsing
 
-    // Initialize
+    // Initialize layer 0 with T0 (will be enhanced by layer detection if present)
     layerColorMap.set(0, [currentTool]);
     colorFirstSeen.set(currentTool, 0);
     colorLastSeen.set(currentTool, 0);
@@ -224,42 +225,69 @@ export class GcodeParserLazy {
 
       // Comments
       if (trimmed[0] === ';') {
-        // Layer changes
-        if (trimmed.includes('layer')) {
-          const layerMatch = trimmed.match(/layer\s*(?:#|num\/total_layer_count:)?\s*(\d+)/i);
-          if (layerMatch) {
-            const newLayer = parseInt(layerMatch[1]);
-            if (newLayer !== currentLayer) {
-              // Finalize previous layer
-              if (layerToolChanges.length > 0 || currentLayer === 0) {
-                this.finalizeLayer(
-                  currentLayer,
-                  layerColorMap,
-                  layerDetails,
-                  layerToolChanges,
-                  currentTool
-                );
-              }
+        // Handle various layer formats (using same logic as main parser)
+        let layerMatch = null;
 
-              // Start new layer
-              currentLayer = newLayer;
-              if (newLayer > maxLayerSeen) {
-                maxLayerSeen = newLayer;
-              }
+        // Bambu Lab format: "; layer num/total_layer_count: 1/197"
+        if (trimmed.includes('layer num/total_layer_count:')) {
+          layerMatch = trimmed.match(/layer num\/total_layer_count:\s*(\d+)/);
+        }
+        // Bambu Lab format: "; layer #2"
+        else if (trimmed.includes('; layer #')) {
+          layerMatch = trimmed.match(/; layer #(\d+)/);
+        }
+        // Standard formats
+        else if (trimmed.includes('LAYER:') || trimmed.includes('layer ')) {
+          layerMatch = trimmed.match(/(?:LAYER:|layer )\s*(\d+)/i);
+        }
 
-              // Initialize new layer with ALL active tools (color persistence)
-              const layerColors = layerColorMap.get(currentLayer) || [];
-              for (const tool of activeTools) {
-                if (!layerColors.includes(tool)) {
-                  layerColors.push(tool);
-                }
-                // Update color last seen
-                colorLastSeen.set(tool, currentLayer);
-              }
-              layerColorMap.set(currentLayer, layerColors);
+        if (layerMatch) {
+          const gcodeLayer = parseInt(layerMatch[1]);
 
-              layerToolChanges = [];
+          // Track G-code layer numbers for numbering scheme detection
+          gcodeLayers.push(gcodeLayer);
+
+          // Detect numbering scheme if not already determined
+          if (isGcodeOneBased === null && gcodeLayers.length >= 1) {
+            isGcodeOneBased = detectGcodeNumberingScheme(gcodeLayers);
+            this.logger.info(
+              `Detected G-code numbering scheme: ${isGcodeOneBased ? '1-based' : '0-based'}`
+            );
+          }
+
+          // Convert G-code layer to internal 0-based layer
+          const internalLayer = gcodeToInternalLayer(gcodeLayer, isGcodeOneBased || false);
+
+          if (internalLayer !== currentLayer) {
+            // Finalize previous layer
+            if (layerToolChanges.length > 0 || currentLayer >= 0) {
+              this.finalizeLayer(
+                currentLayer,
+                layerColorMap,
+                layerDetails,
+                layerToolChanges,
+                currentTool
+              );
             }
+
+            // Start new layer
+            currentLayer = internalLayer;
+            if (internalLayer > maxLayerSeen) {
+              maxLayerSeen = internalLayer;
+            }
+
+            // Initialize new layer with ALL active tools (color persistence)
+            const layerColors = layerColorMap.get(currentLayer) || [];
+            for (const tool of activeTools) {
+              if (!layerColors.includes(tool)) {
+                layerColors.push(tool);
+              }
+              // Update color last seen
+              colorLastSeen.set(tool, currentLayer);
+            }
+            layerColorMap.set(currentLayer, layerColors);
+
+            layerToolChanges = [];
           }
         }
 
@@ -384,55 +412,37 @@ export class GcodeParserLazy {
     }
 
     // Finalize last layer
-    if (layerToolChanges.length > 0 || currentLayer > 0) {
+    if (currentLayer >= 0) {
       this.finalizeLayer(currentLayer, layerColorMap, layerDetails, layerToolChanges, currentTool);
     }
 
-    stats.totalLayers = maxLayerSeen + 1;
-    stats.totalHeight = currentZ;
-    stats.toolChanges = toolChanges;
-    stats.layerColorMap = layerColorMap;
-    stats.layerDetails = Array.from(layerDetails.values()).sort((a, b) => a.layer - b.layer);
+    // Ensure T0 is present on all layers that were detected
+    // If only layer 0 was used (no layer comments), T0 is already there
+    // This is just a safety check to ensure consistency
 
-    // Calculate colors and usage ranges
-    const uniqueColors = new Set<string>();
-    layerColorMap.forEach((colors) => {
-      colors.forEach((color) => uniqueColors.add(color));
-    });
+    // Let calculateStatistics determine correct totalLayers based on indexing scheme
+    // Don't override it here to maintain consistency with main parser
 
-    stats.colors = Array.from(uniqueColors)
-      .sort((a, b) => a.localeCompare(b)) // Sort colors by ID
-      .map((colorId) => {
-        // Build set of layers where this color is used
-        const layersUsed = new Set<number>();
-        layerColorMap.forEach((colors, layer) => {
-          if (colors.includes(colorId)) {
-            layersUsed.add(layer);
-          }
-        });
+    const parseTime = Date.now() - startTime;
 
-        return new Color({
-          id: colorId,
-          name: colorId,
-          hexValue: this.getColorHex(colorId, quickScanResult.colorDefs),
-          firstLayer: colorFirstSeen.get(colorId)!,
-          lastLayer: colorLastSeen.get(colorId)!,
-          layersUsed: layersUsed,
-          totalLayers: stats.totalLayers,
-        });
-      });
-
-    stats.colorUsageRanges = this.calculateColorRanges(layerColorMap);
-
-    // Calculate parse time
-    stats.parseTime = Date.now() - startTime;
+    // Import and calculate statistics like other parsers
+    const { calculateStatistics } = await import('../statistics');
+    const completeStats = await calculateStatistics(
+      stats as GcodeStats,
+      toolChanges,
+      layerColorMap,
+      colorFirstSeen,
+      colorLastSeen,
+      Array.from(layerDetails.values()),
+      parseTime
+    );
 
     if (this.onProgress) {
       this.onProgress(100, 'Parse complete!');
     }
 
-    this.logger.info(`Full parse completed in ${stats.parseTime}ms`);
-    return stats as GcodeStats;
+    this.logger.info(`Full parse completed in ${parseTime}ms`);
+    return completeStats;
   }
 
   private finalizeLayer(
@@ -461,77 +471,5 @@ export class GcodeParserLazy {
       toolChangeCount: layerToolChanges.length,
       toolChangesInLayer: [...layerToolChanges],
     });
-  }
-
-  private getColorHex(colorId: string, colorDefs?: string[]): string {
-    if (!colorDefs) return '#808080'; // Default gray
-
-    const toolIndex = parseInt(colorId.substring(1));
-    if (toolIndex >= 0 && toolIndex < colorDefs.length) {
-      const color = colorDefs[toolIndex];
-      // Ensure color is valid hex format
-      if (color && color.length > 0) {
-        // Remove any # prefix if present
-        const cleanColor = color.startsWith('#') ? color.substring(1) : color;
-        // Validate hex format (6 characters, 0-9 A-F)
-        if (/^[0-9A-Fa-f]{6}$/.test(cleanColor)) {
-          return `#${cleanColor.toUpperCase()}`;
-        }
-      }
-    }
-
-    return '#808080';
-  }
-
-  private calculateColorRanges(layerColorMap: Map<number, string[]>): ColorRange[] {
-    const colorRanges: ColorRange[] = [];
-    const colorLayerMap = new Map<string, number[]>();
-
-    // Build map of which layers each color appears in
-    layerColorMap.forEach((colors, layer) => {
-      colors.forEach((color) => {
-        if (!colorLayerMap.has(color)) {
-          colorLayerMap.set(color, []);
-        }
-        const layers = colorLayerMap.get(color);
-        if (layers) {
-          layers.push(layer);
-        }
-      });
-    });
-
-    // Calculate ranges for each color
-    colorLayerMap.forEach((layers, colorId) => {
-      layers.sort((a, b) => a - b);
-
-      let start = layers[0];
-      let end = start;
-
-      for (let i = 1; i < layers.length; i++) {
-        if (layers[i] === end + 1) {
-          end = layers[i];
-        } else {
-          colorRanges.push({
-            colorId,
-            startLayer: start,
-            endLayer: end,
-            continuous: true,
-            layerCount: end - start + 1,
-          });
-          start = layers[i];
-          end = start;
-        }
-      }
-
-      colorRanges.push({
-        colorId,
-        startLayer: start,
-        endLayer: end,
-        continuous: true,
-        layerCount: end - start + 1,
-      });
-    });
-
-    return colorRanges;
   }
 }

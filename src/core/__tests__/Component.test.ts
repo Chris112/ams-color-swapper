@@ -1,18 +1,33 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Component } from '../Component';
-import { EventEmitter, AppEvents } from '../EventEmitter';
+import { AppEvents, AppEventMap } from '../EventEmitter';
 import { AppStateData } from '../../state/AppState';
 
 // Mock AppState module
 vi.mock('../../state/AppState', () => ({
   appState: {
     getState: vi.fn(() => ({
+      currentFile: null,
+      isLoading: false,
+      loadingMessage: '',
+      loadingProgress: 0,
       view: 'upload',
       stats: null,
       optimization: null,
+      logs: [],
+      error: null,
+      configuration: {
+        type: 'ams',
+        unitCount: 1,
+        totalSlots: 4,
+        parserAlgorithm: 'optimized',
+      },
       preferences: {
         timelineView: 'color',
+        swapInstructionDesign: 'glassmorphism',
       },
+      mergeHistory: [],
+      originalStats: null,
     })),
     subscribe: vi.fn(),
     unsubscribe: vi.fn(),
@@ -32,7 +47,7 @@ class TestComponent extends Component {
     }
   }
 
-  protected shouldUpdate(oldState: AppStateData, newState: AppStateData): boolean {
+  protected shouldUpdate(_oldState: AppStateData, _newState: AppStateData): boolean {
     this.shouldUpdateCallCount++;
     return this.shouldUpdateResult;
   }
@@ -58,7 +73,7 @@ class TestComponent extends Component {
     this.onStateChange(newState);
   }
 
-  public testEmit(event: string, data?: any) {
+  public testEmit(event: keyof AppEventMap, data?: any) {
     this.emit(event, data);
   }
 }
@@ -87,7 +102,7 @@ describe('Component', () => {
   describe('Constructor and Initialization', () => {
     it('should create component with valid selector', () => {
       expect(component).toBeInstanceOf(Component);
-      expect(component.element).toBe(mockElement);
+      expect((component as any).element).toBe(mockElement);
     });
 
     it('should throw error for invalid selector', () => {
@@ -98,7 +113,7 @@ describe('Component', () => {
 
     it('should initialize without throwing', () => {
       expect(component).toBeInstanceOf(Component);
-      expect(component.element).toBe(mockElement);
+      expect((component as any).element).toBe(mockElement);
     });
   });
 
@@ -143,13 +158,28 @@ describe('Component', () => {
   describe('State Management', () => {
     it('should handle state changes and trigger render', () => {
       const initialRenderCount = component.renderCallCount;
-      const newState = {
+      const newState: AppStateData = {
+        currentFile: null,
+        isLoading: false,
+        loadingMessage: '',
+        loadingProgress: 0,
         view: 'results' as const,
         stats: null,
         optimization: null,
+        logs: [],
+        error: null,
+        configuration: {
+          type: 'ams',
+          unitCount: 1,
+          totalSlots: 4,
+          parserAlgorithm: 'optimized',
+        },
         preferences: {
           timelineView: 'slot' as const,
+          swapInstructionDesign: 'glassmorphism',
         },
+        mergeHistory: [],
+        originalStats: null,
       };
 
       component.testStateChange(newState);
@@ -162,13 +192,28 @@ describe('Component', () => {
       component.shouldUpdateResult = false;
       const initialRenderCount = component.renderCallCount;
 
-      const newState = {
+      const newState: AppStateData = {
+        currentFile: null,
+        isLoading: false,
+        loadingMessage: '',
+        loadingProgress: 0,
         view: 'results' as const,
         stats: null,
         optimization: null,
+        logs: [],
+        error: null,
+        configuration: {
+          type: 'ams',
+          unitCount: 1,
+          totalSlots: 4,
+          parserAlgorithm: 'optimized',
+        },
         preferences: {
           timelineView: 'slot' as const,
+          swapInstructionDesign: 'glassmorphism',
         },
+        mergeHistory: [],
+        originalStats: null,
       };
 
       component.testStateChange(newState);
@@ -178,17 +223,32 @@ describe('Component', () => {
     });
 
     it('should update state property when handling state changes', () => {
-      const newState = {
+      const newState: AppStateData = {
+        currentFile: null,
+        isLoading: false,
+        loadingMessage: '',
+        loadingProgress: 0,
         view: 'results' as const,
         stats: null,
         optimization: null,
+        logs: [],
+        error: null,
+        configuration: {
+          type: 'ams',
+          unitCount: 1,
+          totalSlots: 4,
+          parserAlgorithm: 'optimized',
+        },
         preferences: {
           timelineView: 'slot' as const,
+          swapInstructionDesign: 'glassmorphism',
         },
+        mergeHistory: [],
+        originalStats: null,
       };
 
       component.testStateChange(newState);
-      expect(component.state).toEqual(newState);
+      expect((component as any).state).toEqual(newState);
     });
   });
 
@@ -198,7 +258,7 @@ describe('Component', () => {
       // This test just ensures the emit method doesn't throw
       const testData = { filename: 'test.gcode' };
       expect(() => {
-        component.testEmit(AppEvents.FILE_LOADED, testData);
+        component.testEmit(AppEvents.FILE_SELECTED, testData);
       }).not.toThrow();
     });
 
@@ -219,13 +279,13 @@ describe('Component', () => {
     });
 
     it('should maintain element reference throughout lifecycle', () => {
-      const originalElement = component.element;
+      const originalElement = (component as any).element;
 
       component.testHide();
       component.testShow();
       component.testInitialize();
 
-      expect(component.element).toBe(originalElement);
+      expect((component as any).element).toBe(originalElement);
     });
   });
 
@@ -314,25 +374,55 @@ describe('Component', () => {
       // Initialize to set the initial state
       (stateComponent as any).testInitialize();
 
-      const newState = {
+      const newState: AppStateData = {
+        currentFile: null,
+        isLoading: false,
+        loadingMessage: '',
+        loadingProgress: 0,
         view: 'results' as const,
         stats: null,
         optimization: null,
+        logs: [],
+        error: null,
+        configuration: {
+          type: 'ams',
+          unitCount: 1,
+          totalSlots: 4,
+          parserAlgorithm: 'optimized',
+        },
         preferences: {
           timelineView: 'slot' as const,
+          swapInstructionDesign: 'glassmorphism',
         },
+        mergeHistory: [],
+        originalStats: null,
       };
 
       // Simulate state change
       (stateComponent as any).onStateChange(newState);
 
       expect(capturedOldState).toEqual({
+        currentFile: null,
+        isLoading: false,
+        loadingMessage: '',
+        loadingProgress: 0,
         view: 'upload',
         stats: null,
         optimization: null,
+        logs: [],
+        error: null,
+        configuration: {
+          type: 'ams',
+          unitCount: 1,
+          totalSlots: 4,
+          parserAlgorithm: 'optimized',
+        },
         preferences: {
           timelineView: 'color',
+          swapInstructionDesign: 'glassmorphism',
         },
+        mergeHistory: [],
+        originalStats: null,
       });
       expect(capturedNewState).toEqual(newState);
 

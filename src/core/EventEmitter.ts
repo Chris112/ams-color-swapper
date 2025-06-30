@@ -41,7 +41,11 @@ export class EventEmitter<TEventMap = AppEventMap> {
     if (!this.events.has(event as string)) {
       this.events.set(event as string, new Set());
     }
-    getFromMap(this.events, event as string, `Event handler set not found for event: ${String(event)}`).add(handler as EventHandler<any>);
+    getFromMap(
+      this.events,
+      event as string,
+      `Event handler set not found for event: ${String(event)}`
+    ).add(handler as EventHandler<any>);
 
     // Return unsubscribe function
     return () => this.off(event, handler);

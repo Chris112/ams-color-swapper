@@ -12,6 +12,7 @@ import { gcodeCache } from '../services/GcodeCache';
 import { ColorMergeService, MergeHistoryEntry } from '../services/ColorMergeService';
 import { ColorMergePanel } from '../ui/components/ColorMergePanel';
 import { MergeHistoryTimeline } from '../ui/components/MergeHistoryTimeline';
+import { MergeHistoryTimelineVariations } from '../ui/components/MergeHistoryTimelineVariations';
 
 // Services
 import { FileProcessingService } from '../services/FileProcessingService';
@@ -51,6 +52,7 @@ export class App {
   private resultsView: ResultsView | null = null;
   private colorMergePanel: ColorMergePanel | null = null;
   private mergeHistoryTimeline: MergeHistoryTimeline | null = null;
+  private mergeHistoryTimelineVariations: MergeHistoryTimelineVariations | null = null;
 
   constructor() {
     this.logger = new Logger();
@@ -114,12 +116,14 @@ export class App {
     this.resultsView = new ResultsView();
     this.colorMergePanel = new ColorMergePanel();
     this.mergeHistoryTimeline = new MergeHistoryTimeline();
+    this.mergeHistoryTimelineVariations = new MergeHistoryTimelineVariations();
     this.components = [
       new FileUploader(),
       this.resultsView,
       new FilamentSyncStatus('body'), // Add sync status indicator
       this.colorMergePanel,
       this.mergeHistoryTimeline,
+      this.mergeHistoryTimelineVariations,
     ];
 
     // Initialize configuration modal
@@ -207,9 +211,10 @@ export class App {
             const newTimelineBtn = timelineBtn.cloneNode(true) as HTMLElement;
             timelineBtn.parentNode?.replaceChild(newTimelineBtn, timelineBtn);
 
-            // Add fresh click handler
+            // Add fresh click handler - use variations timeline for testing
             newTimelineBtn.addEventListener('click', () => {
-              this.mergeHistoryTimeline!.toggle();
+              // Use the variations timeline instead of the original
+              this.mergeHistoryTimelineVariations!.toggle();
             });
           }
         }, 100);
@@ -220,8 +225,8 @@ export class App {
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
         e.preventDefault();
-        if (this.mergeHistoryTimeline && appState.getState().view === 'results') {
-          this.mergeHistoryTimeline.toggle();
+        if (this.mergeHistoryTimelineVariations && appState.getState().view === 'results') {
+          this.mergeHistoryTimelineVariations.toggle();
         }
       }
     });
@@ -299,7 +304,11 @@ export class App {
     const state = appState.getState();
     if (!state.stats || !state.optimization) return;
 
-    const result = this.exportService.exportGcodeWithPauses(state.stats, state.optimization);
+    const result = await this.exportService.exportGcodeWithPauses(
+      state.stats,
+      state.optimization,
+      state.currentFile || undefined
+    );
 
     if (!result.ok) {
       this.logger.error('Failed to export G-code with pauses', result.error);
@@ -310,27 +319,74 @@ export class App {
   }
 
   private async handleClearCache(): Promise<void> {
+    // Show loading state on button
+    const btn = document.getElementById('clearCacheBtn');
+    const originalText = btn ? btn.innerHTML : '';
+
+    if (btn) {
+      btn.innerHTML =
+        '<svg class="animate-spin w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Clearing...';
+      btn.classList.add('opacity-75');
+      btn.setAttribute('disabled', 'true');
+    }
+
     // Create and execute clear cache command
     const command = new ClearCacheCommand(this.cacheRepository, this.logger);
-
     const result = await this.commandExecutor.execute(command);
 
     if (result.ok) {
       // Show success feedback in UI
-      const btn = document.getElementById('clearCacheBtn');
       if (btn) {
-        const originalText = btn.innerHTML;
         btn.innerHTML =
-          '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Cleared!';
+          '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> All Cleared!';
+        btn.classList.remove('opacity-75');
         btn.classList.add('text-vibrant-teal');
+        btn.removeAttribute('disabled');
+
+        // Also show a notification for more detail
+        this.showCacheClearNotification();
+
         setTimeout(() => {
           btn.innerHTML = originalText;
           btn.classList.remove('text-vibrant-teal');
-        }, 2000);
+        }, 3000);
       }
     } else {
-      appState.setError('Failed to clear cache');
+      if (btn) {
+        btn.innerHTML = originalText;
+        btn.classList.remove('opacity-75');
+        btn.removeAttribute('disabled');
+      }
+      appState.setError('Failed to clear some caches. Check console for details.');
     }
+  }
+
+  private showCacheClearNotification(): void {
+    const notification = document.createElement('div');
+    notification.className =
+      'fixed top-4 right-4 z-50 glass rounded-lg p-4 animate-fade-in max-w-md';
+    notification.innerHTML = `
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-vibrant-teal rounded-full flex items-center justify-center flex-shrink-0">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <div class="text-white font-semibold">All Caches Cleared</div>
+          <div class="text-white/70 text-sm">
+            Cleared: Application cache, G-code cache, Timeline history
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+      notification.classList.add('animate-fade-out');
+      setTimeout(() => notification.remove(), 300);
+    }, 4000);
   }
 
   private handleReset(): void {

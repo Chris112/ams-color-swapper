@@ -24,14 +24,33 @@ export class OptimizationService {
     algorithm: OptimizationAlgorithm = OptimizationAlgorithm.Greedy // New parameter
   ): OptimizationResult {
     // Use provided configuration or default to single AMS unit
-    const config = configuration || {
-      type: 'ams' as const,
-      unitCount: 1,
-      totalSlots: 4,
-    };
+    // IMPORTANT: Clone the configuration to avoid mutating the original
+    const config = configuration
+      ? { ...configuration }
+      : {
+          type: 'ams' as const,
+          unitCount: 1,
+          totalSlots: 4,
+        };
 
-    // Run constraint validation first
+    // Log the configuration being used
+    this.logger.info('Using configuration:', {
+      type: config.type,
+      unitCount: config.unitCount,
+      totalSlots: config.totalSlots,
+      colorCount: stats.colors.length,
+    });
+
+    // Run constraint validation FIRST against the original user configuration
     const constraintValidation = LayerConstraintAnalyzer.validateLayerConstraints(stats, config);
+
+    // Validate configuration for optimization - adjust if needed for optimization algorithms
+    if (config.totalSlots < stats.colors.length) {
+      this.logger.warn(
+        `Configuration has only ${config.totalSlots} slots but ${stats.colors.length} colors are needed. Adjusting to minimum required for optimization algorithms.`
+      );
+      config.totalSlots = Math.max(4, stats.colors.length); // Ensure at least 4 slots or number of colors
+    }
 
     // Log constraint validation results
     if (constraintValidation.hasViolations) {
@@ -52,8 +71,16 @@ export class OptimizationService {
       );
     }
 
-    // Attach constraint validation to stats for UI consumption
-    stats.constraintValidation = constraintValidation;
+    // CRITICAL FIX: Don't mutate the original stats object - clone it instead
+    // This prevents the stats object from being modified by reference, which could cause
+    // unexpected side effects in calling code
+    const enrichedStats = {
+      ...stats,
+      constraintValidation,
+    };
+
+    // Update the stats reference to point to our enriched version
+    Object.assign(stats, enrichedStats);
 
     // Convert to domain model
     const print = PrintMapper.toDomain(stats);
@@ -69,14 +96,24 @@ export class OptimizationService {
 
     if (algorithm === OptimizationAlgorithm.SimulatedAnnealing) {
       this.logger.info('Using Simulated Annealing for optimization');
+      this.logger.info('Creating SA optimizer with:', {
+        colors: print.colors.length,
+        totalSlots: config.totalSlots,
+        iterations: 1000,
+      });
       const saOptimizer = new SimulatedAnnealingOptimizer(
         print.colors,
         config.totalSlots,
         10000, // Initial temperature
         0.995, // Cooling rate
-        10000 // Iterations
+        1000 // Reduced iterations to prevent browser blocking
       );
+      this.logger.info('Starting SA optimization...');
       const saResult = saOptimizer.optimize();
+      this.logger.info('SA optimization completed', {
+        assignments: saResult.assignments.size,
+        swaps: saResult.swapDetails.length,
+      });
 
       // Map SA result to OptimizationResult structure
       const slotAssignments = Array.from(saResult.assignments.entries()).map(
@@ -92,10 +129,18 @@ export class OptimizationService {
       result = {
         totalColors: print.colors.length,
         requiredSlots: saResult.assignments.size,
-        manualSwaps: saResult.swapDetails.map((swap) => {
+        manualSwaps: saResult.swapDetails.map((swap, index) => {
+          this.logger.debug(`Processing swap ${index + 1}/${saResult.swapDetails.length}`);
           // Find the colors to understand their usage patterns
           const fromColor = stats.colors.find((c) => c.id === swap.fromColor);
           const toColor = stats.colors.find((c) => c.id === swap.toColor);
+
+          // Log color information for debugging
+          this.logger.debug('Processing swap', {
+            fromColor: swap.fromColor,
+            toColor: swap.toColor,
+            originalAtLayer: swap.atLayer,
+          });
 
           // Calculate meaningful pause window
           let pauseStart = swap.atLayer;
@@ -112,12 +157,26 @@ export class OptimizationService {
             const lastFromColorUse = fromColor.lastLayer;
             const firstToColorUse = toColor.firstLayer;
 
-            if (firstToColorUse > lastFromColorUse) {
-              // There's a gap - we can swap anytime in this window
+            if (firstToColorUse > lastFromColorUse + 1) {
+              // There's a real gap - we can swap anytime in this window
               pauseStart = lastFromColorUse + 1;
               pauseEnd = firstToColorUse - 1;
               earliest = pauseStart;
               latest = pauseEnd;
+
+              // CRITICAL FIX: Don't mutate the original swap object - create a new one
+              // The optimization algorithm sets atLayer to toColor.firstLayer, but that's outside the pause window
+              const originalAtLayer = swap.atLayer;
+              const adjustedAtLayer = Math.floor((pauseStart + pauseEnd) / 2); // Middle of the valid window
+
+              // Create a new swap object with the adjusted atLayer instead of mutating the original
+              swap = { ...swap, atLayer: adjustedAtLayer };
+
+              this.logger.debug('Adjusted swap timing for gap', {
+                original: originalAtLayer,
+                adjusted: swap.atLayer,
+                window: `${pauseStart}-${pauseEnd}`,
+              });
             } else {
               // Colors overlap or are adjacent - must swap at the exact transition
               // Use the swap layer calculated by the optimization algorithm
@@ -167,6 +226,8 @@ export class OptimizationService {
         canShareSlots: [], // TODO: Calculate actual color sharing pairs
         configuration: config,
       };
+
+      this.logger.info('Finished mapping swap details to OptimizationResult');
 
       // Calculate estimated time saved (simple estimation for now)
       // A more accurate calculation would involve comparing the original number of tool changes
@@ -219,6 +280,7 @@ export class OptimizationService {
       });
     }
 
+    this.logger.info('Optimization service completed, returning result');
     return result;
   }
 

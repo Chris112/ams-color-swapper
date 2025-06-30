@@ -10,6 +10,9 @@ export class Color {
   public readonly layersUsed: Set<number>;
   public readonly partialLayers: Set<number>;
   public readonly usagePercentage: number;
+  // 3MF specific fields
+  public readonly threeMfFilamentId?: number;
+  public readonly threeMfToolIndex?: number | null;
 
   constructor(params: {
     id: string;
@@ -20,6 +23,9 @@ export class Color {
     layersUsed?: Set<number>;
     partialLayers?: Set<number>;
     totalLayers?: number;
+    // 3MF specific fields
+    threeMfFilamentId?: number;
+    threeMfToolIndex?: number | null;
   }) {
     this.id = params.id;
     this.name = params.name;
@@ -28,6 +34,8 @@ export class Color {
     this.lastLayer = params.lastLayer;
     this.layersUsed = params.layersUsed || new Set();
     this.partialLayers = params.partialLayers || new Set();
+    this.threeMfFilamentId = params.threeMfFilamentId;
+    this.threeMfToolIndex = params.threeMfToolIndex;
 
     // Calculate usage percentage
     const totalLayers = params.totalLayers || 0;

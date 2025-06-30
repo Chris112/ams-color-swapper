@@ -252,6 +252,16 @@ export class GcodeCache {
     const gitCommitHash = import.meta.env.VITE_GIT_COMMIT_HASH || Date.now().toString(36);
     return `${ALGORITHM_VERSION}-${gitCommitHash}`;
   }
+
+  /**
+   * Close the database connection
+   */
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
 }
 
 // Export singleton instance

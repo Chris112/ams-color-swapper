@@ -98,53 +98,48 @@ G1 X150 Y150 E5.0`;
     });
 
     it('should map colors to layers with persistence', () => {
-      // With the color persistence fix, all active tools appear on every layer after introduction
+      // Each layer accumulates all tools used on that layer
       // Layer 0: Only T0 (starting tool)
       expect(stats.layerColorMap.get(0)).toEqual(['T0']);
 
-      // Layer 1: T0 + T1 (T1 introduced via tool change)
-      expect(stats.layerColorMap.get(1)).toContain('T0');
-      expect(stats.layerColorMap.get(1)).toContain('T1');
+      // Layer 1: T0 carries forward + T1 (after tool change from T0 to T1)
+      expect(stats.layerColorMap.get(1)).toEqual(['T0', 'T1']);
 
-      // Layer 2: T0 + T1 + T2 (T2 introduced, all previous tools persist)
-      expect(stats.layerColorMap.get(2)).toContain('T0');
-      expect(stats.layerColorMap.get(2)).toContain('T1');
-      expect(stats.layerColorMap.get(2)).toContain('T2');
+      // Layer 2: Previous tools carry forward + T2 (after tool change from T1 to T2)
+      expect(stats.layerColorMap.get(2)).toEqual(['T0', 'T1', 'T2']);
 
-      // Layer 3: T0 + T1 + T2 + T3 (T3 introduced, all previous tools persist)
-      expect(stats.layerColorMap.get(3)).toContain('T0');
-      expect(stats.layerColorMap.get(3)).toContain('T1');
-      expect(stats.layerColorMap.get(3)).toContain('T2');
-      expect(stats.layerColorMap.get(3)).toContain('T3');
+      // Layer 3: Previous tools carry forward + T3 (after tool change from T2 to T3)
+      expect(stats.layerColorMap.get(3)).toEqual(['T0', 'T1', 'T2', 'T3']);
 
-      // Layer 4: All tools still active (T0, T1, T2, T3)
-      expect(stats.layerColorMap.get(4)).toContain('T0');
-      expect(stats.layerColorMap.get(4)).toContain('T1');
-      expect(stats.layerColorMap.get(4)).toContain('T2');
-      expect(stats.layerColorMap.get(4)).toContain('T3');
+      // Layer 4: All tools carry forward (T3 to T0 change, but T0 already present)
+      expect(stats.layerColorMap.get(4)).toEqual(['T0', 'T1', 'T2', 'T3']);
     });
 
     it('should track multiple colors per layer with cumulative persistence', () => {
-      // With persistence fix, each layer accumulates more colors as tools are introduced
+      // Each layer accumulates all tools that have been used
 
       // Layer 0: Only T0
       expect(stats.layerColorMap.get(0)?.length).toBe(1);
 
-      // Layer 1: T0 + T1 (2 colors)
+      // Layer 1: T0 + T1 (two colors accumulated)
       const layer1Colors = stats.layerColorMap.get(1);
       expect(layer1Colors).toBeDefined();
       expect(layer1Colors?.length).toBe(2);
       expect(layer1Colors).toContain('T0');
       expect(layer1Colors).toContain('T1');
 
-      // Layer 2: T0 + T1 + T2 (3 colors)
+      // Layer 2: T0 + T1 + T2 (three colors accumulated)
       expect(stats.layerColorMap.get(2)?.length).toBe(3);
+      expect(stats.layerColorMap.get(2)).toContain('T0');
+      expect(stats.layerColorMap.get(2)).toContain('T1');
+      expect(stats.layerColorMap.get(2)).toContain('T2');
 
-      // Layer 3: T0 + T1 + T2 + T3 (4 colors)
+      // Layer 3: All four tools accumulated
       expect(stats.layerColorMap.get(3)?.length).toBe(4);
-
-      // Layer 4: Still all 4 colors
-      expect(stats.layerColorMap.get(4)?.length).toBe(4);
+      expect(stats.layerColorMap.get(3)).toContain('T0');
+      expect(stats.layerColorMap.get(3)).toContain('T1');
+      expect(stats.layerColorMap.get(3)).toContain('T2');
+      expect(stats.layerColorMap.get(3)).toContain('T3');
     });
 
     it('should provide layer details with tool changes', () => {
@@ -156,7 +151,7 @@ G1 X150 Y150 E5.0`;
       const layer1Detail = stats.layerDetails?.find((ld) => ld.layer === 1);
       expect(layer1Detail).toBeDefined();
       expect(layer1Detail?.toolChangeCount).toBeGreaterThan(0);
-      expect(layer1Detail?.colors.length).toBeGreaterThan(1);
+      expect(layer1Detail?.colors.length).toBe(2); // T0 + T1 accumulated
     });
   });
 });

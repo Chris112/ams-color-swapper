@@ -27,6 +27,10 @@ describe('MergeHistoryManager - Regression Tests', () => {
     manager = new MergeHistoryManager();
 
     mockStats = {
+      fileName: 'test.gcode',
+      fileSize: 1000,
+      totalHeight: 50,
+      parseTime: 100,
       colors: [
         new Color({
           id: 'T0',
@@ -53,16 +57,13 @@ describe('MergeHistoryManager - Regression Tests', () => {
     };
 
     mockOptimization = {
+      totalColors: 2,
+      requiredSlots: 2,
       totalSlots: 4,
       slotAssignments: [],
       manualSwaps: [],
-      efficiency: 95,
-      analysis: {
-        totalColors: 2,
-        overlappingColors: 0,
-        maxSimultaneousColors: 2,
-        colorDistribution: new Map(),
-      },
+      estimatedTimeSaved: 0,
+      canShareSlots: [],
     };
   });
 

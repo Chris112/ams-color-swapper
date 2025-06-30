@@ -18,6 +18,10 @@ export interface GcodeStats {
     version: string;
     profile?: string;
     colorDefinitions?: string[];
+    // 3MF specific fields
+    threeMfVersion?: number;
+    bedType?: string;
+    nozzleDiameter?: number;
   };
 
   totalLayers: number;
@@ -57,5 +61,17 @@ export interface GcodeStats {
     }>;
     freedSlots: string[];
     colorMapping: Map<string, string>;
+  };
+
+  // 3MF specific fields
+  is3mfFile?: boolean;
+  threeMfMetadata?: {
+    filament_colors: string[];
+    filament_ids: number[];
+    first_extruder: number;
+    nozzle_diameter: number;
+    bed_type: string;
+    version: number;
+    is_seq_print: boolean;
   };
 }

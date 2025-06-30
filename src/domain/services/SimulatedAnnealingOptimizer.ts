@@ -30,6 +30,11 @@ export class SimulatedAnnealingOptimizer {
    * Runs the Simulated Annealing algorithm to find an optimized color assignment.
    */
   optimize(): SlotOptimizationResult {
+    // Safety check for invalid configuration
+    if (this.maxSlots < 1) {
+      throw new Error(`Invalid maxSlots: ${this.maxSlots}. Must be at least 1.`);
+    }
+
     if (this.colors.length <= this.maxSlots) {
       // If colors are less than or equal to max slots, no optimization needed, each gets its own slot
       const assignments = new Map<number, Color[]>();
@@ -127,11 +132,22 @@ export class SimulatedAnnealingOptimizer {
     if (changeType < 0.7) {
       // 70% chance to move a single color
       const randomColorId = colorIds[Math.floor(Math.random() * colorIds.length)];
-      let newSlot = Math.floor(Math.random() * this.maxSlots) + 1;
-      while (newSlot === newAssignment[randomColorId]) {
-        newSlot = Math.floor(Math.random() * this.maxSlots) + 1;
+
+      // If we only have 1 slot, we can't move colors to different slots
+      if (this.maxSlots === 1) {
+        return newAssignment;
       }
-      newAssignment[randomColorId] = newSlot;
+
+      let newSlot = Math.floor(Math.random() * this.maxSlots) + 1;
+      let attempts = 0;
+      while (newSlot === newAssignment[randomColorId] && attempts < 10) {
+        newSlot = Math.floor(Math.random() * this.maxSlots) + 1;
+        attempts++;
+      }
+
+      if (newSlot !== newAssignment[randomColorId]) {
+        newAssignment[randomColorId] = newSlot;
+      }
     } else {
       // 30% chance to swap two colors
       if (colorIds.length < 2) return newAssignment; // Need at least two colors to swap

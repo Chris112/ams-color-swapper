@@ -172,4 +172,102 @@ describe('LayerConstraintAnalyzer', () => {
       expect(mergeSuggestions.length).toBeGreaterThan(0);
     });
   });
+
+  describe('suggestion deduplication', () => {
+    it('should deduplicate merge suggestions across multiple violation ranges', () => {
+      const layerColorMap = new Map<number, string[]>();
+
+      // Create multiple violation ranges with the same colors
+      // Range 1: layers 10-20 with colors T0, T1, T2, T3, T4 (5 colors)
+      for (let i = 10; i <= 20; i++) {
+        layerColorMap.set(i, ['T0', 'T1', 'T2', 'T3', 'T4']);
+      }
+
+      // Normal layers 21-49 with 3 colors (no violation)
+      for (let i = 21; i <= 49; i++) {
+        layerColorMap.set(i, ['T0', 'T1', 'T2']);
+      }
+
+      // Range 2: layers 50-60 with the same colors T0, T1, T2, T3, T4 (5 colors)
+      for (let i = 50; i <= 60; i++) {
+        layerColorMap.set(i, ['T0', 'T1', 'T2', 'T3', 'T4']);
+      }
+
+      const stats = createMockStats(5, layerColorMap);
+      // Set similar colors for T3 and T4 to trigger merge suggestions
+      (stats.colors[3] as any).hexValue = '#FF0000'; // Red
+      (stats.colors[4] as any).hexValue = '#FF1111'; // Very similar red
+
+      const config = createConfig(4);
+      const result = LayerConstraintAnalyzer.validateLayerConstraints(stats, config);
+
+      expect(result.hasViolations).toBe(true);
+      expect(result.violations.length).toBe(2); // Two separate ranges
+
+      // Create a map to track unique merge suggestions across all ranges
+      const mergeSuggestionMap = new Map<string, number>();
+
+      result.violations.forEach((range) => {
+        range.suggestions
+          .filter((s) => s.type === 'merge' && s.secondaryColor)
+          .forEach((s) => {
+            // Create a normalized key for the merge
+            const colors = [s.primaryColor, s.secondaryColor!].sort();
+            const key = `${colors[0]}-${colors[1]}`;
+            mergeSuggestionMap.set(key, (mergeSuggestionMap.get(key) || 0) + 1);
+          });
+      });
+
+      // Check that no merge suggestion appears more than once across all ranges
+      for (const [, count] of mergeSuggestionMap) {
+        expect(count).toBe(1); // Each unique merge should appear exactly once
+      }
+
+      // Specifically verify T3-T4 merge appears only once
+      expect(mergeSuggestionMap.get('T3-T4') || 0).toBe(1);
+    });
+
+    it('should merge affected layers when deduplicating suggestions', () => {
+      const layerColorMap = new Map<number, string[]>();
+
+      // Two violation ranges with same colors
+      for (let i = 1; i <= 10; i++) {
+        layerColorMap.set(i, ['T0', 'T1', 'T2', 'T3', 'T4']);
+      }
+      for (let i = 20; i <= 30; i++) {
+        layerColorMap.set(i, ['T0', 'T1', 'T2', 'T3', 'T4']);
+      }
+
+      const stats = createMockStats(5, layerColorMap);
+      (stats.colors[3] as any).hexValue = '#FF0000';
+      (stats.colors[4] as any).hexValue = '#FF0011'; // Very similar
+
+      const config = createConfig(4);
+      const result = LayerConstraintAnalyzer.validateLayerConstraints(stats, config);
+
+      // Find a merge suggestion that should have combined layers from both ranges
+      let foundMergedSuggestion = false;
+      result.violations.forEach((range) => {
+        const mergeSuggestion = range.suggestions.find(
+          (s) =>
+            s.type === 'merge' &&
+            ((s.primaryColor === 'T3' && s.secondaryColor === 'T4') ||
+              (s.primaryColor === 'T4' && s.secondaryColor === 'T3'))
+        );
+
+        if (mergeSuggestion) {
+          // Should include layers from both ranges
+          const affectedLayers = mergeSuggestion.impact.layersAffected;
+          const hasFirstRange = affectedLayers.some((l) => l >= 1 && l <= 10);
+          const hasSecondRange = affectedLayers.some((l) => l >= 20 && l <= 30);
+
+          if (hasFirstRange && hasSecondRange) {
+            foundMergedSuggestion = true;
+          }
+        }
+      });
+
+      expect(foundMergedSuggestion).toBe(true);
+    });
+  });
 });

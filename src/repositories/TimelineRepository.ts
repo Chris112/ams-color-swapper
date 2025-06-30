@@ -357,4 +357,14 @@ export class TimelineRepository {
       branches: new Map(data.branches),
     };
   }
+
+  /**
+   * Close the database connection
+   */
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
 }

@@ -79,6 +79,9 @@ export const colorStatsTemplate = (
   colors: Color[],
   filamentEstimates?: FilamentUsage[]
 ): string => {
+  // Calculate total weight from filament estimates for percentage calculations
+  const totalWeight = filamentEstimates?.reduce((sum, est) => sum + (est.weight || 0), 0) || 0;
+
   return `
     <div class="space-y-8">
       <!-- Interactive Layer Timeline -->
@@ -139,6 +142,9 @@ export const colorStatsTemplate = (
             const filamentEstimate = filamentEstimates?.find((est) => est.colorId === color.id);
             const weight = filamentEstimate?.weight || 0;
 
+            // Calculate weight-based percentage for progress bar
+            const weightPercentage = totalWeight > 0 ? (weight / totalWeight) * 100 : 0;
+
             return `
           <div class="color-card bg-white/5 backdrop-blur-sm rounded-2xl p-4 hover:bg-white/8 transition-all duration-300 group animate-scale-in border border-white/10 hover:border-white/15" 
                style="animation-delay: ${index * 0.05}s" 
@@ -176,9 +182,9 @@ export const colorStatsTemplate = (
               
               <div class="flex items-center gap-2">
                 <div class="progress-bar flex-1">
-                  <div class="progress-bar-fill" style="width: ${Math.min(100, Math.max(0, color.usagePercentage || 0))}%"></div>
+                  <div class="progress-bar-fill" style="width: ${Math.min(100, Math.max(0, weightPercentage))}%"></div>
                 </div>
-                <span class="text-xs text-white/60 font-mono min-w-fit">${(color.usagePercentage || 0).toFixed(1)}%</span>
+                <span class="text-xs text-white/60 font-mono min-w-fit">${weightPercentage.toFixed(1)}%</span>
               </div>
             </div>
           </div>`;
@@ -196,9 +202,10 @@ export const optimizationTemplate = (
   stats?: GcodeStats
 ): string => {
   // Determine terminology based on configuration
-  const isAmsMode = optimization.configuration?.type === 'ams' && (optimization.configuration?.unitCount || 0) > 0;
+  const isAmsMode =
+    optimization.configuration?.type === 'ams' && (optimization.configuration?.unitCount || 0) > 0;
   const assignmentTitle = isAmsMode ? 'AMS Slot Assignments' : 'Toolhead Assignments';
-  
+
   return `
 
     <div class="glass rounded-3xl p-8 animate-fade-in" style="animation-delay: 0.4s">
@@ -302,10 +309,16 @@ export const filamentUsageTemplate = (filamentUsage: FilamentUsage[]): string =>
 };
 
 // Simplified swap instructions template with only Glassmorphism design
-export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats, optimization?: OptimizationResult): string => {
+export const swapInstructionsTemplate = (
+  swaps: ManualSwap[],
+  stats: GcodeStats,
+  optimization?: OptimizationResult
+): string => {
   // Determine terminology based on configuration
-  const isAmsMode = optimization?.configuration?.type === 'ams' && (optimization?.configuration?.unitCount || 0) > 0;
-  
+  const isAmsMode =
+    optimization?.configuration?.type === 'ams' &&
+    (optimization?.configuration?.unitCount || 0) > 0;
+
   if (swaps.length === 0) {
     return `
       <div class="text-center p-12 glass rounded-3xl border border-vibrant-green/30">
@@ -321,7 +334,11 @@ export const swapInstructionsTemplate = (swaps: ManualSwap[], stats: GcodeStats,
 };
 
 // Ultra Premium Glassmorphism Cards Design
-function swapInstructionsGlassmorphismDesign(swaps: ManualSwap[], stats: GcodeStats, isAmsMode: boolean): string {
+function swapInstructionsGlassmorphismDesign(
+  swaps: ManualSwap[],
+  stats: GcodeStats,
+  isAmsMode: boolean
+): string {
   const getContrastColor = (hexValue: string): string => {
     const r = parseInt(hexValue.substring(1, 3), 16);
     const g = parseInt(hexValue.substring(3, 5), 16);

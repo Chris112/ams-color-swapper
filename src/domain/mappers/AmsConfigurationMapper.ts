@@ -9,7 +9,7 @@ export class AmsConfigurationMapper {
   /**
    * Convert AmsConfiguration to OptimizationResult
    */
-  static toOptimizationResult(config: AmsConfiguration, _colors: Color[]): OptimizationResult {
+  static toOptimizationResult(config: AmsConfiguration, colors: Color[]): OptimizationResult {
     // Include ALL slots, even empty ones, to ensure proper display in UI
     const slotAssignments: SlotAssignment[] = config
       .getAllSlots()
@@ -43,7 +43,7 @@ export class AmsConfigurationMapper {
     });
 
     return {
-      totalColors: config.getTotalColors(),
+      totalColors: colors.length, // Use the actual colors array length, not what's in slots
       requiredSlots: slotAssignments.length, // This now shows actual slots used, not total slots
       totalSlots: config.getConfiguration().totalSlots, // Add total slots available
       slotAssignments,

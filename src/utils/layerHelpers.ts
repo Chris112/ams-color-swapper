@@ -1,7 +1,7 @@
 /**
  * Layer numbering conversion utilities
- * 
- * Core Principle: 
+ *
+ * Core Principle:
  * - Internal storage is always 0-based (0, 1, 2, ...)
  * - User display is always 1-based (1, 2, 3, ...)
  * - G-code files may use either 0-based or 1-based numbering
@@ -24,20 +24,26 @@ export function toInternalLayer(displayLayer: number): number {
 /**
  * Convert internal 0-based layer range to display 1-based range
  */
-export function toDisplayRange(startLayer: number, endLayer: number): { start: number; end: number } {
+export function toDisplayRange(
+  startLayer: number,
+  endLayer: number
+): { start: number; end: number } {
   return {
     start: toDisplayLayer(startLayer),
-    end: toDisplayLayer(endLayer)
+    end: toDisplayLayer(endLayer),
   };
 }
 
 /**
  * Convert display 1-based layer range to internal 0-based range
  */
-export function toInternalRange(startLayer: number, endLayer: number): { start: number; end: number } {
+export function toInternalRange(
+  startLayer: number,
+  endLayer: number
+): { start: number; end: number } {
   return {
     start: toInternalLayer(startLayer),
-    end: toInternalLayer(endLayer)
+    end: toInternalLayer(endLayer),
   };
 }
 

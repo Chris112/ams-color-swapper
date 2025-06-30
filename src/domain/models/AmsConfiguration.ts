@@ -154,6 +154,11 @@ export class AmsConfiguration {
             ? Math.floor((pauseStart + pauseEnd) / 2) // Non-overlapping: pause in the middle
             : pauseEnd; // Overlapping: pause at start of overlap
 
+        // Calculate actual swap window based on color usage
+        const hasGap = toColor.firstLayer > fromColor.lastLayer + 1;
+        const windowStart = hasGap ? fromColor.lastLayer + 1 : atLayer;
+        const windowEnd = hasGap ? toColor.firstLayer - 1 : atLayer;
+
         swaps.push({
           unit: slot.unitNumber,
           slot: slot.slotNumber,
@@ -165,17 +170,17 @@ export class AmsConfiguration {
           zHeight: 0, // Would be calculated from layer height
           reason: `Swap ${fromColor.id} → ${toColor.id} in Unit ${slot.unitNumber} Slot ${slot.slotNumber}`,
           timingOptions: {
-            earliest: Math.max(0, fromColor.lastLayer - 10),
-            latest: Math.min(toColor.firstLayer + 10, fromColor.lastLayer + 50),
+            earliest: windowStart,
+            latest: windowEnd,
             optimal: atLayer,
-            adjacentOnly: false,
-            bufferLayers: 5,
+            adjacentOnly: !hasGap,
+            bufferLayers: hasGap ? Math.floor((windowEnd - windowStart) / 2) : 0,
           },
           swapWindow: {
-            startLayer: Math.max(0, fromColor.lastLayer - 10),
-            endLayer: Math.min(toColor.firstLayer + 10, fromColor.lastLayer + 50),
-            flexibilityScore: 80,
-            constraints: [],
+            startLayer: windowStart,
+            endLayer: windowEnd,
+            flexibilityScore: hasGap ? Math.min(100, ((windowEnd - windowStart) / 10) * 100) : 0,
+            constraints: hasGap ? [] : ['Colors are adjacent - no flexibility'],
           },
           confidence: {
             timing: 85,

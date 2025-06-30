@@ -109,7 +109,6 @@ export class LayerConstraintAnalyzer {
       if (!currentRange || violation.layer > currentRange.endLayer + 1) {
         // Start new range
         if (currentRange) {
-          currentRange.suggestions = this.generateSuggestions(currentRange, stats);
           ranges.push(currentRange);
         }
 
@@ -119,7 +118,7 @@ export class LayerConstraintAnalyzer {
           maxColorsRequired: violation.requiredColors,
           availableSlots: constraints.maxSimultaneousColors,
           affectedLayers: [violation],
-          suggestions: [],
+          suggestions: [], // Will be populated after deduplication
         };
       } else {
         // Extend current range
@@ -134,13 +133,90 @@ export class LayerConstraintAnalyzer {
 
     // Don't forget the last range
     if (currentRange) {
-      currentRange.suggestions = this.generateSuggestions(currentRange, stats);
       ranges.push(currentRange);
     }
+
+    // Generate and deduplicate suggestions across all ranges
+    this.generateAndDeduplicateSuggestions(ranges, stats);
 
     return ranges;
   }
 
+  /**
+   * Generate suggestions for all ranges and deduplicate them
+   */
+  private static generateAndDeduplicateSuggestions(
+    ranges: ConstraintViolationRange[],
+    stats: GcodeStats
+  ): void {
+    // Track unique suggestions using a key based on the suggestion type and colors involved
+    const uniqueSuggestions = new Map<
+      string,
+      {
+        suggestion: ColorConsolidationSuggestion;
+        rangeIndex: number;
+      }
+    >();
+
+    // Generate suggestions for each range
+    ranges.forEach((range, rangeIndex) => {
+      const rangeSuggestions = this.generateSuggestions(range, stats);
+
+      for (const suggestion of rangeSuggestions) {
+        // Create a unique key for each suggestion
+        let key: string;
+        if (suggestion.type === 'merge' && suggestion.secondaryColor) {
+          // For merge suggestions, ensure A→B and B→A are treated as the same
+          const colors = [suggestion.primaryColor, suggestion.secondaryColor].sort();
+          key = `merge:${colors[0]}:${colors[1]}`;
+        } else {
+          // For remove/replace suggestions
+          key = `${suggestion.type}:${suggestion.primaryColor}`;
+        }
+
+        // If this is a new suggestion or should be merged with an existing one
+        const existing = uniqueSuggestions.get(key);
+        if (!existing) {
+          uniqueSuggestions.set(key, { suggestion, rangeIndex });
+        } else {
+          // Merge the suggestions - combine affected layers
+          const mergedLayers = Array.from(
+            new Set([
+              ...existing.suggestion.impact.layersAffected,
+              ...suggestion.impact.layersAffected,
+            ])
+          ).sort((a, b) => a - b);
+
+          const mergedSuggestion: ColorConsolidationSuggestion = {
+            ...existing.suggestion,
+            impact: {
+              ...existing.suggestion.impact,
+              layersAffected: mergedLayers,
+              // Update usage percentage if needed (take the max)
+              usagePercentage: Math.max(
+                existing.suggestion.impact.usagePercentage,
+                suggestion.impact.usagePercentage
+              ),
+            },
+          };
+
+          // Update the suggestion with merged data
+          uniqueSuggestions.set(key, {
+            suggestion: mergedSuggestion,
+            rangeIndex: existing.rangeIndex, // Keep it assigned to the first range that had it
+          });
+        }
+      }
+
+      // Clear suggestions for now, will be populated below
+      range.suggestions = [];
+    });
+
+    // Assign unique suggestions to their respective ranges
+    for (const { suggestion, rangeIndex } of uniqueSuggestions.values()) {
+      ranges[rangeIndex].suggestions.push(suggestion);
+    }
+  }
   /**
    * Generates smart suggestions for resolving constraint violations
    */

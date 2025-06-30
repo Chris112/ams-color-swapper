@@ -74,6 +74,11 @@ describe('ColorMergeService', () => {
         { colorId: 'T1', startLayer: 20, endLayer: 80, continuous: true },
         { colorId: 'T2', startLayer: 60, endLayer: 90, continuous: true },
       ],
+      filamentEstimates: [
+        { colorId: 'T0', length: 500, weight: 2.5 },
+        { colorId: 'T1', length: 800, weight: 4.0 },
+        { colorId: 'T2', length: 300, weight: 1.5 },
+      ],
       parserWarnings: [],
       parseTime: 100,
     };
@@ -144,6 +149,58 @@ describe('ColorMergeService', () => {
       expect(result!.mergeHistory.sourceColorIds).toEqual(['T1']);
       expect(result!.mergeHistory.freedSlots).toEqual(['T1']);
       expect(result!.mergeHistory.affectedLayers.length).toBeGreaterThan(0);
+    });
+
+    it('should merge filament estimates when merging colors', () => {
+      const result = service.mergeColors(mockStats, 'T0', ['T1']);
+
+      expect(result).toBeTruthy();
+      expect(result!.mergedStats.filamentEstimates).toBeDefined();
+
+      // Should have 2 filament estimates remaining (T0 merged with T1, T2 untouched)
+      expect(result!.mergedStats.filamentEstimates!.length).toBe(2);
+
+      // T1's estimate should be removed
+      const t1Estimate = result!.mergedStats.filamentEstimates!.find((est) => est.colorId === 'T1');
+      expect(t1Estimate).toBeUndefined();
+
+      // T0's estimate should have combined weight and length
+      const t0Estimate = result!.mergedStats.filamentEstimates!.find((est) => est.colorId === 'T0');
+      expect(t0Estimate).toBeTruthy();
+      expect(t0Estimate!.weight).toBe(6.5); // 2.5 + 4.0 = 6.5g
+      expect(t0Estimate!.length).toBe(1300); // 500 + 800 = 1300mm
+
+      // T2's estimate should remain unchanged
+      const t2Estimate = result!.mergedStats.filamentEstimates!.find((est) => est.colorId === 'T2');
+      expect(t2Estimate).toBeTruthy();
+      expect(t2Estimate!.weight).toBe(1.5);
+      expect(t2Estimate!.length).toBe(300);
+    });
+
+    it('should handle merging when filament estimates are missing', () => {
+      // Test with stats that don't have filament estimates
+      const statsWithoutEstimates = { ...mockStats, filamentEstimates: undefined };
+      const result = service.mergeColors(statsWithoutEstimates, 'T0', ['T1']);
+
+      expect(result).toBeTruthy();
+      expect(result!.mergedStats.colors.length).toBe(2); // Should still merge colors
+    });
+
+    it('should handle merging when some colors lack filament estimates', () => {
+      // Test with partial filament estimates
+      const partialEstimates = [
+        { colorId: 'T0', length: 500, weight: 2.5 },
+        // T1 missing estimate
+        { colorId: 'T2', length: 300, weight: 1.5 },
+      ];
+      const statsWithPartialEstimates = { ...mockStats, filamentEstimates: partialEstimates };
+      const result = service.mergeColors(statsWithPartialEstimates, 'T0', ['T1']);
+
+      expect(result).toBeTruthy();
+      const t0Estimate = result!.mergedStats.filamentEstimates!.find((est) => est.colorId === 'T0');
+      expect(t0Estimate).toBeTruthy();
+      expect(t0Estimate!.weight).toBe(2.5); // Only T0's original weight since T1 had no estimate
+      expect(t0Estimate!.length).toBe(500);
     });
   });
 

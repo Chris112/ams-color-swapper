@@ -98,8 +98,10 @@
               <p class="text-lg font-medium text-white mb-1">Drop your G-code file here</p>
               <p class="text-body text-white/60 mb-4">or click to browse</p>
               <button class="btn-gradient">Select File</button>
-              <p class="text-sm text-white/50 mt-4">Supports .gcode, .gco, .g files up to 200MB</p>
-              <input type="file" id="fileInput" accept=".gcode,.gco,.g" hidden />
+              <p class="text-sm text-white/50 mt-4">
+                Supports .gcode, .gco, .g, .3mf files up to 200MB
+              </p>
+              <input type="file" id="fileInput" accept=".gcode,.gco,.g,.3mf,.gcode.3mf" hidden />
             </div>
 
             <!-- Action Buttons - Outside dropZone -->
@@ -309,6 +311,13 @@
               </h3>
               <div id="fileStats">
                 <!-- Stats will be populated here -->
+              </div>
+            </div>
+
+            <!-- Constraint Validation Section -->
+            <div class="mb-8">
+              <div id="constraintValidation">
+                <!-- Constraint validation warnings will be populated here -->
               </div>
             </div>
 

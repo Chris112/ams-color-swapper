@@ -23,7 +23,7 @@ function createMockFile(content: string, name: string): File {
 describe('Carrot Sign Layer Count Fix', () => {
   it('should correctly count 13 layers for carrot_sign.gcode', async () => {
     // Read the actual carrot_sign.gcode file
-    const carrotPath = path.join(__dirname, '../../../examples/carrot_sign.gcode');
+    const carrotPath = path.join(__dirname, '../../../examples/tests/carrot_sign.gcode');
     const carrotContent = fs.readFileSync(carrotPath, 'utf8');
     const carrotFile = createMockFile(carrotContent, 'carrot_sign.gcode');
 
@@ -33,16 +33,20 @@ describe('Carrot Sign Layer Count Fix', () => {
 
     // Log debug information
     console.log(`Total layers detected: ${stats.totalLayers}`);
-    console.log(`Layer color map keys: [${Array.from(stats.layerColorMap.keys()).sort((a, b) => a - b).join(', ')}]`);
+    console.log(
+      `Layer color map keys: [${Array.from(stats.layerColorMap.keys())
+        .sort((a, b) => a - b)
+        .join(', ')}]`
+    );
     console.log(`Layer color map size: ${stats.layerColorMap.size}`);
-    
+
     // Verify that we correctly detect 13 layers (not 14)
     expect(stats.totalLayers).toBe(13);
-    
-    // Verify that the layer map contains layers 1-13 (not 0-13)
+
+    // Verify that the layer map contains layers 0-12 (internal representation is 0-based)
     const layerKeys = Array.from(stats.layerColorMap.keys()).sort((a, b) => a - b);
-    expect(layerKeys[0]).toBe(1); // First layer should be 1, not 0
-    expect(layerKeys[layerKeys.length - 1]).toBe(13); // Last layer should be 13
+    expect(layerKeys[0]).toBe(0); // First layer should be 0 (internal 0-based)
+    expect(layerKeys[layerKeys.length - 1]).toBe(12); // Last layer should be 12 (internal 0-based)
     expect(layerKeys.length).toBe(13); // Should have exactly 13 layers
   });
 

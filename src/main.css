@@ -49,18 +49,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Merge Timeline Styles */
-.merge-timeline-container {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-  max-width: 90vw;
-  max-height: 90vh;
-  overflow: auto;
-}
-
+/* Timeline Styles - Minimal CSS, rely on Tailwind */
 .timeline-track {
   position: relative;
   padding: 20px 0;
@@ -100,35 +89,6 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-/* Timeline overlay background */
-.merge-timeline-container::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: -1;
-}
-
-/* Animation for timeline appearance */
-.merge-timeline-container:not(.hidden) {
-  animation: timelineSlideIn 0.3s ease-out;
-}
-
-@keyframes timelineSlideIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -60%);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%);
   }
 }
 
@@ -880,6 +840,83 @@ body {
   border-bottom: 6px solid rgba(0, 0, 0, 0.9);
 }
 
+/* Timeline Variations - Fix for SVG hover issues */
+.timeline-node {
+  transform-origin: center;
+  transition: transform 0.2s ease;
+}
+
+.timeline-node:hover {
+  transform: scale(1.1);
+}
+
+/* Remove problematic animate-ping */
+@keyframes timeline-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.1);
+  }
+}
+
+.timeline-pulse {
+  animation: timeline-pulse 2s ease-in-out infinite;
+}
+
+/* Timeline Track Fixes */
+.timeline-track {
+  position: relative;
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+.timeline-svg {
+  overflow: visible;
+}
+
+/* Timeline Variation 1 - Clean Horizontal */
+.timeline-v1-node {
+  transition: transform 0.2s ease;
+}
+
+.timeline-v1-node:hover {
+  transform: translateY(-4px);
+}
+
+/* Timeline Variation 2 - Cards */
+.timeline-v2-card {
+  transition: all 0.2s ease;
+}
+
+.timeline-v2-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Timeline Variation 3 - Vertical */
+.timeline-v3-item {
+  transition: transform 0.2s ease;
+}
+
+.timeline-v3-item:hover > div:last-child {
+  transform: translateX(4px);
+}
+
+/* Test Buttons */
+.variation-btn {
+  transition: all 0.2s ease;
+}
+
+/* Fix tooltip z-index */
+.timeline-tooltip,
+[class*='timeline-tooltip'] {
+  z-index: 9999 !important;
+}
+
 /* Layer Hover Tooltip Styles */
 .layer-tooltip-container {
   position: absolute;
@@ -1434,7 +1471,7 @@ body {
   transform: scale(1.02) translateY(-2px);
   border: 2px dashed #ff006e !important;
   background: linear-gradient(135deg, rgba(255, 0, 110, 0.15), rgba(131, 56, 236, 0.15));
-  box-shadow: 
+  box-shadow:
     0 0 30px rgba(255, 0, 110, 0.4),
     0 10px 40px rgba(0, 0, 0, 0.3);
   animation: drag-pulse 1.5s ease-in-out infinite;
@@ -1459,7 +1496,8 @@ body {
 
 /* Enhanced floating animation for drag state */
 @keyframes float-enhanced {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px) scale(1.1);
   }
   50% {
@@ -1469,13 +1507,14 @@ body {
 
 /* Pulsing glow animation */
 @keyframes drag-pulse {
-  0%, 100% {
-    box-shadow: 
+  0%,
+  100% {
+    box-shadow:
       0 0 30px rgba(255, 0, 110, 0.4),
       0 10px 40px rgba(0, 0, 0, 0.3);
   }
   50% {
-    box-shadow: 
+    box-shadow:
       0 0 50px rgba(255, 0, 110, 0.6),
       0 15px 50px rgba(0, 0, 0, 0.4);
   }

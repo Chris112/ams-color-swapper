@@ -2,6 +2,7 @@ import { GcodeStats } from '../../types/gcode';
 import { LayerColorInfo } from '../../types/layer';
 import { Color } from '../../domain/models/Color';
 import { Logger } from '../../utils/logger';
+import { gcodeToInternalLayer } from '../../utils/layerHelpers';
 import {
   ColorRange,
   ToolChangeData,
@@ -108,7 +109,7 @@ export class GcodeParserWorker {
               : `#${colorDef}`
             : '#888888';
         const firstLayer = mergedData.colorFirstSeen.get(tool) || 0;
-        const lastLayer = mergedData.colorLastSeen.get(tool) || 0;
+        const lastLayer = mergedData.colorLastSeen.get(tool) || firstLayer;
 
         // Build layersUsed set from layerColorMap
         const layersUsed = new Set<number>();
@@ -232,12 +233,20 @@ export class GcodeParserWorker {
         if (trimmed.includes('layer')) {
           const match = trimmed.match(/layer\s*(?:#|num\/total_layer_count:)?\s*(\d+)/i);
           if (match) {
-            const newLayer = parseInt(match[1]);
+            const gcodeLayer = parseInt(match[1]);
+            // Convert G-code layer number to internal 0-based layer number
+            const newLayer = gcodeToInternalLayer(gcodeLayer, true); // Assume 1-based G-code
             if (newLayer !== currentLayer) {
               currentLayer = newLayer;
               layers.add(currentLayer);
-              // Add only the current tool to the new layer
-              layerColorMap.push([currentLayer, [currentTool]]);
+              // Add all active tools to the new layer (carry forward from previous layer)
+              const previousLayerEntry = layerColorMap.find(
+                ([layer]) => layer === currentLayer - 1
+              );
+              const previousLayerTools = previousLayerEntry
+                ? [...previousLayerEntry[1]]
+                : [currentTool];
+              layerColorMap.push([currentLayer, previousLayerTools]);
             }
           }
         } else if (
@@ -280,10 +289,13 @@ export class GcodeParserWorker {
               lineNumber: localLineNumber,
             });
             currentTool = command;
-            // Update current layer with new tool
+            // When a tool change happens during a layer, accumulate all tools that deposit material
             const existingEntry = layerColorMap.find(([layer]) => layer === currentLayer);
             if (existingEntry) {
-              existingEntry[1] = [currentTool];
+              // Keep the previous tools and add the new tool (tool accumulation)
+              if (!existingEntry[1].includes(currentTool)) {
+                existingEntry[1].push(currentTool);
+              }
             }
           }
         } else if (command === 'M600') {
@@ -413,8 +425,20 @@ export class GcodeParserWorker {
       merged.layerColorMap.set(0, ['T0']);
     }
 
-    // No color persistence needed - keep only the tools actually used in each layer
-    // The layerColorMap already contains the correct mapping from the chunks
+    // CRITICAL: Apply tool accumulation across layers after merging
+    // In multi-color prints, tools remain active until explicitly changed
+    const sortedLayers = Array.from(merged.layers).sort((a, b) => a - b);
+    for (let i = 1; i < sortedLayers.length; i++) {
+      const currentLayer = sortedLayers[i];
+      const previousLayer = sortedLayers[i - 1];
+
+      const currentTools = merged.layerColorMap.get(currentLayer) || [];
+      const previousTools = merged.layerColorMap.get(previousLayer) || [];
+
+      // Carry forward all tools from previous layer (tool accumulation)
+      const accumulatedTools = [...new Set([...previousTools, ...currentTools])];
+      merged.layerColorMap.set(currentLayer, accumulatedTools);
+    }
 
     // Update color first/last seen based on actual layer usage
     merged.colorFirstSeen.clear();

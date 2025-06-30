@@ -24,7 +24,7 @@ export async function calculateStatistics(
   );
   const maxLayerFromMap = layerKeys.length > 0 ? Math.max(...layerKeys) : 0;
   const minLayerFromMap = layerKeys.length > 0 ? Math.min(...layerKeys) : 0;
-  
+
   // For 1-based indexing (like OrcaSlicer), totalLayers = maxLayer
   // For 0-based indexing, totalLayers = maxLayer + 1
   // Detect indexing scheme: if minimum layer is 1, it's 1-based
@@ -148,6 +148,38 @@ export async function calculateStatistics(
 
   // Filter out unused colors (test requirement: only show used colors)
   const usedColors = deduplicationResult.deduplicatedColors.filter((color) => color.layerCount > 0);
+
+  // Fix filament estimates mapping to match actual tool IDs found in G-code
+  if (partialStats.filamentEstimates) {
+    const actualToolIds = usedColors.map((c) => c.id).sort(); // [T0, T5]
+    const originalFilamentEstimates = [...partialStats.filamentEstimates]; // [{colorId: T0, weight: 2.32}, {colorId: T1, weight: 3.75}]
+
+    logger.debug('Fixing filament estimates mapping', {
+      actualToolIds,
+      originalEstimates: originalFilamentEstimates.map((e) => `${e.colorId}: ${e.weight}g`),
+    });
+
+    // Create new filament estimates that map to actual tool IDs
+    const fixedFilamentEstimates = actualToolIds
+      .map((toolId, index) => {
+        // Map to the original estimate by index (T0->T0, T5->T1, etc.)
+        const originalEstimate = originalFilamentEstimates[index];
+        if (originalEstimate) {
+          return {
+            ...originalEstimate,
+            colorId: toolId, // Update the colorId to match the actual tool
+          };
+        }
+        return null;
+      })
+      .filter((estimate): estimate is NonNullable<typeof estimate> => estimate !== null);
+
+    partialStats.filamentEstimates = fixedFilamentEstimates;
+
+    logger.debug('Fixed filament estimates', {
+      fixedEstimates: fixedFilamentEstimates.map((e) => `${e.colorId}: ${e.weight}g`),
+    });
+  }
 
   const stats: GcodeStats = {
     ...partialStats,

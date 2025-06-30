@@ -75,6 +75,13 @@ export class ColorMergePanel extends Component {
     const isMergeColor = selectionIndex === 0; // First selected = merge (will be removed)
     const isKeepColor = selectionIndex === 1; // Second selected = keep (target)
 
+    // Get filament weight for this color
+    const state = appState.getState();
+    const filamentEstimate = state.stats?.filamentEstimates?.find(
+      (est) => est.colorId === color.id
+    );
+    const weight = filamentEstimate?.weight || 0;
+
     return `
       <div class="color-merge-option ${isSelected ? 'selected' : ''} ${isMergeColor ? 'merge-color' : ''} ${isKeepColor ? 'keep-color' : ''} cursor-pointer hover:bg-white/10 transition-colors rounded-lg p-4 border border-white/10 hover:border-white/20" data-color-id="${color.id}">
         <div class="flex items-center gap-4">
@@ -88,6 +95,7 @@ export class ColorMergePanel extends Component {
             <div class="font-semibold text-white">${color.name || color.id}</div>
             <div class="text-sm text-white/60">${color.hexValue || 'No hex'}</div>
             <div class="text-xs text-white/50">Layers ${color.firstLayer + 1}-${color.lastLayer + 1}</div>
+            ${weight > 0 ? `<div class="text-xs text-white/60 font-medium">${weight.toFixed(1)}g</div>` : ''}
           </div>
         </div>
       </div>
@@ -144,11 +152,38 @@ export class ColorMergePanel extends Component {
         <div class="mt-4 text-sm text-white/70">
           <p>${allSourceColors.length} color${allSourceColors.length > 1 ? 's' : ''} will be merged into ${targetColor.name || targetColor.id}</p>
           <p>${allSourceColors.length} slot${allSourceColors.length > 1 ? 's' : ''} will be freed for manual swaps</p>
+          ${this.renderWeightSummary(allSourceColors, targetColor)}
         </div>
       </div>
     `;
   }
 
+  private renderWeightSummary(sourceColors: Color[], targetColor: Color): string {
+    const state = appState.getState();
+    if (!state.stats?.filamentEstimates) return '';
+
+    // Get weights for all colors involved
+    const targetWeight =
+      state.stats.filamentEstimates.find((est) => est.colorId === targetColor.id)?.weight || 0;
+    const sourceWeights = sourceColors.map((color) => {
+      const estimate = state.stats!.filamentEstimates!.find((est) => est.colorId === color.id);
+      return estimate?.weight || 0;
+    });
+
+    const totalSourceWeight = sourceWeights.reduce((sum, weight) => sum + weight, 0);
+    const combinedWeight = targetWeight + totalSourceWeight;
+
+    if (combinedWeight <= 0) return '';
+
+    return `
+        <div class="mt-2 p-2 bg-white/5 rounded border-l-2 border-blue-400">
+          <div class="text-xs font-medium text-blue-300">Filament Weight Summary</div>
+          <div class="text-xs text-white/60 mt-1">
+            Target: ${targetWeight.toFixed(1)}g + Sources: ${totalSourceWeight.toFixed(1)}g = <span class="text-green-400 font-medium">${combinedWeight.toFixed(1)}g total</span>
+          </div>
+        </div>
+      `;
+  }
   private attachEventListeners(): void {
     // Close button
     const closeBtn = this.element.querySelector('#closeMergePanel');

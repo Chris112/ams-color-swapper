@@ -185,7 +185,7 @@ export class FileUploader extends Component {
   private handleDragEnter(event: DragEvent): void {
     event.preventDefault();
     this.dragCounter++;
-    
+
     if (!this.isDragActive && this.dropZone) {
       this.isDragActive = true;
       this.dropZone.classList.add('drag-enter');
@@ -208,7 +208,7 @@ export class FileUploader extends Component {
   private handleDragLeave(event: DragEvent): void {
     event.preventDefault();
     this.dragCounter--;
-    
+
     // Only reset when all drag events have left (counter reaches 0)
     if (this.dragCounter === 0 && this.isDragActive && this.dropZone) {
       this.isDragActive = false;
@@ -247,13 +247,21 @@ export class FileUploader extends Component {
           this.dropZone.style.animation = '';
         }
       }, 500);
-      alert('Please drop a valid G-code file (.gcode, .gco, .g)');
+      alert('Please drop a valid G-code file (.gcode, .gco, .g, .3mf)');
     }
   }
 
   private isValidGcodeFile(file: File): boolean {
-    const validExtensions = ['.gcode', '.gco', '.g'];
-    const ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+    const validExtensions = ['.gcode', '.gco', '.g', '.3mf'];
+    const fileName = file.name.toLowerCase();
+
+    // Check for .gcode.3mf files
+    if (fileName.endsWith('.gcode.3mf')) {
+      return true;
+    }
+
+    // Check for regular extensions
+    const ext = fileName.substring(fileName.lastIndexOf('.'));
     return validExtensions.includes(ext);
   }
 

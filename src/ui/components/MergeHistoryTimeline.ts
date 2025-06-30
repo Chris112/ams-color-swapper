@@ -8,73 +8,107 @@ export class MergeHistoryTimeline extends Component {
   private tooltipElement: HTMLElement | null = null;
   private storageMetrics: { totalSize: number; timelineCount: number } | null = null;
   private clickOutsideHandler: ((e: MouseEvent) => void) | null = null;
+  private scrollPosition: number = 0;
 
   constructor() {
-    const container = document.createElement('div');
-    container.id = 'mergeHistoryTimeline';
-    container.className =
-      'merge-timeline-container hidden fixed top-0 left-0 right-0 bottom-0 z-50 flex items-center justify-center';
-    container.innerHTML = `
-      <div class="absolute top-0 left-0 w-full h-full bg-black/50 backdrop-blur-sm"></div>
-      <div class="timeline-dialog relative z-10 w-full max-w-4xl max-h-[80vh] overflow-auto m-4"></div>
-    `;
-    document.body.appendChild(container);
+    // Create a wrapper element that will be our component root
+    const wrapper = document.createElement('div');
+    wrapper.id = 'mergeHistoryTimeline';
+    document.body.appendChild(wrapper);
 
     super('#mergeHistoryTimeline');
     this.initialize();
   }
 
   protected render(): void {
+    // Create the modal structure only if it doesn't exist
+    if (!this.element.innerHTML) {
+      this.element.innerHTML = `
+        <div id="timelineModal" class="fixed inset-0 z-50 hidden opacity-0 transition-opacity duration-300">
+          <!-- Backdrop -->
+          <div class="modal-backdrop absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+          
+          <!-- Modal Content -->
+          <div class="relative z-10 flex items-center justify-center min-h-screen p-4" id="modalCentering">
+            <div class="modal-content glass rounded-3xl shadow-2xl border border-white/10 max-w-5xl w-full max-h-[90vh] overflow-y-auto transform transition-transform duration-300 scale-95">
+              <!-- Modal Header -->
+              <div class="sticky top-0 glass rounded-t-3xl border-b border-white/10 px-8 py-6 flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                  <svg class="w-8 h-8 text-vibrant-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  Merge Timeline
+                  <span id="timelineStateCount" class="text-sm text-white/60 font-normal"></span>
+                </h2>
+                <button id="closeTimeline" class="text-white/60 hover:text-white transition-colors">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              
+              <!-- Modal Body -->
+              <div class="p-8 space-y-6">
+                <!-- Controls Section -->
+                <div id="timelineControls" class="flex items-center justify-between"></div>
+                
+                <!-- Branch Selector -->
+                <div id="branchSelector"></div>
+                
+                <!-- Timeline Track -->
+                <div id="timelineTrack" class="timeline-track-container relative min-h-[120px]"></div>
+                
+                <!-- Help Text -->
+                <div class="text-xs text-white/50 text-center">
+                  Use Ctrl+Z/Ctrl+Y for quick navigation • Click nodes to jump to any state
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Update dynamic content
+    this.updateTimelineContent();
+  }
+
+  private updateTimelineContent(): void {
     const state = appState.getState();
     if (!state.stats || state.view !== 'results') {
-      this.hide();
       return;
     }
 
     const timelineState = appState.getTimelineState();
     if (!timelineState || timelineState.snapshots.length === 0) {
-      this.hide();
       return;
     }
 
-    // Find the dialog container within our element
-    const dialogContainer = this.element.querySelector('.timeline-dialog');
-    if (!dialogContainer) return;
+    // Update state count
+    const stateCountElement = this.element.querySelector('#timelineStateCount');
+    if (stateCountElement) {
+      stateCountElement.textContent = `(${timelineState.snapshots.length} states)`;
+    }
 
-    dialogContainer.innerHTML = `
-      <div class="glass rounded-2xl p-6 border border-white/10 bg-black/40 backdrop-blur-sm">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <svg class="w-5 h-5 text-vibrant-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Merge Timeline
-            <span class="text-sm text-white/60 font-normal">(${timelineState.snapshots.length} states)</span>
-          </h3>
-          <div class="flex items-center gap-2">
-            ${this.renderControls()}
-            <button id="closeTimeline" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white/70 hover:text-white">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
+    // Update controls
+    const controlsContainer = this.element.querySelector('#timelineControls');
+    if (controlsContainer) {
+      controlsContainer.innerHTML = this.renderControls();
+    }
 
-        <div class="mb-4">
-          ${this.renderBranchSelector(timelineState)}
-        </div>
+    // Update branch selector
+    const branchContainer = this.element.querySelector('#branchSelector');
+    if (branchContainer) {
+      branchContainer.innerHTML = this.renderBranchSelector(timelineState);
+    }
 
-        <div class="timeline-track-container relative">
-          ${this.renderTimelineTrack(timelineState)}
-        </div>
+    // Update timeline track
+    const trackContainer = this.element.querySelector('#timelineTrack');
+    if (trackContainer) {
+      trackContainer.innerHTML = this.renderTimelineTrack(timelineState);
+    }
 
-        <div class="mt-4 text-xs text-white/50 text-center">
-          Use Ctrl+Z/Ctrl+Y for quick navigation • Click nodes to jump to any state
-        </div>
-      </div>
-    `;
-
+    // Attach event listeners after content update
     this.attachEventListeners();
   }
 
@@ -146,14 +180,14 @@ export class MergeHistoryTimeline extends Component {
     const snapshots = timelineState.snapshots;
     if (snapshots.length === 0) return '';
 
-    const trackWidth = Math.max(600, snapshots.length * 80);
-    const nodeSpacing = Math.max(60, (trackWidth - 40) / Math.max(1, snapshots.length - 1));
+    const trackWidth = Math.max(600, snapshots.length * 100);
+    const nodeSpacing = Math.max(80, (trackWidth - 40) / Math.max(1, snapshots.length - 1));
 
     return `
-      <div class="timeline-track relative overflow-x-auto pb-6" style="min-height: 120px;">
-        <svg width="${trackWidth}" height="100" class="timeline-svg">
+      <div class="timeline-track relative overflow-x-auto pb-6" style="min-height: 160px;">
+        <svg width="${trackWidth}" height="120" class="timeline-svg">
           <!-- Timeline line -->
-          <line x1="20" y1="50" x2="${trackWidth - 20}" y2="50" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
+          <line x1="20" y1="40" x2="${trackWidth - 20}" y2="40" stroke="rgba(255,255,255,0.2)" stroke-width="2"/>
           
           <!-- Snapshot nodes -->
           ${snapshots
@@ -163,7 +197,7 @@ export class MergeHistoryTimeline extends Component {
               const isOptimal = snapshot.violationCount === 0;
               const isInitial = index === 0;
 
-              return this.renderTimelineNode(snapshot, index, x, 50, {
+              return this.renderTimelineNode(snapshot, index, x, 40, {
                 isCurrent,
                 isOptimal,
                 isInitial,
@@ -179,7 +213,7 @@ export class MergeHistoryTimeline extends Component {
               const x = 20 + index * nodeSpacing;
               return `
               <div class="absolute text-center pointer-events-auto" 
-                   style="left: ${x - 25}px; top: 70px; width: 50px;"
+                   style="left: ${x - 30}px; top: 65px; width: 60px;"
                    data-snapshot-id="${snapshot.id}">
                 <div class="text-xs text-white/70 font-medium">${snapshot.violationCount}</div>
                 <div class="text-xs text-white/50">violations</div>
@@ -203,12 +237,12 @@ export class MergeHistoryTimeline extends Component {
 
     let nodeColor = 'rgba(255,255,255,0.6)';
     let fillColor = 'rgba(255,255,255,0.1)';
-    let strokeWidth = 2;
+    let strokeWidth = 3;
 
     if (isCurrent) {
       nodeColor = '#8b5cf6';
       fillColor = 'rgba(139, 92, 246, 0.2)';
-      strokeWidth = 3;
+      strokeWidth = 4;
     } else if (isOptimal) {
       nodeColor = '#10b981';
       fillColor = 'rgba(16, 185, 129, 0.2)';
@@ -217,7 +251,7 @@ export class MergeHistoryTimeline extends Component {
       fillColor = 'rgba(245, 158, 11, 0.2)';
     }
 
-    const nodeSize = isCurrent ? 8 : 6;
+    const nodeSize = isCurrent ? 12 : 10;
     const nodeType = isInitial ? 'rect' : isOptimal ? 'polygon' : 'circle';
 
     let nodeElement = '';
@@ -245,8 +279,8 @@ export class MergeHistoryTimeline extends Component {
 
     // Add pulse animation for current node
     if (isCurrent) {
-      nodeElement += `<circle cx="${x}" cy="${y}" r="${nodeSize + 3}" 
-                             fill="none" stroke="${nodeColor}" stroke-width="1" opacity="0.5"
+      nodeElement += `<circle cx="${x}" cy="${y}" r="${nodeSize + 5}" 
+                             fill="none" stroke="${nodeColor}" stroke-width="2" opacity="0.5"
                              class="animate-ping"/>`;
     }
 
@@ -271,72 +305,72 @@ export class MergeHistoryTimeline extends Component {
   }
 
   private attachEventListeners(): void {
-    // Get the dialog container for event delegation
-    const dialogContainer = this.element.querySelector('.timeline-dialog');
-    if (!dialogContainer) return;
+    // Get the modal content container for event delegation
+    const modalContent = this.element.querySelector('.modal-content');
+    if (!modalContent) return;
 
     // Control buttons
-    const undoBtn = dialogContainer.querySelector('#timelineUndo');
+    const undoBtn = modalContent.querySelector('#timelineUndo');
     if (undoBtn) {
       undoBtn.addEventListener('click', () => {
         appState.undoLastMerge();
-        this.render();
+        this.updateTimelineContent();
       });
     }
 
-    const redoBtn = dialogContainer.querySelector('#timelineRedo');
+    const redoBtn = modalContent.querySelector('#timelineRedo');
     if (redoBtn) {
       redoBtn.addEventListener('click', () => {
         appState.redoMerge();
-        this.render();
+        this.updateTimelineContent();
       });
     }
 
-    const resetBtn = dialogContainer.querySelector('#timelineReset');
+    const resetBtn = modalContent.querySelector('#timelineReset');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         appState.resetToInitialState();
-        this.render();
+        this.updateTimelineContent();
       });
     }
 
     // Close button
-    const closeBtn = dialogContainer.querySelector('#closeTimeline');
+    const closeBtn = modalContent.querySelector('#closeTimeline');
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.hide());
     }
 
     // Branch selector
-    const branchSelector = queryElement<HTMLSelectElement>(dialogContainer, '#branchSelector');
+    const branchSelector = queryElement<HTMLSelectElement>(modalContent, '#branchSelector select');
     if (branchSelector) {
       branchSelector.addEventListener('change', (e) => {
         const target = e.target;
         if (!target || !(target instanceof HTMLSelectElement)) return;
         appState.switchMergeBranch(target.value);
-        this.render();
+        this.updateTimelineContent();
       });
     }
 
     // Create branch button
-    const createBranchBtn = dialogContainer.querySelector('#createBranch');
+    const createBranchBtn = modalContent.querySelector('#createBranch');
     if (createBranchBtn) {
       createBranchBtn.addEventListener('click', () => this.showCreateBranchDialog());
     }
 
     // Export timeline button
-    const exportBtn = dialogContainer.querySelector('#exportTimeline');
+    const exportBtn = modalContent.querySelector('#exportTimeline');
     if (exportBtn) {
       exportBtn.addEventListener('click', () => this.exportTimeline());
     }
 
     // Timeline node clicks
-    dialogContainer.querySelectorAll('.timeline-node').forEach((node) => {
+    modalContent.querySelectorAll('.timeline-node').forEach((node) => {
       node.addEventListener('click', (e) => {
         const target = e.target as SVGElement;
         const snapshotId = target.getAttribute('data-snapshot-id');
         if (snapshotId) {
           appState.navigateToSnapshot(snapshotId);
-          this.render();
+          this.updateTimelineContent();
         }
       });
 
@@ -411,7 +445,7 @@ export class MergeHistoryTimeline extends Component {
     if (branchName && branchName.trim()) {
       const success = appState.createMergeBranch(branchName.trim());
       if (success) {
-        this.render();
+        this.updateTimelineContent();
       } else {
         alert('Branch name already exists or is invalid');
       }
@@ -420,22 +454,53 @@ export class MergeHistoryTimeline extends Component {
 
   public async show(): Promise<void> {
     this.isVisible = true;
-    this.element.classList.remove('hidden');
+
+    // Disable body scroll while preserving scroll position
+    this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.width = '100%';
+    document.body.style.top = `-${this.scrollPosition}px`;
 
     // Load storage metrics
     await this.loadStorageMetrics();
 
+    // Ensure modal structure is rendered
     this.render();
+
+    const modalElement = this.element.querySelector('#timelineModal');
+    if (!modalElement) return;
+
+    modalElement.classList.remove('hidden');
+    // Force reflow to ensure the transition works
+    void modalElement.getBoundingClientRect();
+
+    // Use double RAF for more reliable animation
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (modalElement) {
+          modalElement.classList.remove('opacity-0');
+          modalElement.classList.add('opacity-100');
+
+          const modalContent = modalElement.querySelector('.modal-content');
+          if (modalContent) {
+            modalContent.classList.remove('scale-95');
+            modalContent.classList.add('scale-100');
+          }
+        }
+      });
+    });
 
     // Add click outside handler
     if (!this.clickOutsideHandler) {
       this.clickOutsideHandler = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
 
-        // Check if click is on the backdrop or outside the dialog content
+        // Check if click is on the backdrop, modal container, or centering container (but not modal content)
         if (
-          target === this.element ||
-          (target.closest('.merge-timeline-container') && !target.closest('.timeline-dialog'))
+          target.classList.contains('modal-backdrop') ||
+          target.id === 'timelineModal' ||
+          (target.id === 'modalCentering' && !target.closest('.modal-content'))
         ) {
           this.hide();
         }
@@ -443,7 +508,10 @@ export class MergeHistoryTimeline extends Component {
 
       // Add with slight delay to prevent immediate close on open
       setTimeout(() => {
-        this.element.addEventListener('click', this.clickOutsideHandler!);
+        const modalElement = this.element.querySelector('#timelineModal');
+        if (modalElement) {
+          modalElement.addEventListener('click', this.clickOutsideHandler! as EventListener);
+        }
       }, 100);
     }
   }
@@ -479,12 +547,35 @@ export class MergeHistoryTimeline extends Component {
 
   public hide(): void {
     this.isVisible = false;
-    this.element.classList.add('hidden');
     this.hideTooltip();
+
+    // Restore body scroll
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+
+    const modalElement = this.element.querySelector('#timelineModal');
+    if (!modalElement) return;
+
+    // Animate out
+    modalElement.classList.remove('opacity-100');
+    modalElement.classList.add('opacity-0');
+
+    const modalContent = modalElement.querySelector('.modal-content');
+    if (modalContent) {
+      modalContent.classList.remove('scale-100');
+      modalContent.classList.add('scale-95');
+    }
+
+    setTimeout(() => {
+      if (!this.isVisible && modalElement) {
+        modalElement.classList.add('hidden');
+      }
+    }, 300);
 
     // Remove click outside handler
     if (this.clickOutsideHandler) {
-      this.element.removeEventListener('click', this.clickOutsideHandler);
+      modalElement.removeEventListener('click', this.clickOutsideHandler as EventListener);
       this.clickOutsideHandler = null;
     }
   }
