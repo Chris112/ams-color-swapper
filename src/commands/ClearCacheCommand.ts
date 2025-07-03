@@ -10,7 +10,7 @@ import { appState } from '../state/AppState';
  * Command to clear the application cache, IndexedDB databases, and development state
  */
 export class ClearCacheCommand implements ICommand<void> {
-  private static readonly INDEXED_DB_NAMES = ['ams-gcode-cache', 'ams-timeline-db'];
+  private static readonly INDEXED_DB_NAMES = ['ams-gcode-cache', 'ams-timeline-db', 'ams-hmr-state'];
 
   constructor(
     private cacheRepository: ICacheRepository,
@@ -23,16 +23,16 @@ export class ClearCacheCommand implements ICommand<void> {
       const clearingTasks: Promise<void>[] = [];
       const errors: Error[] = [];
 
-      // 1. Close database connections before deletion
-      this.closeDatabaseConnections();
-
-      // 2. Clear the main cache repository
+      // 1. Clear the main cache repository BEFORE closing connections
       const cacheResult = await this.cacheRepository.clear();
       if (cacheResult.ok) {
         this.logger.info('Cache repository cleared successfully');
       } else {
         errors.push(new Error('Failed to clear cache repository'));
       }
+
+      // 2. NOW close database connections before deletion
+      await this.closeDatabaseConnections();
 
       // 3. Clear IndexedDB databases
       for (const dbName of ClearCacheCommand.INDEXED_DB_NAMES) {
@@ -74,8 +74,12 @@ export class ClearCacheCommand implements ICommand<void> {
     }
   }
 
-  private closeDatabaseConnections(): void {
+  private async closeDatabaseConnections(): Promise<void> {
     try {
+      // Close the main cache repository connection
+      this.cacheRepository.close();
+      this.logger.info('Closed cache repository database connection');
+
       // Close gcodeCache connection
       gcodeCache.close();
       this.logger.info('Closed gcodeCache database connection');
@@ -91,6 +95,16 @@ export class ClearCacheCommand implements ICommand<void> {
           this.logger.info('Closed timeline repository database connection');
         }
       }
+
+      // Close HMR state repository if in dev mode
+      if (import.meta.env.DEV && hmrStateRepository) {
+        hmrStateRepository.close();
+        this.logger.info('Closed HMR state repository database connection');
+      }
+
+      // Give connections time to fully close
+      // This helps ensure IndexedDB deletion won't be blocked
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       this.logger.warn('Error closing database connections:', error);
     }

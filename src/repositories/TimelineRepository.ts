@@ -2,6 +2,7 @@ import { Result } from '../types/result';
 import { CacheError } from '../types/errors';
 import { MergeTimelineState } from '../services/MergeHistoryManager';
 import LZString from 'lz-string';
+import { Color } from '../domain/models/Color';
 
 export interface TimelineMetadata {
   id: string;
@@ -347,6 +348,19 @@ export class TimelineRepository {
         ...snapshot.stats,
         // Restore Map from array
         layerColorMap: new Map(snapshot.stats.layerColorMap),
+        // Restore Color objects from plain data
+        colors: snapshot.stats.colors.map((colorData: any) => 
+          Color.fromData({
+            id: colorData.id,
+            name: colorData.name,
+            hexColor: colorData.hexValue || colorData.hexColor,
+            firstLayer: colorData.firstLayer,
+            lastLayer: colorData.lastLayer,
+            layersUsed: colorData.layersUsed,
+            partialLayers: colorData.partialLayers,
+            totalLayers: snapshot.stats.totalLayers
+          })
+        ),
       },
     }));
 

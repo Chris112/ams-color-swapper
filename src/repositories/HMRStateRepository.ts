@@ -132,6 +132,13 @@ export class HMRStateRepository {
       console.error('Failed to clear HMR state:', error);
     }
   }
+
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
 }
 
 // Singleton instance

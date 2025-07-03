@@ -1,7 +1,7 @@
 import { GcodeStats } from '../types/gcode';
 import { OptimizationResult } from '../types/optimization';
 import { ConstraintValidationResult } from '../types/constraints';
-import { TimelineStateMachine, TimelineAction } from './TimelineStateMachine';
+import { TimelineStateMachine, TimelineAction, TimelineState } from './TimelineStateMachine';
 import { TimelineRepository } from '../repositories/TimelineRepository';
 import { Color } from '../domain/models/Color';
 import { assertDefined, getFromMap } from '../utils/typeGuards';
@@ -255,6 +255,7 @@ export class MergeHistoryManager {
     this.stateMachine.performAction(TimelineAction.JUMP_TO);
 
     const index = this.snapshots.findIndex((s) => s.id === snapshotId);
+    
     if (index !== -1) {
       this.currentIndex = index;
       const snapshot = this.getCurrentSnapshot();
@@ -268,6 +269,7 @@ export class MergeHistoryManager {
 
       return snapshot;
     }
+    
     return null;
   }
 
@@ -512,10 +514,16 @@ export class MergeHistoryManager {
 
       if (result.ok && result.value) {
         const { state, currentIndex } = result.value;
+        
         this.snapshots = state.snapshots;
         this.currentIndex = currentIndex;
         this.branches = state.branches;
         this.currentBranch = state.currentBranch;
+
+        // First initialize the state machine if it's empty
+        if (this.stateMachine.getCurrentState() === TimelineState.EMPTY && this.snapshots.length > 0) {
+          this.stateMachine.performAction(TimelineAction.INITIALIZE);
+        }
 
         // Update state machine context
         const currentSnapshot = this.snapshots[this.currentIndex];
@@ -525,6 +533,13 @@ export class MergeHistoryManager {
             canUndo: this.currentIndex > 0,
             canRedo: this.currentIndex < this.snapshots.length - 1,
           });
+          
+          // If we have snapshots but state machine is still in INITIAL, move to AT_SNAPSHOT
+          if (this.currentIndex > 0 && this.stateMachine.getCurrentState() === TimelineState.INITIAL) {
+            // Use ADD_MERGE to transition from INITIAL to AT_SNAPSHOT
+            this.stateMachine.performAction(TimelineAction.ADD_MERGE);
+            this.stateMachine.performAction(TimelineAction.ADD_MERGE); // Second call completes the transition
+          }
         }
 
         return true;

@@ -174,6 +174,13 @@ export class CacheRepository implements ICacheRepository {
     }
   }
 
+  close(): void {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
+
   async getMetadata(): Promise<Result<CacheMetadata>> {
     if (!this.db) {
       return Result.err(new CacheError('Database not initialized', 'getMetadata'));

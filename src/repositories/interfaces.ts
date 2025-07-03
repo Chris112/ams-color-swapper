@@ -59,6 +59,11 @@ export interface ICacheRepository {
   clear(): Promise<Result<void>>;
 
   /**
+   * Close the database connection
+   */
+  close(): void;
+
+  /**
    * Get cache metadata
    */
   getMetadata(): Promise<Result<CacheMetadata>>;

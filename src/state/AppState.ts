@@ -144,9 +144,18 @@ export class AppState {
       mergeHistory: [], // Reset merge history for new file
     });
 
-    // Reset and initialize merge history timeline with initial state
-    this.mergeHistoryManager.clear();
-    this.mergeHistoryManager.addInitialState(stats, optimization);
+    // Only reset timeline if this is a new file (not loaded from cache)
+    // Check if the stats match what's already in the timeline
+    const currentSnapshot = this.mergeHistoryManager.getCurrentSnapshot();
+    const isRestoredFromTimeline = currentSnapshot && 
+      currentSnapshot.stats === stats && 
+      currentSnapshot.optimization === optimization;
+    
+    if (!isRestoredFromTimeline) {
+      // This is a new file, so reset and initialize merge history timeline
+      this.mergeHistoryManager.clear();
+      this.mergeHistoryManager.addInitialState(stats, optimization);
+    }
 
     // Auto-save timeline asynchronously
     this.mergeHistoryManager.saveToStorage().catch((error) => {
@@ -375,7 +384,30 @@ export class AppState {
     try {
       const loaded = await this.mergeHistoryManager.loadFromStorage();
       if (loaded) {
-        console.log('Timeline loaded from storage');
+        // Restore the app state from the current snapshot if we're already showing results
+        const currentSnapshot = this.mergeHistoryManager.getCurrentSnapshot();
+        if (currentSnapshot) {
+          // Check if we should restore to the results view
+          if (this.state.view === 'results' || (currentSnapshot.stats && currentSnapshot.optimization)) {
+            // Update the current stats and optimization to match the loaded timeline
+            this.state.stats = currentSnapshot.stats;
+            this.state.optimization = currentSnapshot.optimization;
+            this.state.view = 'results';
+            
+            // Restore original stats if not already set
+            if (!this.state.originalStats && currentSnapshot.stats) {
+              // The first snapshot should have the original stats
+              const firstSnapshot = this.mergeHistoryManager.getTimeline().snapshots[0];
+              if (firstSnapshot) {
+                this.state.originalStats = firstSnapshot.stats;
+              }
+            }
+            
+            // Notify listeners that the state has been updated
+            this.notifyListeners();
+            // The state update will trigger UI updates through the listeners
+          }
+        }
       }
     } catch (error) {
       console.warn('Failed to load timeline:', error);
